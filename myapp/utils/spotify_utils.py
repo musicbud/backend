@@ -33,8 +33,7 @@ class SpotifyClient:
         :return: A dictionary containing the access and refresh tokens.
         """
 
-
-        tokens = self.auth_manager.get_access_token(code)
+        tokens = self.auth_manager.get_access_token(code = code,check_cache=False)
         return tokens
     
     def get_current_user_profile(self, access_token):

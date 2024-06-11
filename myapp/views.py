@@ -19,24 +19,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.authtoken.models import Token
 logger = logging.getLogger(__name__)
     
-from neomodel import db, Q
+from neomodel import db
 from .models import User
-
-
-def create_user(request):
-    # Extract data from request
-    email = request.data.get('email')
-    password = request.data.get('password')
-    birth_date = request.data.get('birth_date')
-    country = request.data.get('country')
-    display_name = request.data.get('display_name')
-
-    # Create a new User node
-    user = User(email=email, password=password, birthDate=birth_date, country=country, displayName=display_name)  # Adjust field names according to your NeoModel User model
-    user.save()
-
-    return JsonResponse({'message': 'User created successfully'})
-
 
 def login(request):
     try:
@@ -59,8 +43,6 @@ def callback(request):
         refresh_token = tokens['refresh_token'] 
         expires_at = tokens['expires_at']
 
-        
-        
         user_profile = spotify_service.get_current_user_profile(access_token)
         try:
             user = User.nodes.get(uid=user_profile['id'])
@@ -217,18 +199,18 @@ class get_bud_profile(APIView):
             if user_node is None or bud_node is None:
                 return JsonResponse({'error': 'User or bud not found'}, status=404)
 
-             # Get all artists and tracks liked by the user and the bud
-            user_artists = set(user_node.likes_artist.all())
-            bud_artists = set(bud_node.likes_artist.all())
-            user_tracks = set(user_node.likes_track.all())
-            bud_tracks = set(bud_node.likes_track.all())
+            # Get all artists and tracks liked by the user and the bud
+            user_artists = {artist.uid for artist in user_node.likes_artist.all()} 
+            bud_artists = {artist.uid for artist in bud_node.likes_artist.all()} 
+            user_tracks = {track.uid for track in user_node.likes_track.all()}  # Extracting track IDs
+            bud_tracks = {track.uid for track in bud_node.likes_track.all()}    # Extracting track IDs
 
             # Find common artists and tracks
             common_artists = user_artists.intersection(bud_artists)
             common_tracks = user_tracks.intersection(bud_tracks)
 
             common_artists_ids = [artist.uid for artist in common_artists]
-            common_tracks_ids = [track.uid for track in common_tracks]
+            common_tracks_ids = list(common_tracks)  # Converting set back to a list for iteration
 
             # Fetch additional details about common artists and tracks using SpotifyService
             common_artists_data, common_tracks_data = spotify_service.fetch_common_artists_and_tracks(user_node.access_token, common_artists_ids, common_tracks_ids)
@@ -242,7 +224,7 @@ class get_bud_profile(APIView):
             # Handle exceptions
             logger.error(e)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)
-           
+
 class get_buds_by_artists(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [IsAuthenticated]
@@ -272,11 +254,10 @@ class get_buds_by_artists(APIView):
                     "AND bud.uid <> $user_uid "
                     "RETURN DISTINCT bud "
                     "LIMIT 30"
-                )
+                )   
 
                 # Execute the Cypher query
                 results, meta = db.cypher_query(cypher_query, params={'liked_artists_ids': liked_artists_ids, 'user_uid': user.uid})
-
                 # Extract buds from the query result
                 buds = [User.inflate(record[0]) for record in results]
 
@@ -325,12 +306,12 @@ class get_buds_by_tracks(APIView):
 
                 # Execute the Cypher query
                 results, meta = db.cypher_query(cypher_query, params={'liked_tracks_ids': liked_tracks_ids, 'user_uid': user.uid})
-
                 # Extract buds from the query result
                 buds = [User.inflate(record[0]) for record in results]
-
+                serialized_liked_tracks = [{'uid': track.uid} for track in liked_tracks]
                 data = {
                     'buds': [bud.serialize() for bud in buds],
+                    'commonTracks': serialized_liked_tracks,
                     'commonTracksCount': len(liked_tracks)
                 }
 

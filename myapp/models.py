@@ -11,6 +11,11 @@ class Artist(StructuredNode):
     uri = StringProperty(required=True, max_length=255)
     liked_by = RelationshipFrom('User', 'LIKED_BY')
 
+    def serialize(self):
+        return {
+            'uid': self.uid,
+        }
+
 class Track(StructuredNode):
     uid = StringProperty(required=True, unique_index=True)  
     href = StringProperty(required=True, min_length=1, max_length=255)
@@ -19,6 +24,11 @@ class Track(StructuredNode):
     type = StringProperty(required=True, min_length=1, max_length=255)
     uri = StringProperty(required=True, min_length=1, max_length=255)
     liked_by = RelationshipFrom('User', 'LIKED_BY')
+
+    def serialize(self):
+        return {
+            'uid': self.uid
+        }
 
 class Genre(StructuredNode):
     uid = StringProperty(required=True, unique_index=True)  
@@ -31,7 +41,7 @@ class Genre(StructuredNode):
 
 class User(StructuredNode):
     uid = StringProperty(required=True, unique_index=True)  
-    email = StringProperty(required=True, unique_index=True, email=True, min_length=1, max_length=255)
+    email = StringProperty( unique_index=True, email=True, min_length=1, max_length=255)
     country = StringProperty()
     display_name = StringProperty(required=True, min_length=1, max_length=255)
     likes_artist = RelationshipTo('Artist', 'LIKES_ARTIST', cardinality='*')
@@ -60,7 +70,6 @@ class User(StructuredNode):
             'bio': self.bio,
             'is_active': self.is_active,
             'is_authenticated': self.is_authenticated,
-            # Include other fields if necessary
         }
     
     @classmethod
