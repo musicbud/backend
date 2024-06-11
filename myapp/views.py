@@ -18,15 +18,18 @@ from .CustomTokenAuthentication import CustomTokenAuthentication
 from rest_framework.permissions import AllowAny
 from rest_framework.authtoken.models import Token
 logger = logging.getLogger(__name__)
+    
+from neomodel import db, Q
+from .models import User
 
 
 def create_user(request):
     # Extract data from request
-    email = request.POST.get('email')
-    password = request.POST.get('password')
-    birth_date = request.POST.get('birth_date')
-    country = request.POST.get('country')
-    display_name = request.POST.get('display_name')
+    email = request.data.get('email')
+    password = request.data.get('password')
+    birth_date = request.data.get('birth_date')
+    country = request.data.get('country')
+    display_name = request.data.get('display_name')
 
     # Create a new User node
     user = User(email=email, password=password, birthDate=birth_date, country=country, displayName=display_name)  # Adjust field names according to your NeoModel User model
@@ -109,120 +112,30 @@ class refresh_token(APIView):
             print(e)
             logger.error(e)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)
+        
+
+
+class get_my_profile(APIView):
+    authentication_classes = [CustomTokenAuthentication]
+    permission_classes = [IsAuthenticated]
     
-def updateUserProfile(request):
-    try:
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super(get_my_profile, self).dispatch(*args, **kwargs)
+    
+    def post(self, request):
         user = request.user
-        user_top_artists, user_top_tracks = spotify_service.get_user_top_artists_and_tracks(user.access_token)
+        if not user.is_authenticated:
+            raise PermissionDenied("User not authenticated")
+        user_profile = {
+            'uid': user.uid,
+            'display_name': user.display_name,
+            'bio': user.bio,
+            'email': user.email,
+            'country': user.country
+        }
+        return Response(user_profile, status=status.HTTP_200_OK)
 
-        user.update_likes(user_top_artists, user_top_tracks)
-
-        return JsonResponse({
-            'message': 'updated successfully.',
-            'code': 200,
-            'status': 'HTTP OK',
-        })
-    except Exception as e:
-        logger.error(e)
-        return JsonResponse({'error': 'Internal Server Error'}, status=500)
-def getUserProfile(request):
-    try:
-        user = request.user
-        limit = request.POST.get('limit', 30)
-        skip = request.POST.get('skip', 0)
-
-        user = User.find_by_id(user.id)
-        if not user:
-            return JsonResponse({'message': 'User profile not found'}, status=404)
-
-        user = User.nodes.get_or_none(id=user.id)
-        if user:
-            user_top_artists_ids = user.get_user_top_artists_ids()
-            user_top_tracks_ids = user.get_user_top_tracks_ids()
-        else:
-            # Handle case where user with given id does not exist
-            pass  # You can raise an exception or handle it according to your application logic
-
-
-
-        user_top_artists, user_top_tracks = spotify_service.fetch_top_artists_and_tracks(user.access_token, user_top_artists_ids, user_top_tracks_ids)
-
-        return JsonResponse({
-            'message': 'Fetched profile successfully.',
-            'code': 200,
-            'status': 'HTTP OK',
-            'data': {
-                'user': user.serialize(),
-                'userTopArtists': user_top_artists,
-                'userTopTracks': user_top_tracks
-            }
-        })
-    except Exception as e:
-        logger.error(e)
-        return JsonResponse({'error': 'Internal Server Error'}, status=500)
-
-def setAndUpdateUserBio(request):
-    try:
-        user_id = request.user.id
-        bio = request.POST.get('bio')
-
-        if bio is not None:
-            if User.set_and_update_bio(user_id, bio):
-                return JsonResponse({
-                    'message': 'Updated bio successfully.',
-                    'code': 200,
-                    'successful': True
-                })
-            else:
-                return JsonResponse({
-                    'error': 'User not found or unable to update bio.',
-                    'code': 404
-                }, status=404)
-        else:
-            return JsonResponse({
-                'error': 'Bio field is missing.',
-                'code': 400
-            }, status=400)
-    except Exception as e:
-        logger.error(e)
-        return JsonResponse({'error': 'Internal Server Error'}, status=500)
-
-def get_bud_profile(request):
-    try:
-        user = request.user
-        bud_id = request.POST.get('budId')
-        limit = int(request.POST.get('limit', 30))
-        skip = int(request.POST.get('skip', 0))
-
-        # Fetch common artists and tracks from the Neo4j database using neomodel
-        user_node = User.nodes.get_or_none(id=user.id)
-        bud_node = User.nodes.get_or_none(id=bud_id)
-        if user_node is None or bud_node is None:
-            return JsonResponse({'error': 'User or bud not found'}, status=404)
-
-        common_artists = user_node.likes.is_liked_by.filter(Q(is_liked_by=bud_node))
-        common_tracks = user_node.likes.likes_track.filter(Q(likes_track=bud_node))
-
-        common_artists_ids = [artist.id for artist in common_artists]
-        common_tracks_ids = [track.id for track in common_tracks]
-
-        # Fetch additional details about common artists and tracks using SpotifyService
-        spotify_service = SpotifyService()
-        common_artists_data, common_tracks_data = spotify_service.fetch_common_artists_and_tracks(user.access_token, common_artists_ids, common_tracks_ids)
-
-        return JsonResponse({
-            'message': 'Fetched common successfully.',
-            'code': 200,
-            'status': 'HTTP OK',
-            'data': {
-                'user': user.serialize(),  # Assuming you have a serialize method in your User model
-                'commonArtists': common_artists_data,
-                'commonTracks': common_tracks_data
-            }
-        })
-    except Exception as e:
-        logger.error(e)
-        return JsonResponse({'error': 'Internal Server Error'}, status=500)
 class update_my_likes(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [IsAuthenticated]
@@ -246,226 +159,325 @@ class update_my_likes(APIView):
         except Exception as e:
             logger.error(e)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)
-def set_my_bio(request):
-    try:
-        user = request.user
-        bio = request.POST.get('bio')
+class set_my_bio(APIView):
+    authentication_classes = [CustomTokenAuthentication]
+    permission_classes = [IsAuthenticated]
 
-        # Fetch the user node from the Neo4j database
-        user_node = User.nodes.get_or_none(id=user.id)
-        if user_node is None:
-            return JsonResponse({'error': 'User not found'}, status=404)
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super(set_my_bio, self).dispatch(*args, **kwargs)
+    
+    def post(self, request):
+        try:
+            user = request.user
+            bio = request.data.get('bio')
 
-        # Set the bio property of the user node
-        user_node.bio = bio
-        user_node.save()
+            if bio is None:
+                return JsonResponse({
+                    'error': 'Bio field is missing.',
+                    'code': 400
+                }, status=400)
 
-        return JsonResponse({
-            'message': 'Bio updated successfully.',
-            'code': 200,
-            'status': 'HTTP OK',
-        })
-    except Exception as e:
-        logger.error(e)
-        return JsonResponse({'error': 'Internal Server Error'}, status=500)
+            # Fetch the user node from the Neo4j database
+            user_node = User.nodes.get_or_none(uid=user.uid)
+            if user_node is None:
+                return JsonResponse({'error': 'User not found'}, status=404)
 
-class get_my_profile(APIView):
+            # Set the bio property of the user node
+            user_node.bio = bio
+            user_node.save()
+
+            return JsonResponse({
+                'message': 'Bio updated successfully.',
+                'code': 200,
+                'status': 'HTTP OK',
+            })
+        except Exception as e:
+            logger.error(e)
+            return JsonResponse({'error': 'Internal Server Error'}, status=500)
+
+
+
+class get_bud_profile(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [IsAuthenticated]
     
     @method_decorator(csrf_exempt)
     def dispatch(self, *args, **kwargs):
-        return super(get_my_profile, self).dispatch(*args, **kwargs)
+        return super(get_bud_profile, self).dispatch(*args, **kwargs)
     
     def post(self, request):
-        user = request.user
-        if not user.is_authenticated:
-            raise PermissionDenied("User not authenticated")
-        user_profile = {
-            'uid': user.uid,
-            'display_name': user.display_name,
-            'bio': user.bio,
-            'email': user.email,
-            'country': user.country
-        }
-        return Response(user_profile, status=status.HTTP_200_OK)
-def get_bud_profile(request):
-    try:
-        # Extract user id and bud id from request
-        user_id = request.user.id
-        bud_id = request.POST.get('bud_id')
+        try:
+            # Extract user id and bud id from request
+            user = request.user
+            bud_id = request.data.get('bud_id')
 
-        # Retrieve the bud profile using NeoModel
-        user = User.nodes.get(id=user_id)
-        bud_profile = user.get_bud_profile(bud_id)
+            user_node = User.nodes.get_or_none(uid=user.uid)
+            bud_node = User.nodes.get_or_none(uid=bud_id)
+            if user_node is None or bud_node is None:
+                return JsonResponse({'error': 'User or bud not found'}, status=404)
 
-        # Return the bud profile as JSON response
-        return JsonResponse({
-            'message': 'Get Bud Profile',
-            'data': bud_profile
-        }, status=200)
-    except Exception as e:
-        # Handle exceptions
-        logger.error(e)
-        return JsonResponse({'error': 'Internal Server Error'}, status=500)
+             # Get all artists and tracks liked by the user and the bud
+            user_artists = set(user_node.likes_artist.all())
+            bud_artists = set(bud_node.likes_artist.all())
+            user_tracks = set(user_node.likes_track.all())
+            bud_tracks = set(bud_node.likes_track.all())
 
+            # Find common artists and tracks
+            common_artists = user_artists.intersection(bud_artists)
+            common_tracks = user_tracks.intersection(bud_tracks)
 
-def get_buds_by_artist(request):
-    try:
-        user = request.user
-        artist_id = request.POST.get('artist_id')
-        buds = user.get_buds_by_artist(artist_id)
+            common_artists_ids = [artist.uid for artist in common_artists]
+            common_tracks_ids = [track.uid for track in common_tracks]
 
-        return JsonResponse({
-            'message': 'Get Buds by Artist',
-            'data': buds
-        }, status=200)
-    except Exception as e:
-        logger.error(e)
-        return JsonResponse({'error': 'Internal Server Error'}, status=500)
+            # Fetch additional details about common artists and tracks using SpotifyService
+            common_artists_data, common_tracks_data = spotify_service.fetch_common_artists_and_tracks(user_node.access_token, common_artists_ids, common_tracks_ids)
 
-def get_buds_by_track(request):
-    try:
-        user = request.user
-        track_id = request.POST.get('track_id')
-        buds = user.get_buds_by_track(track_id)
+            # Return the bud profile as JSON response
+            return JsonResponse({
+                'message': 'Get Bud Profile',
+                'data': {'common_artists_data':common_artists_data,'common_tracks_data':common_tracks_data}
+            }, status=200)
+        except Exception as e:
+            # Handle exceptions
+            logger.error(e)
+            return JsonResponse({'error': 'Internal Server Error'}, status=500)
+           
+class get_buds_by_artists(APIView):
+    authentication_classes = [CustomTokenAuthentication]
+    permission_classes = [IsAuthenticated]
 
-        return JsonResponse({
-            'message': 'Get Buds by Track',
-            'data': buds
-        }, status=200)
-    except Exception as e:
-        logger.error(e)
-        return JsonResponse({'error': 'Internal Server Error'}, status=500)
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super(get_buds_by_artists, self).dispatch(*args, **kwargs)
 
-def get_buds_by_artist_and_track(request):
-    try:
-        user = request.user
-        artist_id = request.POST.get('artist_id')
-        track_id = request.POST.get('track_id')
-        buds = user.get_buds_by_artist_and_track(artist_id, track_id)
+    def post(self, request):
+        try:
+            user = request.user
 
-        return JsonResponse({
-            'message': 'Get Buds by Artist and Track',
-            'data': buds
-        }, status=200)
-    except Exception as e:
-        logger.error(e)
-        return JsonResponse({'error': 'Internal Server Error'}, status=500)
+            # Retrieve the user from the database
+            user_node = User.nodes.get_or_none(uid=user.uid)
+            if user_node:
+                # Retrieve the list of artists liked by the user
+                liked_artists = user_node.likes_artist.all()
+                liked_artists_ids = [artist.uid for artist in liked_artists]
 
-def get_buds_by_artists(user_id):
-    try:
-        # Retrieve the user from the database
-        user = User.nodes.get_or_none(id=user_id)
-        
-        if user:
-            # Retrieve the list of artists liked by the user
-            liked_artists = user.likes_artists.all()
+                if not liked_artists_ids:
+                    return JsonResponse({'error': 'No liked artists found for user'}, status=404)
 
-            # Construct a Cypher query to find buds who like the same artists
-            cypher_query = (
-                "MATCH (bud:User)-[:LIKES_ARTIST]->(artist:Artist) "
-                "WHERE artist IN $liked_artists "
-                "AND ID(bud) <> $user_id "
-                "RETURN DISTINCT bud "
-                "LIMIT 30"
-            )
+                # Construct a Cypher query to find buds who like the same artists
+                cypher_query = (
+                    "MATCH (bud:User)-[:LIKES_ARTIST]->(artist:Artist) "
+                    "WHERE artist.uid IN $liked_artists_ids "
+                    "AND bud.uid <> $user_uid "
+                    "RETURN DISTINCT bud "
+                    "LIMIT 30"
+                )
 
-            # Execute the Cypher query
-            results, meta = db.cypher_query(cypher_query, params={'liked_artists': liked_artists, 'user_id': user_id})
+                # Execute the Cypher query
+                results, meta = db.cypher_query(cypher_query, params={'liked_artists_ids': liked_artists_ids, 'user_uid': user.uid})
 
-            # Extract buds from the query result
-            buds = [User.inflate(record[0]) for record in results]
+                # Extract buds from the query result
+                buds = [User.inflate(record[0]) for record in results]
 
-            # Count the common artists between the user and buds
-            common_artists_count = len(liked_artists)
+                data = {
+                    'buds': [bud.serialize() for bud in buds],
+                    'commonArtistsCount': len(liked_artists)
+                }
 
-            data = {
-                'buds': [bud.serialize() for bud in buds],
-                'commonArtistsCount': common_artists_count
-            }
+                return JsonResponse({'message': 'Fetched buds successfully.', 'code': 200, 'successful': True, 'data': data})
+            else:
+                return JsonResponse({'error': 'User not found'}, status=404)
+        except Exception as e:
+            logger.error(e)
+            return JsonResponse({'error': str(e)}, status=500)        
 
-            return {'message': 'Fetched buds successfully.', 'code': 200, 'successful': True, 'data': data}
-        else:
-            return {'error': 'User not found'}, 404
-    except Exception as e:
-        return {'error': str(e)}, 500
+class get_buds_by_tracks(APIView):
+    authentication_classes = [CustomTokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super(get_buds_by_tracks, self).dispatch(*args, **kwargs)
+
+    def post(self, request):
+        try:
+            user = request.user
+
+            # Retrieve the user from the database
+            user_node = User.nodes.get_or_none(uid=user.uid)
+            if user_node:
+                # Retrieve the list of tracks liked by the user
+                liked_tracks = user_node.likes_track.all()
+                liked_tracks_ids = [track.uid for track in liked_tracks]
+
+                if not liked_tracks_ids:
+                    return JsonResponse({'error': 'No liked tracks found for user'}, status=404)
+
+                # Construct a Cypher query to find buds who like the same tracks
+                cypher_query = (
+                    "MATCH (bud:User)-[:LIKES_TRACK]->(track:Track) "
+                    "WHERE track.uid IN $liked_tracks_ids "
+                    "AND bud.uid <> $user_uid "
+                    "RETURN DISTINCT bud "
+                    "LIMIT 30"
+                )
+
+                # Execute the Cypher query
+                results, meta = db.cypher_query(cypher_query, params={'liked_tracks_ids': liked_tracks_ids, 'user_uid': user.uid})
+
+                # Extract buds from the query result
+                buds = [User.inflate(record[0]) for record in results]
+
+                data = {
+                    'buds': [bud.serialize() for bud in buds],
+                    'commonTracksCount': len(liked_tracks)
+                }
+
+                return JsonResponse({'message': 'Fetched buds successfully.', 'code': 200, 'successful': True, 'data': data})
+            else:
+                return JsonResponse({'error': 'User not found'}, status=404)
+        except Exception as e:
+            logger.error(e)
+            return JsonResponse({'error': str(e)}, status=500)
+
+class get_buds_by_artists_and_tracks_and_genres(APIView):
+    authentication_classes = [CustomTokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super(get_buds_by_artists_and_tracks_and_genres, self).dispatch(*args, **kwargs)
+
+    def post(self, request):
+        try:
+            user_id = request.user.uid  # Get the user's UID
+            user_node = User.nodes.get_or_none(uid=user_id)
+
+            if user_node:
+                # Retrieve the list of artists, tracks, and genres liked by the user
+                liked_artists = user_node.likes_artist.all()
+                liked_tracks = user_node.likes_track.all()
+                liked_genres = user_node.likes_genre.all()
+
+                liked_artists_ids = [artist.uid for artist in liked_artists]
+                liked_tracks_ids = [track.uid for track in liked_tracks]
+                liked_genres_names = [genre.name for genre in liked_genres]
+
+                if not liked_artists_ids and not liked_tracks_ids and not liked_genres_names:
+                    return JsonResponse({'error': 'No liked artists, tracks, or genres found for user'}, status=404)
+
+                # Construct a Cypher query to find buds who like the same artists, tracks, or genres
+                cypher_query = (
+                    "MATCH (bud:User)-[:LIKES_ARTIST]->(artist:Artist), "
+                    "(bud)-[:LIKES_TRACK]->(track:Track), "
+                    "(bud)-[:LIKES_GENRE]->(genre:Genre) "
+                    "WHERE (artist.uid IN $liked_artists_ids OR track.uid IN $liked_tracks_ids OR genre.name IN $liked_genres_names) "
+                    "AND bud.uid <> $user_uid "
+                    "RETURN DISTINCT bud "
+                    "LIMIT 30"
+                )
+
+                # Execute the Cypher query
+                results, meta = db.cypher_query(cypher_query, params={
+                    'liked_artists_ids': liked_artists_ids,
+                    'liked_tracks_ids': liked_tracks_ids,
+                    'liked_genres_names': liked_genres_names,
+                    'user_uid': user_id
+                })
+
+                # Extract buds from the query result
+                buds = [User.inflate(record[0]) for record in results]
+
+                data = {
+                    'buds': [bud.serialize() for bud in buds],
+                    'commonArtistsCount': len(liked_artists),
+                    'commonTracksCount': len(liked_tracks),
+                    'commonGenresCount': len(liked_genres),
+                    'commonCount': len(liked_artists) + len(liked_tracks) + len(liked_genres)
+                }
+
+                return JsonResponse({'message': 'Fetched buds successfully.', 'code': 200, 'successful': True, 'data': data})
+            else:
+                return JsonResponse({'error': 'User not found'}, status=404)
+        except Exception as e:
+            logger.error(e)
+            return JsonResponse({'error': str(e)}, status=500)
+class get_buds_by_genres(APIView):
+    authentication_classes = [CustomTokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super(get_buds_by_genres, self).dispatch(*args, **kwargs)
+
+    def post(self, request):
+        try:
+            user_id = request.user.uid  # Get the user's UID
+            user_node = User.nodes.get_or_none(uid=user_id)
+
+            if user_node:
+                # Retrieve the genres liked by the user
+                liked_genres = user_node.likes_genre.all()
+                liked_genres_names = [genre.name for genre in liked_genres]
+
+                if not liked_genres_names:
+                    return JsonResponse({'error': 'No liked genres found for user'}, status=404)
+
+                # Construct a Cypher query to find buds who like the same genres
+                cypher_query = (
+                    "MATCH (bud:User)-[:LIKES_GENRE]->(genre:Genre) "
+                    "WHERE genre.name IN $liked_genres_names "
+                    "AND bud.uid <> $user_uid "
+                    "RETURN DISTINCT bud "
+                    "LIMIT 30"
+                )
+
+                # Execute the Cypher query
+                results, meta = db.cypher_query(cypher_query, params={
+                    'liked_genres_names': liked_genres_names,
+                    'user_uid': user_id
+                })
+
+                # Extract buds from the query result
+                buds = [User.inflate(record[0]) for record in results]
+
+                data = {
+                    'buds': [bud.serialize() for bud in buds],
+                    'commonGenresCount': len(liked_genres)
+                }
+
+                return JsonResponse({'message': 'Fetched buds successfully.', 'code': 200, 'successful': True, 'data': data})
+            else:
+                return JsonResponse({'error': 'User not found'}, status=404)
+        except Exception as e:
+            logger.error(e)
+            return JsonResponse({'error': str(e)}, status=500)
+class search_users(APIView):
+    authentication_classes = [CustomTokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super(search_users, self).dispatch(*args, **kwargs)
     
-from neomodel import db, Q
-from .models import User
-
-def get_buds_by_tracks(request):
-    try:
-        user_id = request.user.id
-        user = User.nodes.get_or_none(uid=user_id)
-        
-        if user:
-            buds = User.nodes.filter(likes__tracks__in=user.likes.tracks).exclude(uid=user_id).limit(30)
-            common_tracks_count = len(user.likes.tracks)
-            data = {
-                'buds': [bud.serialize() for bud in buds],
-                'commonTracksCount': common_tracks_count
-            }
-            return JsonResponse({'message': 'Fetched buds successfully.', 'code': 200, 'successful': True, 'data': data})
-        else:
-            return JsonResponse({'error': 'User not found'}, status=404)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
-
-def get_buds_by_artists_and_tracks(request):
-    try:
-        user_id = request.user.id
-        user = User.nodes.get_or_none(uid=user_id)
-        
-        if user:
-            buds = User.nodes.filter(Q(likes__artists__in=user.likes.artists) & Q(likes__tracks__in=user.likes.tracks)).exclude(uid=user_id).limit(30)
-            common_artists_count = len(user.likes.artists)
-            common_tracks_count = len(user.likes.tracks)
-            common_count = common_artists_count + common_tracks_count
-            data = {
-                'buds': [bud.serialize() for bud in buds],
-                'commonArtistsCount': common_artists_count,
-                'commonTracksCount': common_tracks_count,
-                'commonCount': common_count
-            }
-            return JsonResponse({'message': 'Fetched buds successfully.', 'code': 200, 'successful': True, 'data': data})
-        else:
-            return JsonResponse({'error': 'User not found'}, status=404)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
-
-def search_channels_and_users_view(request):
-    try:
-        query = request.POST.get('query', '')
-        users = User.nodes.filter(display_name__icontains=query)
-        return JsonResponse({
-            'message': 'Fetched search result successfully.',
-            'code': 200,
-            'successful': True,
-            'collection': {'users': [user.serialize() for user in users]}
-        }, status=200)
-    except Exception as e:
-        logger.error(e)
-        return JsonResponse({'error': 'Internal Server Error'}, status=500)
+    def post(self, request):
+        try:
+            query = request.data.get('query', '')
+            print(query)
+            users = User.nodes.filter(display_name__icontains=query)
+            return JsonResponse({
+                'message': 'Fetched search result successfully.',
+                'code': 200,
+                'successful': True,
+                'collection': {'users': [user.serialize() for user in users]}
+            }, status=200)
+        except Exception as e:
+            logger.error(e)
+            return JsonResponse({'error': 'Internal Server Error'}, status=500)
 
 def not_found_view(request, exception):
     return JsonResponse({'error': 'Resource not found on this server'}, status=404)
 
 def error_view(request):
     return JsonResponse({'error': 'Internal Server Error'}, status=500)
-
-# def buds_route(request):
-#     # Invoke your buds route logic here
-#     return JsonResponse({'message': 'Buds route'})
-
-# def user_profile_route(request):
-#     # Invoke your user profile route logic here
-#     return JsonResponse({'message': 'User profile route'})
-
-# def chat_route(request):
-#     # Invoke your chat route logic here
-#     return JsonResponse({'message': 'Chat route'})
-
-# def search_route(request):
-#     # Invoke your search route logic here
-#     return JsonResponse({'message': 'Search route'})

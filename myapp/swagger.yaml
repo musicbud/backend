@@ -10,52 +10,6 @@ servers:
 
 paths:
 
-  /get-buds-by-artist:
-    post:
-      description: returns buds profiles with similar taste in artists 
-      
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/navigation'
-           
-      responses:
-        '200':
-          description: "HTTP OK"
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                      code:
-                        type: integer
-                      status:
-                        type: string
-                      message:
-                        type: string
-                      data:
-                        type: object
-                        properties:
-                          authorization_link:
-                            type: string
-        '400':
-          #  ----- Added line  ----------------------------------------
-          $ref: '#/components/responses/400Error'
-          #  ---- /Added line  ----------------------------------------
-        '422':
-          #  ----- Added line  ----------------------------------------
-         $ref: '#/components/responses/422Error'
-          #  ---- /Added line  ----------------------------------------
-        '401':
-          #  ----- Added line  ----------------------------------------
-          $ref: '#/components/responses/401Error'
-          #  ---- /Added line  ----------------------------------------
-        '500':
-          #  ----- Added line  ----------------------------------------
-          $ref: '#/components/responses/500Error'
-          #  ---- /Added line  ----------------------------------------
   
   /login:
     get:
@@ -101,6 +55,11 @@ paths:
   
   /callback:
     get:
+      parameters:
+        - in: query
+          name: code
+          schema:
+            type: string
       description: generates a token
       responses:
         '200':
@@ -139,7 +98,7 @@ paths:
           $ref: '#/components/responses/500Error'
 
   /refresh-token:
-    get:
+    post:
       description: refresh token
       security:
         - bearerAuth: []
@@ -177,42 +136,6 @@ paths:
         '500':
           #  ----- Added line  ----------------------------------------
           $ref: '#/components/responses/500Error'
-
-  /update-my-likes:
-    get:
-      description: import user's spotify data
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Valid token.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  defaultResponse:
-                    type: object
-                    properties:
-                      code:
-                        type: integer
-                      successful:
-                        type: boolean
-                      message:
-                        type: string
-                  data:
-                    type: object
-        '400':
-          #  ----- Added line  ----------------------------------------
-          $ref: '#/components/responses/400Error'
-          #  ---- /Added line  ----------------------------------------
-        '422':
-          #  ----- Added line  ----------------------------------------
-         $ref: '#/components/responses/422Error'
-        '500':
-          #  ----- Added line  ----------------------------------------
-          $ref: '#/components/responses/500Error'
-          #  ---- /Added line  ----------------------------------------                 
   /get-my-profile:
     post:
       description: View logged user profile
@@ -260,12 +183,57 @@ paths:
           $ref: '#/components/responses/500Error'
           #  ---- /Added line  ----------------------------------------              
   
- 
+
+  /update-my-likes:
+    post:
+      description: import user's spotify data
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Valid token.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  defaultResponse:
+                    type: object
+                    properties:
+                      code:
+                        type: integer
+                      successful:
+                        type: boolean
+                      message:
+                        type: string
+                  data:
+                    type: object
+        '400':
+          #  ----- Added line  ----------------------------------------
+          $ref: '#/components/responses/400Error'
+          #  ---- /Added line  ----------------------------------------
+        '422':
+          #  ----- Added line  ----------------------------------------
+         $ref: '#/components/responses/422Error'
+        '500':
+          #  ----- Added line  ----------------------------------------
+          $ref: '#/components/responses/500Error'
+          #  ---- /Added line  ----------------------------------------    
   /set-my-bio:
-    get:
+    post:
       description: set user's bio
       security:
         - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bio:
+                  type: string
+     
       responses:
         '200':
           description: Logged out successfully.
@@ -308,12 +276,8 @@ paths:
             schema:
               type: object
               properties:
-                budId:
+                bud_id:
                   type: string
-                skip:
-                  type: integer
-                limit:
-                  type: integer
      
       responses:
         '200':
@@ -343,7 +307,56 @@ paths:
         '500':
           #  ----- Added line  ----------------------------------------
           $ref: '#/components/responses/500Error'
-          #  ---- /Added line  ----------------------------------------       
+          #  ---- /Added line  ----------------------------------------      
+  /get-buds-by-artists:
+    post:
+      description: returns buds profiles with similar taste in artists 
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/navigation'
+           
+      responses:
+        '200':
+          description: "HTTP OK"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                      code:
+                        type: integer
+                      status:
+                        type: string
+                      message:
+                        type: string
+                      data:
+                        type: object
+                        properties:
+                          authorization_link:
+                            type: string
+        '400':
+          #  ----- Added line  ----------------------------------------
+          $ref: '#/components/responses/400Error'
+          #  ---- /Added line  ----------------------------------------
+        '422':
+          #  ----- Added line  ----------------------------------------
+         $ref: '#/components/responses/422Error'
+          #  ---- /Added line  ----------------------------------------
+        '401':
+          #  ----- Added line  ----------------------------------------
+          $ref: '#/components/responses/401Error'
+          #  ---- /Added line  ----------------------------------------
+        '500':
+          #  ----- Added line  ----------------------------------------
+          $ref: '#/components/responses/500Error'
+          #  ---- /Added line  ----------------------------------------
+  
+  
   /get-buds-by-tracks:
     post:
       description: display buds with similar taste in tracks
@@ -428,7 +441,7 @@ paths:
           $ref: '#/components/responses/500Error'
           #  ---- /Added line  ----------------------------------------  
 
-  /get-buds-by-artist-and-track:
+  /get-buds-by-artists-and-tracks-and-genres:
     post:
       description: display buds with similar taste in artists and tracks
       security:
@@ -481,7 +494,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/navigation'
+              type: object
+              properties:
+                query:
+                  type: string
       responses:
         '200':
           description: Logged out successfully.

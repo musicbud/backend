@@ -86,7 +86,9 @@ DATABASES = {
 
 # Neo4j database settings
 
-NEOMODEL_NEO4J_BOLT_URL = 'bolt://neo4j:12345678@192.168.49.2:30087'
+# NEOMODEL_NEO4J_BOLT_URL = 'bolt://neo4j:12345678@192.168.49.2:30087'
+NEOMODEL_NEO4J_BOLT_URL = 'bolt://neo4j:12345678@127.0.0.1:7687'
+
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
 

@@ -22,5 +22,5 @@ def get_spotify_tokens():
 def get_current_user_profile(access_token):
     return spotify_client.get_current_user_profile(access_token)
 
-
-
+def get_user_top_artists_and_tracks(access_token):
+        return spotify_client.get_user_top_artists_and_tracks(access_token)

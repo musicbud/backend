@@ -52,9 +52,25 @@ class SpotifyClient:
         sp.auth_manager.refresh_access_token(refresh_token)
         token_info = sp.auth_manager.get_cached_token()
         return token_info
-    def get_user_top_artists_and_tracks(self, time_range='long_term', limit=20):
-        sp = spotipy.Spotify(auth_manager=self.auth_manager)
-
+    def get_user_top_artists_and_tracks(self, access_token, time_range='long_term', limit=20):
+        sp = spotipy.Spotify(auth=access_token)    
         user_top_artists = sp.current_user_top_artists(time_range=time_range, limit=limit)['items']
         user_top_tracks = sp.current_user_top_tracks(time_range=time_range, limit=limit)['items']
         return user_top_artists, user_top_tracks
+    def fetch_common_artists_and_tracks(self, access_token, artist_ids, track_ids):
+        self.sp = spotipy.Spotify(auth=access_token)    
+        common_artists_data = self.fetch_artists(artist_ids)
+        common_tracks_data = self.fetch_tracks(track_ids)
+        return common_artists_data, common_tracks_data
+
+    def fetch_artists(self, artist_ids):
+        artists_data = []
+        if artist_ids:
+            artists_data = self.sp.artists(artist_ids)['artists']
+        return artists_data
+
+    def fetch_tracks(self, track_ids):
+        tracks_data = []
+        if track_ids:
+            tracks_data = self.sp.tracks(track_ids)['tracks']
+        return tracks_data

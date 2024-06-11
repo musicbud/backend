@@ -9,7 +9,7 @@ class Artist(StructuredNode):
     popularity = IntegerProperty(required=True, min_value=1, max_value=255)
     type = StringProperty(required=True, max_length=255)
     uri = StringProperty(required=True, max_length=255)
-
+    liked_by = RelationshipFrom('User', 'LIKED_BY')
 
 class Track(StructuredNode):
     uid = StringProperty(required=True, unique_index=True)  
@@ -18,6 +18,16 @@ class Track(StructuredNode):
     popularity = StringProperty(required=True, min_length=1, max_length=255)
     type = StringProperty(required=True, min_length=1, max_length=255)
     uri = StringProperty(required=True, min_length=1, max_length=255)
+    liked_by = RelationshipFrom('User', 'LIKED_BY')
+
+class Genre(StructuredNode):
+    uid = StringProperty(required=True, unique_index=True)  
+    href = StringProperty(required=True, min_length=1, max_length=255)
+    name = StringProperty(required=True, min_length=1, max_length=255)
+    popularity = StringProperty(required=True, min_length=1, max_length=255)
+    type = StringProperty(required=True, min_length=1, max_length=255)
+    uri = StringProperty(required=True, min_length=1, max_length=255)
+    liked_by = RelationshipFrom('User', 'LIKED_BY')
 
 class User(StructuredNode):
     uid = StringProperty(required=True, unique_index=True)  
@@ -38,7 +48,20 @@ class User(StructuredNode):
 
     likes_artist = RelationshipTo('Artist', 'LIKES_ARTIST')
     likes_track = RelationshipTo('Track', 'LIKES_TRACK')
+    likes_genre = RelationshipTo('Genre', 'LIKES_GENRE')
     liked_by = RelationshipFrom('User', 'LIKED_BY')
+    
+    def serialize(self):
+        return {
+            'uid': self.uid,
+            'email': self.email,
+            'country': self.country,
+            'display_name': self.display_name,
+            'bio': self.bio,
+            'is_active': self.is_active,
+            'is_authenticated': self.is_authenticated,
+            # Include other fields if necessary
+        }
     
     @classmethod
     def update_tokens(cls, user_id, access_token, refresh_token, expires_at):
