@@ -147,7 +147,7 @@ class update_my_likes(APIView):
     def post(self, request):
         try:
             user = request.user
-            user_top_artists, user_top_tracks = spotify_service.get_user_top_artists_and_tracks()
+            user_top_artists, user_top_tracks = spotify_service.get_user_top_artists_and_tracks(user.access_token)
             
             # Extract artist and track IDs
             artist_ids = [artist['id'] for artist in user_top_artists]
