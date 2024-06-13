@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -10,7 +11,7 @@ SECRET_KEY = 'your-secret-key'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1','152.70.49.208']
+ALLOWED_HOSTS = [os.environ.get('HOST')]
 
 # Application definition
 INSTALLED_APPS = [
@@ -130,6 +131,11 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC_URL = '/static/'
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+# Change 'project_name' to your actual Django project name
+dotenv_path = os.path.join(BASE_DIR, '.env')
+load_dotenv(dotenv_path)
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field

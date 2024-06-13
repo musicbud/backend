@@ -1,9 +1,10 @@
 from .spotify_utils import SpotifyClient
+import os
 
 # Define your Spotify application credentials
-CLIENT_ID = "cd3fb6fd6379457bacc7f3559ba36c13"
-CLIENT_SECRET = "ff3d663125f8429a9fe64836f8016eef"
-REDIRECT_URI = "http://152.70.49.208/musicbud/callback"
+CLIENT_ID = os.environ.get('CLIENT_ID')
+CLIENT_SECRET = os.environ.get('CLIENT_SECRET')
+REDIRECT_URI = os.environ.get('REDIRECT_URI')
 scope = "user-library-read user-read-private user-top-read"
 
 
