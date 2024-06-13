@@ -28,7 +28,7 @@ urlpatterns = [path('login', login, name='login'),
     path('get_buds_by_genres', get_buds_by_genres.as_view(), name='get_buds_by_genres'),
     path('get-buds-by-artists-and-tracks-and-genres', get_buds_by_artists_and_tracks_and_genres.as_view(), name='get_buds_by_artist_and_track'),
     path('search-channels-and-users', search_users.as_view(), name='search_channels_and_users'),
-    path('openapi/', TemplateView.as_view(template_name="index.html")),
+    path('docs/', TemplateView.as_view(template_name="index.html")),
     path(r'^', include(router.urls))
 ]
 

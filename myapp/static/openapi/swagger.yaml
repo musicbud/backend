@@ -5,7 +5,7 @@ info:
   description: A simple API to illustrate Musicbud APIs
 
 servers:
-  - url: http://localhost:8000/
+  - url: http://152.70.49.208/musicbud
 
 
 paths:

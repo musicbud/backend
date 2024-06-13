@@ -9,8 +9,4 @@ from musicbud import settings
 urlpatterns = [
     path('msucibud/admin', admin.site.urls),
     path('musicbud/', include('myapp.urls')),
-    #path('musicbud/openapi', TemplateView.as_view(
-    #    template_name='index.html',
-    #    extra_context={'schema_url': 'openapi-schema'}
-    #), name='openapi'),
 ]+ static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

@@ -3,7 +3,7 @@ from .spotify_utils import SpotifyClient
 # Define your Spotify application credentials
 CLIENT_ID = "cd3fb6fd6379457bacc7f3559ba36c13"
 CLIENT_SECRET = "ff3d663125f8429a9fe64836f8016eef"
-REDIRECT_URI = "http://localhost:8000/callback"
+REDIRECT_URI = "http://152.70.49.208/musicbud/callback"
 scope = "user-library-read user-read-private user-top-read"
 
 
