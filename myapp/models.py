@@ -1,51 +1,77 @@
 
-from neomodel import StructuredNode, StringProperty,Relationship,RelationshipTo, IntegerProperty,db,RelationshipFrom,BooleanProperty
+from neomodel import StructuredNode, StringProperty,Relationship,RelationshipTo, IntegerProperty,db,RelationshipFrom,BooleanProperty,ZeroOrMore
 from neomodel.exceptions import MultipleNodesReturned, DoesNotExist
 import time
-class Artist(StructuredNode):
-    uid = StringProperty(required=True, unique_index=True)  
-    href = StringProperty(required=True, unique_index=True, max_length=255)
-    name = StringProperty(required=True, max_length=255)
-    popularity = IntegerProperty(required=True, min_value=1, max_value=255)
-    type = StringProperty(required=True, max_length=255)
-    uri = StringProperty(required=True, max_length=255)
-    liked_by = RelationshipFrom('User', 'LIKED_BY')
+
+
+
+class LikedItem(StructuredNode):
+    uid = StringProperty(required=True, unique_index=True)
 
     def serialize(self):
         return {
             'uid': self.uid,
         }
 
-class Track(StructuredNode):
-    uid = StringProperty(required=True, unique_index=True)  
-    href = StringProperty(required=True, min_length=1, max_length=255)
-    name = StringProperty(required=True, min_length=1, max_length=255)
-    popularity = StringProperty(required=True, min_length=1, max_length=255)
-    type = StringProperty(required=True, min_length=1, max_length=255)
-    uri = StringProperty(required=True, min_length=1, max_length=255)
-    liked_by = RelationshipFrom('User', 'LIKED_BY')
+class Artist(LikedItem):
+    href = StringProperty(required=True, unique_index=True, max_length=255)
+    name = StringProperty(required=True, max_length=255)
+    popularity = IntegerProperty(required=True, min_value=1, max_value=255)
+    type = StringProperty(required=True, max_length=255)
+    uri = StringProperty(required=True, max_length=255)
+    liked_by = RelationshipFrom('User', 'LIKES_ARTIST',cardinality=ZeroOrMore)
 
     def serialize(self):
         return {
-            'uid': self.uid
+            'uid': self.uid,
+            'href': self.href,
+            'name': self.name,
+            'popularity': self.popularity,
+            'type': self.type,
+            'uri': self.uri
         }
 
-class Genre(StructuredNode):
-    uid = StringProperty(required=True, unique_index=True)  
+class Track(LikedItem):
     href = StringProperty(required=True, min_length=1, max_length=255)
     name = StringProperty(required=True, min_length=1, max_length=255)
-    popularity = StringProperty(required=True, min_length=1, max_length=255)
+    popularity = IntegerProperty(required=True, min_value=1, max_value=255)
     type = StringProperty(required=True, min_length=1, max_length=255)
     uri = StringProperty(required=True, min_length=1, max_length=255)
-    liked_by = RelationshipFrom('User', 'LIKED_BY')
+    liked_by = RelationshipFrom('User', 'LIKES_TRACK',cardinality=ZeroOrMore)
+
+    def serialize(self):
+        return {
+            'uid': self.uid,
+            'href': self.href,
+            'name': self.name,
+            'popularity': self.popularity,
+            'type': self.type,
+            'uri': self.uri
+        }
+
+class Genre(LikedItem):
+    href = StringProperty(required=True, min_length=1, max_length=255)
+    name = StringProperty(required=True, min_length=1, max_length=255)
+    popularity = IntegerProperty(required=True, min_value=1, max_value=255)
+    type = StringProperty(required=True, min_length=1, max_length=255)
+    uri = StringProperty(required=True, min_length=1, max_length=255)
+    liked_by = RelationshipFrom('User', 'LIKES_GENRE',cardinality=ZeroOrMore)
+
+    def serialize(self):
+        return {
+            'uid': self.uid,
+            'href': self.href,
+            'name': self.name,
+            'popularity': self.popularity,
+            'type': self.type,
+            'uri': self.uri
+        }
 
 class User(StructuredNode):
-    uid = StringProperty(required=True, unique_index=True)  
-    email = StringProperty( unique_index=True, email=True, min_length=1, max_length=255)
+    uid = StringProperty(required=True, unique_index=True)
+    email = StringProperty(unique_index=True, email=True, min_length=1, max_length=255)
     country = StringProperty()
     display_name = StringProperty(required=True, min_length=1, max_length=255)
-    likes_artist = RelationshipTo('Artist', 'LIKES_ARTIST', cardinality='*')
-    likes_track = RelationshipTo('Track', 'LIKES_TRACK', cardinality='*')
     access_token = StringProperty()
     refresh_token = StringProperty()
     expires_at = IntegerProperty()
@@ -54,13 +80,10 @@ class User(StructuredNode):
     is_active = BooleanProperty()
     is_authenticated = BooleanProperty()
 
+    likes_artist = RelationshipTo(Artist, 'LIKES_ARTIST',cardinality=ZeroOrMore)
+    likes_track = RelationshipTo(Track, 'LIKES_TRACK',cardinality=ZeroOrMore)
+    likes_genre = RelationshipTo(Genre, 'LIKES_GENRE',cardinality=ZeroOrMore)
 
-
-    likes_artist = RelationshipTo('Artist', 'LIKES_ARTIST')
-    likes_track = RelationshipTo('Track', 'LIKES_TRACK')
-    likes_genre = RelationshipTo('Genre', 'LIKES_GENRE')
-    liked_by = RelationshipFrom('User', 'LIKED_BY')
-    
     def serialize(self):
         return {
             'uid': self.uid,
@@ -148,7 +171,7 @@ class User(StructuredNode):
     likes_track = RelationshipTo('Track', 'LIKES_TRACK')
 
     @classmethod
-    def get_bud_profile(cls, user_id, bud_id, limit=30, skip=0):
+    def get_bud_profile(cls, user_id, bud_id, limit=50, skip=0):
         # Define the Cypher query
         cypher_query = f"""
             MATCH (user {{id: '{user_id}'}})-[:LIKES]->(user_artists:ARTIST)
@@ -236,13 +259,3 @@ class User(StructuredNode):
         
         return user
 
-class LikedItem(StructuredNode):
-    uid = StringProperty(required=True, unique_index=True)  
-
-class Artist(LikedItem):
-    pass
-
-class Track(LikedItem):
-    pass
-class Likes(Relationship):
-    pass

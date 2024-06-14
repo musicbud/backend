@@ -1,9 +1,8 @@
 from django.http import JsonResponse
 from .models import User
-from .services import SpotifyService
 import logging
 from neomodel import db
-from .utils.spotify_client import spotify_client as spotify_service
+from .utils.spotify_services import create_authorize_url, get_spotify_tokens, get_current_user_profile, get_user_top_artists_and_tracks, fetch_common_artists_tracks_and_genres, fetch_artists, fetch_tracks,fetch_genres
 from neomodel.exceptions import MultipleNodesReturned, DoesNotExist
 
 from rest_framework.views import APIView
@@ -24,7 +23,7 @@ from .models import User
 
 def login(request):
     try:
-        authorization_link = spotify_service.create_authorize_url()
+        authorization_link = create_authorize_url()
         return JsonResponse({
             'message': 'generated authorization link successfully.',
             'code': 200,
@@ -38,12 +37,12 @@ def callback(request):
     try:
         code = request.GET.get('code')
 
-        tokens = spotify_service.get_spotify_tokens(code)
+        tokens = get_spotify_tokens(code)
         access_token = tokens['access_token']
         refresh_token = tokens['refresh_token'] 
         expires_at = tokens['expires_at']
 
-        user_profile = spotify_service.get_current_user_profile(access_token)
+        user_profile = get_current_user_profile(access_token)
         try:
             user = User.nodes.get(uid=user_profile['id'])
             created = False
@@ -77,7 +76,7 @@ class refresh_token(APIView):
     def post(self, request):
         try:
             user = request.user  
-            new_data = spotify_service.refresh_access_token(user.refresh_token)
+            new_data = refresh_access_token(user.refresh_token)
             user.update_tokens(user.uid,new_data['access_token'], new_data['refresh_token'],new_data['expires_at'])
 
             return JsonResponse({
@@ -129,7 +128,7 @@ class update_my_likes(APIView):
     def post(self, request):
         try:
             user = request.user
-            user_top_artists, user_top_tracks = spotify_service.get_user_top_artists_and_tracks(user.access_token)
+            user_top_artists, user_top_tracks = get_user_top_artists_and_tracks(user.access_token)
             
             # Extract artist and track IDs
             artist_ids = [artist['id'] for artist in user_top_artists]
@@ -196,29 +195,54 @@ class get_bud_profile(APIView):
 
             user_node = User.nodes.get_or_none(uid=user.uid)
             bud_node = User.nodes.get_or_none(uid=bud_id)
+
             if user_node is None or bud_node is None:
                 return JsonResponse({'error': 'User or bud not found'}, status=404)
+
 
             # Get all artists and tracks liked by the user and the bud
             user_artists = {artist.uid for artist in user_node.likes_artist.all()} 
             bud_artists = {artist.uid for artist in bud_node.likes_artist.all()} 
             user_tracks = {track.uid for track in user_node.likes_track.all()}  # Extracting track IDs
             bud_tracks = {track.uid for track in bud_node.likes_track.all()}    # Extracting track IDs
+            user_genres = {genres.uid for genres in user_node.likes_genre.all()}  # Extracting genres IDs
+            bud_genres = {genres.uid for genres in bud_node.likes_genre.all()}    # Extracting genres IDs
 
             # Find common artists and tracks
             common_artists = user_artists.intersection(bud_artists)
             common_tracks = user_tracks.intersection(bud_tracks)
+            common_genres = user_genres.intersection(bud_genres)
 
-            common_artists_ids = [artist.uid for artist in common_artists]
-            common_tracks_ids = list(common_tracks)  # Converting set back to a list for iteration
+            # Check if there are common artists
+            if common_artists != {None}:
+                # Extract IDs of common artists
+                common_artists_ids = [artist for artist in common_artists]
+            else:
+                # Handle case where there are no common artists
+                common_artists_ids = []
 
-            # Fetch additional details about common artists and tracks using SpotifyService
-            common_artists_data, common_tracks_data = spotify_service.fetch_common_artists_and_tracks(user_node.access_token, common_artists_ids, common_tracks_ids)
+            if common_tracks  != {None}:
+                # Convert set to list for iteration
+                common_tracks_ids = [track for track in common_tracks]
+            else:
+            # Handle case where there are no common tracks
+                common_tracks_ids = []
+            if common_genres  != {None}:
+                # Convert set to list for iteration
+                common_genres_ids = [genre for genre in common_genres]
+            else:
+            # Handle case where there are no common genres
+                common_genres_ids = []
 
+
+            # Fetch additional details only if there are common artists or tracks
+            if common_artists_ids or common_tracks_ids or common_genres_ids:
+                # Fetch additional details about common artists and tracks using SpotifyService
+                common_artists_data, common_tracks_data , common_genres_data= fetch_common_artists_tracks_and_genres(user_node.access_token, common_artists_ids, common_tracks_ids,common_genres_ids)
             # Return the bud profile as JSON response
             return JsonResponse({
                 'message': 'Get Bud Profile',
-                'data': {'common_artists_data':common_artists_data,'common_tracks_data':common_tracks_data}
+                'data': {'common_artists_count':len(common_artists_data),'common_artists_data':common_artists_data,'common_tracks_count':len(common_tracks_data),'common_tracks_data':common_tracks_data,'common_genres_count':len(common_genres_data),'common_genres_data':common_genres_data}
             }, status=200)
         except Exception as e:
             # Handle exceptions
@@ -236,43 +260,61 @@ class get_buds_by_artists(APIView):
     def post(self, request):
         try:
             user = request.user
-
-            # Retrieve the user from the database
             user_node = User.nodes.get_or_none(uid=user.uid)
-            if user_node:
-                # Retrieve the list of artists liked by the user
-                liked_artists = user_node.likes_artist.all()
-                liked_artists_ids = [artist.uid for artist in liked_artists]
 
-                if not liked_artists_ids:
-                    return JsonResponse({'error': 'No liked artists found for user'}, status=404)
-
-                # Construct a Cypher query to find buds who like the same artists
-                cypher_query = (
-                    "MATCH (bud:User)-[:LIKES_ARTIST]->(artist:Artist) "
-                    "WHERE artist.uid IN $liked_artists_ids "
-                    "AND bud.uid <> $user_uid "
-                    "RETURN DISTINCT bud "
-                    "LIMIT 30"
-                )   
-
-                # Execute the Cypher query
-                results, meta = db.cypher_query(cypher_query, params={'liked_artists_ids': liked_artists_ids, 'user_uid': user.uid})
-                # Extract buds from the query result
-                buds = [User.inflate(record[0]) for record in results]
-
-                data = {
-                    'buds': [bud.serialize() for bud in buds],
-                    'commonArtistsCount': len(liked_artists)
-                }
-
-                return JsonResponse({'message': 'Fetched buds successfully.', 'code': 200, 'successful': True, 'data': data})
-            else:
+            if not user_node:
                 return JsonResponse({'error': 'User not found'}, status=404)
+
+            buds = []
+            for artist in user_node.likes_artist.all():
+                buds.extend(artist.liked_by.all())
+            
+            # Filter out the user and duplicates
+            buds = list({bud.uid: bud for bud in buds if bud.uid != user.uid}.values())
+
+            buds_data = []
+            artist_ids = []
+            track_ids = []
+            for bud in buds:
+
+                bud_liked_artist_uids = [artist.uid for artist in bud.likes_artist.all()]
+
+                common_artists = user_node.likes_artist.filter(uid__in=bud_liked_artist_uids)
+
+
+                common_artists_count = len(common_artists)
+
+                artist_ids.extend([artist.uid for artist in common_artists])
+
+                bud_data = {
+                    'uid': bud.uid,
+                    'email': bud.email,
+                    'country': bud.country,
+                    'display_name': bud.display_name,
+                    'bio': bud.bio,
+                    'is_active': bud.is_active,
+                    'is_authenticated': bud.is_authenticated,
+                    'commonArtistsCount': common_artists_count,
+                }
+                buds_data.append(bud_data)
+
+            common_artists_data = fetch_artists(user.access_token,artist_ids)
+
+            for bud in buds_data:
+                bud['commonArtists'] = common_artists_data
+
+            return JsonResponse({
+                'message': 'Fetched buds successfully.',
+                'code': 200,
+                'successful': True,
+                'data': {
+                    'buds': buds_data,
+                    'totalCommonArtistsCount': sum(bud['commonArtistsCount'] for bud in buds_data),
+                }
+            })
         except Exception as e:
             logger.error(e)
-            return JsonResponse({'error': str(e)}, status=500)        
-
+            return JsonResponse({'error': 'Internal Server Error'}, status=500)
 class get_buds_by_tracks(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [IsAuthenticated]
@@ -283,107 +325,58 @@ class get_buds_by_tracks(APIView):
 
     def post(self, request):
         try:
+
             user = request.user
-
-            # Retrieve the user from the database
             user_node = User.nodes.get_or_none(uid=user.uid)
-            if user_node:
-                # Retrieve the list of tracks liked by the user
-                liked_tracks = user_node.likes_track.all()
-                liked_tracks_ids = [track.uid for track in liked_tracks]
 
-                if not liked_tracks_ids:
-                    return JsonResponse({'error': 'No liked tracks found for user'}, status=404)
-
-                # Construct a Cypher query to find buds who like the same tracks
-                cypher_query = (
-                    "MATCH (bud:User)-[:LIKES_TRACK]->(track:Track) "
-                    "WHERE track.uid IN $liked_tracks_ids "
-                    "AND bud.uid <> $user_uid "
-                    "RETURN DISTINCT bud "
-                    "LIMIT 30"
-                )
-
-                # Execute the Cypher query
-                results, meta = db.cypher_query(cypher_query, params={'liked_tracks_ids': liked_tracks_ids, 'user_uid': user.uid})
-                # Extract buds from the query result
-                buds = [User.inflate(record[0]) for record in results]
-                serialized_liked_tracks = [{'uid': track.uid} for track in liked_tracks]
-                data = {
-                    'buds': [bud.serialize() for bud in buds],
-                    'commonTracks': serialized_liked_tracks,
-                    'commonTracksCount': len(liked_tracks)
-                }
-
-                return JsonResponse({'message': 'Fetched buds successfully.', 'code': 200, 'successful': True, 'data': data})
-            else:
+            if not user_node:
                 return JsonResponse({'error': 'User not found'}, status=404)
+
+            buds = []
+            for track in user_node.likes_track.all():
+                buds.extend(track.liked_by.exclude(uid=user.uid))
+
+            buds_data = []
+            track_ids = []
+            
+            for bud in buds:
+                bud_liked_track_uids = [track.uid for track in bud.likes_track.all()]
+
+                common_tracks = user_node.likes_track.filter(uid__in=bud_liked_track_uids)
+
+                common_tracks_count = len(common_tracks)
+                # Extract uid values into a list
+                track_ids = [track.uid for track in common_tracks]
+        
+                bud_data = {
+                    'uid': bud.uid,
+                    'email': bud.email,
+                    'country': bud.country,
+                    'display_name': bud.display_name,
+                    'bio': bud.bio,
+                    'is_active': bud.is_active,
+                    'is_authenticated': bud.is_authenticated,
+                    'commonTracksCount': common_tracks_count,
+                }
+                buds_data.append(bud_data)
+
+            common_tracks_data = fetch_tracks(user.access_token,track_ids)
+
+            for bud in buds_data:
+                bud['commonTracks'] = [track for track in common_tracks_data if track['id'] in track_ids]
+
+            return JsonResponse({
+                'message': 'Fetched buds successfully.',
+                'code': 200,
+                'successful': True,
+                'data': {
+                    'buds': buds_data,
+                    'totalCommonTracksCount': sum(bud['commonTracksCount'] for bud in buds_data)
+                }
+            })
         except Exception as e:
             logger.error(e)
-            return JsonResponse({'error': str(e)}, status=500)
-
-class get_buds_by_artists_and_tracks_and_genres(APIView):
-    authentication_classes = [CustomTokenAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    @method_decorator(csrf_exempt)
-    def dispatch(self, *args, **kwargs):
-        return super(get_buds_by_artists_and_tracks_and_genres, self).dispatch(*args, **kwargs)
-
-    def post(self, request):
-        try:
-            user_id = request.user.uid  # Get the user's UID
-            user_node = User.nodes.get_or_none(uid=user_id)
-
-            if user_node:
-                # Retrieve the list of artists, tracks, and genres liked by the user
-                liked_artists = user_node.likes_artist.all()
-                liked_tracks = user_node.likes_track.all()
-                liked_genres = user_node.likes_genre.all()
-
-                liked_artists_ids = [artist.uid for artist in liked_artists]
-                liked_tracks_ids = [track.uid for track in liked_tracks]
-                liked_genres_names = [genre.name for genre in liked_genres]
-
-                if not liked_artists_ids and not liked_tracks_ids and not liked_genres_names:
-                    return JsonResponse({'error': 'No liked artists, tracks, or genres found for user'}, status=404)
-
-                # Construct a Cypher query to find buds who like the same artists, tracks, or genres
-                cypher_query = (
-                    "MATCH (bud:User)-[:LIKES_ARTIST]->(artist:Artist), "
-                    "(bud)-[:LIKES_TRACK]->(track:Track), "
-                    "(bud)-[:LIKES_GENRE]->(genre:Genre) "
-                    "WHERE (artist.uid IN $liked_artists_ids OR track.uid IN $liked_tracks_ids OR genre.name IN $liked_genres_names) "
-                    "AND bud.uid <> $user_uid "
-                    "RETURN DISTINCT bud "
-                    "LIMIT 30"
-                )
-
-                # Execute the Cypher query
-                results, meta = db.cypher_query(cypher_query, params={
-                    'liked_artists_ids': liked_artists_ids,
-                    'liked_tracks_ids': liked_tracks_ids,
-                    'liked_genres_names': liked_genres_names,
-                    'user_uid': user_id
-                })
-
-                # Extract buds from the query result
-                buds = [User.inflate(record[0]) for record in results]
-
-                data = {
-                    'buds': [bud.serialize() for bud in buds],
-                    'commonArtistsCount': len(liked_artists),
-                    'commonTracksCount': len(liked_tracks),
-                    'commonGenresCount': len(liked_genres),
-                    'commonCount': len(liked_artists) + len(liked_tracks) + len(liked_genres)
-                }
-
-                return JsonResponse({'message': 'Fetched buds successfully.', 'code': 200, 'successful': True, 'data': data})
-            else:
-                return JsonResponse({'error': 'User not found'}, status=404)
-        except Exception as e:
-            logger.error(e)
-            return JsonResponse({'error': str(e)}, status=500)
+            return JsonResponse({'error': 'Internal Server Error'}, status=500)
 class get_buds_by_genres(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [IsAuthenticated]
@@ -394,46 +387,156 @@ class get_buds_by_genres(APIView):
 
     def post(self, request):
         try:
-            user_id = request.user.uid  # Get the user's UID
+            user = request.user
+            user_id = request.user.uid
             user_node = User.nodes.get_or_none(uid=user_id)
-
-            if user_node:
-                # Retrieve the genres liked by the user
-                liked_genres = user_node.likes_genre.all()
-                liked_genres_names = [genre.name for genre in liked_genres]
-
-                if not liked_genres_names:
-                    return JsonResponse({'error': 'No liked genres found for user'}, status=404)
-
-                # Construct a Cypher query to find buds who like the same genres
-                cypher_query = (
-                    "MATCH (bud:User)-[:LIKES_GENRE]->(genre:Genre) "
-                    "WHERE genre.name IN $liked_genres_names "
-                    "AND bud.uid <> $user_uid "
-                    "RETURN DISTINCT bud "
-                    "LIMIT 30"
-                )
-
-                # Execute the Cypher query
-                results, meta = db.cypher_query(cypher_query, params={
-                    'liked_genres_names': liked_genres_names,
-                    'user_uid': user_id
-                })
-
-                # Extract buds from the query result
-                buds = [User.inflate(record[0]) for record in results]
-
-                data = {
-                    'buds': [bud.serialize() for bud in buds],
-                    'commonGenresCount': len(liked_genres)
-                }
-
-                return JsonResponse({'message': 'Fetched buds successfully.', 'code': 200, 'successful': True, 'data': data})
-            else:
+            if not user_node:
                 return JsonResponse({'error': 'User not found'}, status=404)
+
+            buds = []
+            for genre in user_node.likes_genre.all():
+                buds.extend(genre.liked_by.all())
+
+            # Filter out the user and duplicates
+            buds = list({bud.uid: bud for bud in buds if bud.uid != user_id}.values())
+
+            buds_data = []
+            genre_ids = []
+
+            for bud in buds:
+
+                bud_liked_genre_uids = [genre.uid for genre in bud.likes_genre.all()]
+
+                common_genres = user_node.likes_genre.filter(uid__in=bud_liked_genre_uids)
+
+                common_genres_count = len(common_genres)
+
+                 # Extract uid values into a list
+                genre_ids = [genre.uid for genre in common_genres]
+
+                bud_data = {
+                    'uid': bud.uid,
+                    'email': bud.email,
+                    'country': bud.country,
+                    'display_name': bud.display_name,
+                    'bio': bud.bio,
+                    'is_active': bud.is_active,
+                    'is_authenticated': bud.is_authenticated,
+                    'commonGenres': [{'name': genre.name} for genre in common_genres],
+                    'commonGenresCount': common_genres_count
+                }
+                buds_data.append(bud_data)
+            common_genres_data = fetch_genres(user.access_token,genre_ids)
+
+            for bud in buds_data:
+                bud['commonGenres'] = [genre for genre in common_genres_data if genre['id'] in genre_ids]
+
+            return JsonResponse({
+                'message': 'Fetched buds successfully.',
+                'code': 200,
+                'successful': True,
+                'data': {
+                    'buds': buds_data,
+                    'totalCommonGenresCount': sum(bud['commonGenresCount'] for bud in buds_data)
+                }
+            })
         except Exception as e:
             logger.error(e)
-            return JsonResponse({'error': str(e)}, status=500)
+            return JsonResponse({'error': 'Internal Server Error'}, status=500)
+class get_buds_by_artists_and_tracks_and_genres(APIView):
+    authentication_classes = [CustomTokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super(get_buds_by_artists_and_tracks_and_genres, self).dispatch(*args, **kwargs)
+
+    def post(self, request):
+        try:
+            user = request.user
+            user_id = request.user.uid
+            user_node = User.nodes.get_or_none(uid=user_id)
+
+            if not user_node:
+                return JsonResponse({'error': 'User not found'}, status=404)
+
+            liked_artists = user_node.likes_artist.all()
+            liked_tracks = user_node.likes_track.all()
+            liked_genres = user_node.likes_genre.all()
+
+            buds = []
+            for artist in liked_artists:
+                buds.extend(artist.liked_by.all())
+            for track in liked_tracks:
+                buds.extend(track.liked_by.all())
+            for genre in liked_genres:
+                buds.extend(genre.liked_by.all())
+
+            # Filter out the user and duplicates
+            buds = [bud for bud in buds if bud.uid != user_id]
+
+            buds_data = []
+            artist_ids = []
+            track_ids = []
+            genre_ids = []
+
+            for bud in buds:
+                bud_liked_artist_uids = [artist.uid for artist in bud.likes_artist.all()]
+                bud_liked_track_uids = [track.uid for track in bud.likes_track.all()]
+                bud_liked_genre_uids = [genre.uid for genre in bud.likes_genre.all()]
+
+                common_artists = user_node.likes_artist.filter(uid__in=bud_liked_artist_uids)
+                common_tracks = user_node.likes_track.filter(uid__in=bud_liked_track_uids)
+                common_genres = user_node.likes_genre.filter(uid__in=bud_liked_genre_uids)
+
+                common_artists_count = len(common_artists)
+                common_tracks_count = len(common_tracks)
+                common_genres_count = len(common_genres)
+
+                artist_ids.extend([artist.uid for artist in common_artists])
+                track_ids.extend([track.uid for track in common_tracks])
+                genre_ids.extend([genre.uid for genre in common_genres])
+
+                bud_data = {
+                    'uid': bud.uid,
+                    'email': bud.email,
+                    'country': bud.country,
+                    'display_name': bud.display_name,
+                    'bio': bud.bio,
+                    'is_active': bud.is_active,
+                    'is_authenticated': bud.is_authenticated,
+                    'commonArtistsCount': common_artists_count,
+                    'commonTracksCount': common_tracks_count,
+                    'commonGenresCount': common_genres_count
+                }
+                buds_data.append(bud_data)
+
+            common_artists_data, common_tracks_data, common_genres_data = fetch_common_artists_tracks_and_genres(user.access_token, artist_ids, track_ids, genre_ids)
+
+            # Map common data to buds_data based on uid
+            for bud in buds_data:
+                bud_uid = bud['uid']
+                bud['commonArtists'] = [artist for artist in common_artists_data if artist['id'] in artist_ids and artist['id'] != bud_uid]
+                bud['commonTracks'] = [track for track in common_tracks_data if track['id'] in track_ids and track['id'] != bud_uid]
+                bud['commonGenres'] = [genre for genre in common_genres_data if genre['id'] in genre_ids and genre['id'] != bud_uid]
+
+            return JsonResponse({
+                'message': 'Fetched buds successfully.',
+                'code': 200,
+                'successful': True,
+                'data': {
+                    'buds': buds_data,
+                    'totalCommonArtistsCount': sum(bud['commonArtistsCount'] for bud in buds_data),
+                    'totalCommonTracksCount': sum(bud['commonTracksCount'] for bud in buds_data),
+                    'totalCommonGenresCount': sum(bud['commonGenresCount'] for bud in buds_data)
+                }
+            })
+
+        except Exception as e:
+            logger.error(e)
+            return JsonResponse({'error': 'Internal Server Error'}, status=500)
+
+         
 class search_users(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [IsAuthenticated]
