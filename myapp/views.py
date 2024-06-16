@@ -1,48 +1,62 @@
 from django.http import JsonResponse
-from .models import User
-import logging
-from neomodel import db
-from .utils.spotify_services import create_authorize_url, get_spotify_tokens, get_current_user_profile, get_user_top_artists_and_tracks, fetch_common_artists_tracks_and_genres, fetch_artists, fetch_tracks,fetch_genres
 from neomodel.exceptions import MultipleNodesReturned, DoesNotExist
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
-from rest_framework.authentication import SessionAuthentication
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from rest_framework.exceptions import PermissionDenied
 from .CustomTokenAuthentication import CustomTokenAuthentication
-from rest_framework.permissions import AllowAny
-from rest_framework.authtoken.models import Token
-logger = logging.getLogger(__name__)
-    
-from neomodel import db
 from .models import User
+from django.http import JsonResponse
+from .models import User
+import logging
+logger = logging.getLogger(__name__)
+from .services.orchestrator import get_service
 
 def login(request):
+    service = request.GET.get('service', 'ytmusic')  # Default to 'lastfm' if no service is specified
+    
     try:
-        authorization_link = create_authorize_url()
+        authorization_link = get_service(service).strategy.create_authorize_url()
         return JsonResponse({
-            'message': 'generated authorization link successfully.',
+            'message': 'Generated authorization link successfully.',
             'code': 200,
             'status': 'HTTP OK',
             'data': {'authorization_link': authorization_link}
         })
     except Exception as e:
+        logger.error(e)
         return JsonResponse({'error': str(e)}, status=500)
 
-def callback(request):
+def ytmusic_callback(request):
+    try:
+        
+        return JsonResponse({
+            'message': 'logged in successfully.',
+            'code': 200,
+            'status': 'HTTP OK',
+            'data': {'accessToken': access_token, 'refreshToken': refresh_token, 'expiresAt': expires_at}
+        })
+    except Exception as e:
+        logger.error(e)
+        return JsonResponse({'error': str(e)}, status=500)
+    
+def spotify_callback(request):
     try:
         code = request.GET.get('code')
+        service = request.GET.get('service', 'spotify')  # Default to 'lastfm' if no service is specified
+        strategy = None    
+        
+        tokens = get_service(service).strategy.get_tokens()
 
-        tokens = get_spotify_tokens(code)
+        tokens = strategy.get_tokens(code)
         access_token = tokens['access_token']
         refresh_token = tokens['refresh_token'] 
         expires_at = tokens['expires_at']
 
-        user_profile = get_current_user_profile(access_token)
+        user_profile = get_service(service).strategy.get_user_profile(access_token)
         try:
             user = User.nodes.get(uid=user_profile['id'])
             created = False
@@ -63,9 +77,56 @@ def callback(request):
             'data': {'accessToken': access_token, 'refreshToken': refresh_token, 'expiresAt': expires_at}
         })
     except Exception as e:
+        logger.error(e)
+        return JsonResponse({'error': str(e)}, status=500)
+    
+
+def lastfm_callback(request):
+    try:
+        token = request.GET.get('token')
+        code = request.GET.get('code')
+        service = request.GET.get('service', 'lastfm')  # Default to 'lastfm' if no service is specified
+        strategy = None    
+
+
+        print(token)
+
+        token = request.args.get('token')
+
+        print(code)
+        
+        # tokens = get_service(service).strategy.get_tokens()
+
+        # tokens = strategy.get_tokens(code)
+        # access_token = tokens['access_token']
+        # refresh_token = tokens['refresh_token'] 
+        # expires_at = tokens['expires_at']
+
+        # user_profile = get_service(service).strategy.get_user_profile(access_token)
+        # try:
+        #     user = User.nodes.get(uid=user_profile['id'])
+        #     created = False
+        # except MultipleNodesReturned:
+        #     return JsonResponse({'error': 'Multiple users found with this uid'}, status=500)
+        # except DoesNotExist:
+        #     user = User.create_from_spotify_profile(user_profile)
+        #     created = True
+
+        # updated_user = User.update_tokens(user_profile['id'], access_token, refresh_token, expires_at)
+        # if updated_user is None:
+        #     return JsonResponse({'error': 'Error updating tokens'}, status=500)
+
+        # return JsonResponse({
+        #     'message': 'logged in successfully.',
+        #     'code': 200,
+        #     'status': 'HTTP OK',
+        #     'data': {'accessToken': access_token, 'refreshToken': refresh_token, 'expiresAt': expires_at}
+        # })
+    except Exception as e:
+        logger.error(e)
         return JsonResponse({'error': str(e)}, status=500)
 
-class refresh_token(APIView):
+class spotify_refresh_token(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [IsAuthenticated]
 

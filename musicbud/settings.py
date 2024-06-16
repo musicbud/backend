@@ -11,7 +11,8 @@ SECRET_KEY = 'your-secret-key'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [os.environ.get('HOST')]
+HOST = os.environ.get('HOST')
+ALLOWED_HOSTS = ['127.0.0.1','localhost']
 
 # Application definition
 INSTALLED_APPS = [
@@ -87,6 +88,18 @@ DATABASES = {
     }
 }
 
+#Spotify secrets
+SPOTIFY_CLIENT_ID = os.environ.get('SPOTIFY_CLIENT_ID')
+SPOTIFY_CLIENT_SECRET = os.environ.get('SPOTIFY_CLIENT_SECRET')
+SPOTIFY_REDIRECT_URI = os.environ.get('SPOTIFY_REDIRECT_URI')
+SPOTIFY_SCOPE = "user-library-read user-read-private user-top-read"
+
+#LASTFM secrets
+LASTFM_API_KEY = os.environ.get('LASTFM_API_KEY')
+LASTFM_API_SECRET = os.environ.get('LASTFM_API_SECRET')
+LASTFM_REDIRECT_URI = os.environ.get('LASTFM_REDIRECT_URI')
+
+
 # Neo4j database settings
 
 # NEOMODEL_NEO4J_BOLT_URL = 'bolt://neo4j:12345678@192.168.49.2:30087'
@@ -142,4 +155,3 @@ load_dotenv(dotenv_path)
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-SPECTACULAR_SETTINGS= {'TITLE' : 'Django '}

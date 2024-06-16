@@ -14,6 +14,7 @@ class LikedItem(StructuredNode):
         }
 
 class Artist(LikedItem):
+    uid = StringProperty(required=True, unique_index=True)
     href = StringProperty(required=True, unique_index=True, max_length=255)
     name = StringProperty(required=True, max_length=255)
     popularity = IntegerProperty(required=True, min_value=1, max_value=255)
@@ -32,6 +33,7 @@ class Artist(LikedItem):
         }
 
 class Track(LikedItem):
+    uid = StringProperty(required=True, unique_index=True)
     href = StringProperty(required=True, min_length=1, max_length=255)
     name = StringProperty(required=True, min_length=1, max_length=255)
     popularity = IntegerProperty(required=True, min_value=1, max_value=255)
@@ -50,6 +52,7 @@ class Track(LikedItem):
         }
 
 class Genre(LikedItem):
+    uid = StringProperty(required=True, unique_index=True)
     href = StringProperty(required=True, min_length=1, max_length=255)
     name = StringProperty(required=True, min_length=1, max_length=255)
     popularity = IntegerProperty(required=True, min_value=1, max_value=255)
@@ -259,3 +262,19 @@ class User(StructuredNode):
         
         return user
 
+class Album(StructuredNode):
+    uid = StringProperty()
+    name = StringProperty(required=True)
+    href = StringProperty()
+    artist = RelationshipFrom('Artist', 'HAS_ALBUM')
+    tracks = RelationshipFrom('Track', 'IN_ALBUM')
+
+class Genre(StructuredNode):
+    uid = StringProperty()
+    name = StringProperty(unique_index=True, required=True)
+    artists = RelationshipTo(Artist, 'HAS_ARTIST')
+
+class Band(StructuredNode):
+    uid = StringProperty()
+    name = StringProperty(unique_index=True, required=True)
+    members = RelationshipFrom(Artist, 'MEMBER_OF')
