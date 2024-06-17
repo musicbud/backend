@@ -99,6 +99,11 @@ LASTFM_API_KEY = os.environ.get('LASTFM_API_KEY')
 LASTFM_API_SECRET = os.environ.get('LASTFM_API_SECRET')
 LASTFM_REDIRECT_URI = os.environ.get('LASTFM_REDIRECT_URI')
 
+#YTMUSIC secrets
+YTMUSIC_CLIENT_ID = os.environ.get('YTMUSIC_CLIENT_ID')
+YTMUSIC_CLIENT_SECRET = os.environ.get('YTMUSIC_CLIENT_SECRET')
+
+
 
 # Neo4j database settings
 

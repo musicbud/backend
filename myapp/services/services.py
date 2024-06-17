@@ -4,13 +4,14 @@ import time
 import pylast
 import webbrowser
 from myapp.models import User,Artist,Track,Genre,Band,Album
-from ytmusicapi import YTMusic
+import ytmusicapi 
 from abc import ABC, abstractmethod
 import subprocess
 import re
 from musicbud import settings
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
+from ytmusicapi.auth.oauth import OAuthCredentials
 
 
 class AuthStrategy(ABC):
@@ -215,15 +216,20 @@ class YTmusicAuthStrategy(AuthStrategy):
     A class to interact with YouTube Music's API and integrate data into a Neo4j database.
     """
 
-    def __init__(self):
+    def __init__(self,client_id, client_secret):
         """
         Initializes the YouTube Music API client.
         """
-        self.ytmusic = YTMusic()
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.ytmusic = ytmusicapi.YTMusic()
 
     def create_authorize_url(self) -> str:
-        self.ytmusic.setup_oauth()    
+        oauth_credentials = OAuthCredentials(self.client_id,self.client_secret)
+        code = oauth_credentials.get_code()
+        url = f"{code['verification_url']}?user_code={code['user_code']}"
 
+        return url
     def fetch_top_artists(self, user: str, limit: int = 10) -> List[str]:
         """
         Fetches and maps the top artists for a user.

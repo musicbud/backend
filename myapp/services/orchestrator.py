@@ -29,8 +29,10 @@ class SpotifyService():
                                             redirect_uri=self.redirect_uri,scope=scope)
 
 class YTmusicService():
-    def __init__(self):
-        self.strategy = YTmusicAuthStrategy()
+    def __init__(self,client_id, client_secret,):
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.strategy = YTmusicAuthStrategy(client_id=self.client_id, client_secret=self.client_secret)
 
 # class AppleService():
 #     def __init__(self):
@@ -44,7 +46,7 @@ def get_service(service):
         elif service == 'spotify':
             service_instance = SpotifyService(settings.SPOTIFY_CLIENT_ID, settings.SPOTIFY_CLIENT_SECRET, settings.SPOTIFY_REDIRECT_URI,settings.SPOTIFY_SCOPE)
         elif service == 'ytmusic':
-            service_instance = YTmusicService()
+            service_instance = YTmusicService(settings.YTMUSIC_CLIENT_ID, settings.YTMUSIC_CLIENT_SECRET)
         # elif service == 'apple':
         #     service_instance = AppleService()
         else:
