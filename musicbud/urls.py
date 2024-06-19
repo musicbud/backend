@@ -9,4 +9,5 @@ from musicbud import settings
 urlpatterns = [
     path('msucibud/admin', admin.site.urls),
     path('musicbud/', include('myapp.urls')),
+    path('musicbud/chat/', include('chat.urls')),
 ]+ static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

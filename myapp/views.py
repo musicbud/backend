@@ -16,10 +16,9 @@ logger = logging.getLogger(__name__)
 from .services.orchestrator import get_service
 
 def login(request):
-    service = request.GET.get('service', 'ytmusic')  # Default to 'lastfm' if no service is specified
-    
+    service = request.GET.get('service', 'lastfm')  # Default to 'lastfm' if no service is specified
     try:
-        authorization_link = get_service(service).strategy.create_authorize_url()
+        authorization_link = get_service(service).create_authorize_url()
         return JsonResponse({
             'message': 'Generated authorization link successfully.',
             'code': 200,
@@ -32,7 +31,7 @@ def login(request):
 
 def ytmusic_callback(request):
     try:
-        
+        code = request.GET.get('code')
         return JsonResponse({
             'message': 'logged in successfully.',
             'code': 200,
@@ -46,17 +45,16 @@ def ytmusic_callback(request):
 def spotify_callback(request):
     try:
         code = request.GET.get('code')
-        service = request.GET.get('service', 'spotify')  # Default to 'lastfm' if no service is specified
+        service = 'spotify'
         strategy = None    
         
-        tokens = get_service(service).strategy.get_tokens()
+        tokens = get_service(service).get_tokens(code)
 
-        tokens = strategy.get_tokens(code)
         access_token = tokens['access_token']
         refresh_token = tokens['refresh_token'] 
         expires_at = tokens['expires_at']
 
-        user_profile = get_service(service).strategy.get_user_profile(access_token)
+        user_profile = get_service(service).get_user_profile(access_token)
         try:
             user = User.nodes.get(uid=user_profile['id'])
             created = False
@@ -84,16 +82,10 @@ def spotify_callback(request):
 def lastfm_callback(request):
     try:
         token = request.GET.get('token')
-        code = request.GET.get('code')
-        service = request.GET.get('service', 'lastfm')  # Default to 'lastfm' if no service is specified
-        strategy = None    
+        print(token) 
+        return JsonResponse({'token':token})
 
 
-        print(token)
-
-        token = request.args.get('token')
-
-        print(code)
         
         # tokens = get_service(service).strategy.get_tokens()
 

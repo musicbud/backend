@@ -13,6 +13,7 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from ytmusicapi.auth.oauth import OAuthCredentials
 
+from google_auth_oauthlib.flow import InstalledAppFlow
 
 class AuthStrategy(ABC):
     @abstractmethod
@@ -60,14 +61,14 @@ class AuthStrategy(ABC):
                 user.top_albums.connect(node)
 
 # Strategy for Last.fm
-class LastFmAuthStrategy(AuthStrategy):
+class LastFmService(AuthStrategy):
     """
     An implementation of the AuthStrategy abstract base class for Last.fm API authentication and data retrieval.
     """
 
     def __init__(self, api_key: str, api_secret: str):
         """
-        Initializes the LastFmAuthStrategy with the provided API key and secret.
+        Initializes the LastFmAuthService with the provided API key and secret.
         Sets up the network and session key.
         """
         self.api_key = api_key
@@ -105,7 +106,7 @@ class LastFmAuthStrategy(AuthStrategy):
         Generates a URL for user authorization.
         """
         skg = pylast.SessionKeyGenerator(self.network)
-        return skg.get_web_auth_url() + f"&cb={settings.LASTFM_REDIRECT_URI}"
+        return skg.get_web_auth_url()
 
     def fetch_top_artists(self, user: str, limit: int = 10) -> List[pylast.TopItem]:
         """
@@ -139,7 +140,7 @@ class LastFmAuthStrategy(AuthStrategy):
         return []
 
 # Strategy for Spotify
-class SpotifyAuthStrategy(AuthStrategy):
+class SpotifyService(AuthStrategy):
     def __init__(self, client_id, client_secret, redirect_uri, scope):
         self.client_id = client_id
         self.client_secret = client_secret
@@ -211,25 +212,38 @@ class SpotifyAuthStrategy(AuthStrategy):
         return common_artists_data, common_tracks_data,common_genres_data
 
        
-class YTmusicAuthStrategy(AuthStrategy):
+class YTmusicService(AuthStrategy):
     """
     A class to interact with YouTube Music's API and integrate data into a Neo4j database.
     """
 
-    def __init__(self,client_id, client_secret):
+    def __init__(self,client_id, client_secret,redirect_uri):
         """
         Initializes the YouTube Music API client.
         """
         self.client_id = client_id
         self.client_secret = client_secret
+        self.redirect_uri = redirect_uri
         self.ytmusic = ytmusicapi.YTMusic()
 
     def create_authorize_url(self) -> str:
-        oauth_credentials = OAuthCredentials(self.client_id,self.client_secret)
-        code = oauth_credentials.get_code()
-        url = f"{code['verification_url']}?user_code={code['user_code']}"
+        client_config = {
+        "installed": {
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
+                "redirect_uris": [self.redirect_uri],
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token"
+            }
+        }
+    
+        SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly']
+        flow = InstalledAppFlow.from_client_config(client_config, SCOPES,redirect_uri='http://127.0.0.1:8000/musicbud/ytmusic/callback')
+        auth_url, _ = flow.authorization_url(prompt='consent')
 
-        return url
+
+        return auth_url
+
     def fetch_top_artists(self, user: str, limit: int = 10) -> List[str]:
         """
         Fetches and maps the top artists for a user.

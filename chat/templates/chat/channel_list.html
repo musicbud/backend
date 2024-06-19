@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Channels</title>
+</head>
+<body>
+    <h1>Channels</h1>
+    <ul>
+        {% for channel in channels %}
+            <li><a href="{% url 'chat_in_channel' channel.id %}">{{ channel.name }}</a></li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

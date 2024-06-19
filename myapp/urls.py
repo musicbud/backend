@@ -16,7 +16,6 @@ from .views import (
 )
 
 
-from .chat.views import MyCustomView, MessageListView
 
 
 
@@ -36,8 +35,6 @@ urlpatterns = [path('login', login, name='login'),
     path('get-buds-by-artists-and-tracks-and-genres', get_buds_by_artists_and_tracks_and_genres.as_view(), name='get_buds_by_artist_and_track'),
     path('search-channels-and-users', search_users.as_view(), name='search_channels_and_users'),
     path('docs/', TemplateView.as_view(template_name="index.html")),
-    path('chat/my-custom-view/', MyCustomView.as_view(), name='login'),
-    path('chat/message-list/', MessageListView.as_view(), name='messages')
 ]
 
 

@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'myapp',
+    'chat',
     'corsheaders',  # Add CORS headers
     'rest_framework',  # Add Django REST framework
     'rest_framework.authtoken',
@@ -102,6 +103,7 @@ LASTFM_REDIRECT_URI = os.environ.get('LASTFM_REDIRECT_URI')
 #YTMUSIC secrets
 YTMUSIC_CLIENT_ID = os.environ.get('YTMUSIC_CLIENT_ID')
 YTMUSIC_CLIENT_SECRET = os.environ.get('YTMUSIC_CLIENT_SECRET')
+YTMUSIC_REDIRECT_URI = os.environ.get('YTMUSIC_REDIRECT_URI')
 
 
 
