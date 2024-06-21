@@ -162,3 +162,9 @@ load_dotenv(dotenv_path)
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+
+
+
+
+
+

@@ -15,6 +15,8 @@ from ytmusicapi.auth.oauth import OAuthCredentials
 
 from google_auth_oauthlib.flow import InstalledAppFlow
 
+from datetime import datetime
+
 class AuthStrategy(ABC):
     @abstractmethod
     def create_authorize_url(self):
@@ -75,32 +77,13 @@ class LastFmService(AuthStrategy):
         self.api_secret = api_secret
         self.session_key_file = os.path.join(os.path.expanduser("~"), ".lastfm_session_key")
         self.network = pylast.LastFMNetwork(api_key=self.api_key, api_secret=self.api_secret)
-        self.session_key = self.get_session_key()
-        self.network.session_key = self.session_key
-
-    def get_session_key(self) -> str:
-        """
-        Retrieves or generates a session key for Last.fm API access.
-        """
-        if not os.path.exists(self.session_key_file):
-            skg = pylast.SessionKeyGenerator(self.network)
-            url = skg.get_web_auth_url()
-            print(f"Please authorize this script to access your account: {url}\n")
-            webbrowser.open(url)
-            while True:
-                print('True')
-                try:
-                    session_key = skg.get_web_auth_session_key(url)
-                    with open(self.session_key_file, "w") as f:
-                        f.write(session_key)
-                    break
-                except pylast.WSError:
-                    time.sleep(1)
-        else:
-            session_key = open(self.session_key_file).read()
-
-        return session_key
-
+    
+    def get_user_profile(self,token) -> dict:
+        network = pylast.LastFMNetwork(api_key=self.api_key, api_secret=self.api_secret,token=token)
+        username =  network.get_authenticated_user().get_name()
+        return {
+        'username': username,
+        }
     def create_authorize_url(self) -> str:
         """
         Generates a URL for user authorization.
@@ -108,36 +91,118 @@ class LastFmService(AuthStrategy):
         skg = pylast.SessionKeyGenerator(self.network)
         return skg.get_web_auth_url()
 
-    def fetch_top_artists(self, user: str, limit: int = 10) -> List[pylast.TopItem]:
+    async def fetch_top_artists(self, username: str, limit: int = 10) -> List[pylast.TopItem]:
         """
         Fetches the top artists for a given user.
         """
-        return self.network.get_user(user).get_top_artists(limit=limit)
+        return self.network.get_user(username).get_top_artists(limit=limit)
 
-    def fetch_top_tracks(self, user: str, limit: int = 10) -> List[pylast.TopItem]:
+    async def fetch_top_tracks(self, username: str, limit: int = 10) -> List[pylast.TopItem]:
         """
         Fetches the top tracks for a given user.
         """
-        return self.network.get_user(user).get_top_tracks(limit=limit)
+        # Ensure limit is an integer
+        limit = int(limit)  # Convert limit to integer if it's passed as a string or other type
+        
+        return self.network.get_user(username).get_top_tracks(limit=limit)
 
-    def fetch_top_genres(self, user: str, limit: int = 10) -> List[Tuple[str, int]]:
+    async def fetch_top_genres(self, username: str, limit: int = 10) -> List[Tuple[str, int]]:
         """
         Fetches the top genres for a given user based on their top artists' tags.
         """
-        top_artists = self.fetch_top_artists(user, limit)
+        top_artists = self.fetch_top_artists(username, limit)
         genre_count = {}
+        
         for artist in top_artists:
             tags = artist.item.get_top_tags(limit=5)
             for tag in tags:
-                genre = tag.item.name
-                genre_count[genre] = genre_count.get(genre, 0) + tag.weight
-        return sorted(genre_count.items(), key=lambda x: x[1], reverse=True)[:limit]
-    def fetch_top_albums(self, user, limit=10):
+                
+                genre = tag.item.get_name()
+                if genre in genre_count:
+                    genre_count[genre] += tag.weight
+                else:
+                    genre_count[genre] = tag.weight
+        
+        # Convert dictionary to list of tuples for sorting
+        sorted_genres = sorted(genre_count.items(), key=lambda x: x[1], reverse=True)[:limit]        
+        return sorted_genres
+    def fetch_top_bands(self, username, limit=10):
         # Spotify does not have a separate category for bands
         return []
-    def fetch_top_bands(self, user, limit=10):
-        # Spotify does not have a separate category for bands
+    def fetch_top_albums(self, username, limit=10):
         return []
+    
+    async def fetch_library(self, username: str):
+        user = self.network.get_user(username)
+        library = user.get_library()
+        return library
+
+    async def fetch_top_charts(self, limit: int = 10):
+        top_tracks = self.network.get_top_tracks(limit=limit)
+        top_artists = self.network.get_top_artists(limit=limit)
+        return top_tracks, top_artists
+    
+    async def save_artist(artist_name):
+        artist = await Artist.nodes.get_or_none(name=artist_name)
+        if not artist:
+            artist = Artist(name=artist_name)
+            await artist.save()
+        return artist
+
+    async def save_track(track_name):
+        track = await Track.nodes.get_or_none(name=track_name)
+        if not track:
+            track = Track(name=track_name)
+            await track.save()
+        return track
+
+    async def save_genre(genre_name):
+        genre = await Genre.nodes.get_or_none(name=genre_name)
+        if not genre:
+            genre = Genre(name=genre_name)
+            await genre.save()
+        return genre
+
+    async def save_album(album_name):
+        album = await Album.nodes.get_or_none(name=album_name)
+        if not album:
+            album = Album(name=album_name)
+            await album.save()
+        return album
+
+    async def save_band(band_name):
+        band = await Band.nodes.get_or_none(name=band_name)
+        if not band:
+            band = Band(name=band_name)
+            await band.save()
+        return band
+
+    async def save_user_likes(self,username, artist_names, track_names, genre_names, album_names, band_names):
+        user = await User.nodes.get_or_none(username=username)
+        if not user:
+            user = User(username=username)
+            await user.save()
+
+        for artist_name in artist_names:
+            artist = await self.save_artist(artist_name)
+            await user.top_artists.connect(artist)
+        
+        for track_name in track_names:
+            track = await self.save_track(track_name)
+            await user.top_tracks.connect(track)
+        
+        for genre_name in genre_names:
+            genre = await self.save_genre(genre_name)
+            await user.top_genres.connect(genre)
+        
+        for album_name in album_names:
+            album = await self.save_album(album_name)
+            await user.top_albums.connect(album)
+        
+        for band_name in band_names:
+            band = await self.save_band(band_name)
+            await user.top_bands.connect(band)
+
 
 # Strategy for Spotify
 class SpotifyService(AuthStrategy):
@@ -237,13 +302,44 @@ class YTmusicService(AuthStrategy):
             }
         }
     
-        SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly']
-        flow = InstalledAppFlow.from_client_config(client_config, SCOPES,redirect_uri='http://127.0.0.1:8000/musicbud/ytmusic/callback')
+        SCOPES = ["openid",'https://www.googleapis.com/auth/userinfo.profile',
+                  'https://www.googleapis.com/auth/userinfo.email',
+                  'https://www.googleapis.com/auth/youtube.readonly',
+                  'https://www.googleapis.com/auth/youtube'
+                  ]
+        flow = InstalledAppFlow.from_client_config(client_config, scopes=SCOPES,redirect_uri='http://127.0.0.1:8000/musicbud/ytmusic/callback')
         auth_url, _ = flow.authorization_url(prompt='consent')
-
-
         return auth_url
+        
+    def get_tokens(self, code):
+        client_config = {
+        "installed": {
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
+                "redirect_uris": [self.redirect_uri],
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token"
+            }
+        }
+    
+        SCOPES = ["openid",'https://www.googleapis.com/auth/userinfo.profile',
+                  'https://www.googleapis.com/auth/userinfo.email',
+                  'https://www.googleapis.com/auth/youtube.readonly',
+                  'https://www.googleapis.com/auth/youtube'
+                  ]
+        flow = InstalledAppFlow.from_client_config(client_config, scopes=SCOPES,redirect_uri='http://127.0.0.1:8000/musicbud/ytmusic/callback')
+        return flow.fetch_token(code=code)
+    def get_user_profile(self,tokens) -> str:
 
+        token_filtered = {'access_token':tokens['access_token'],
+                          'expires_in':tokens['expires_in'],
+                          'refresh_token':tokens['refresh_token'],
+                          'token_type':tokens['token_type'],
+                          'expires_at':tokens['expires_at'],
+                          'scope':tokens['scope']
+                          }
+        return ytmusicapi.YTMusic(auth=token_filtered).get_account_info()  
+    
     def fetch_top_artists(self, user: str, limit: int = 10) -> List[str]:
         """
         Fetches and maps the top artists for a user.
@@ -294,45 +390,4 @@ class YTmusicService(AuthStrategy):
         top_albums = [album['title'] for album in response['results']]
         self.map_to_neo4j(user, 'Album', top_albums, 'YTMusic')
         return top_albums
-
-# class AppleMusicAuthStrategy(AuthStrategy):
-#     def __init__(self, developer_token, user_token):
-#         self.apple_music = AppleMusic(developer_token, user_token)
-#     def create_authorize_url(self):
-#         # Apple Music uses tokens for authorization
-#         return "Apple Music does not require an auth URL"
-
-#     def fetch_top_artists(self, user, limit=10):
-#         response = self.apple_music.get_user_top_artists(limit=limit)
-#         top_artists = [artist['attributes']['name'] for artist in response['data']]
-#         self.map_to_neo4j(user, 'Artist', top_artists, 'AppleMusic')
-#         return top_artists
-
-#     def fetch_top_tracks(self, user, limit=10):
-#         response = self.apple_music.get_user_top_tracks(limit=limit)
-#         top_tracks = [track['attributes']['name'] for track in response['data']]
-#         self.map_to_neo4j(user, 'Track', top_tracks, 'AppleMusic')
-#         return top_tracks
-
-#     def fetch_top_genres(self, user, limit=10):
-#         top_artists = self.fetch_top_artists(user, limit)
-#         genre_count = {}
-#         for artist in top_artists:
-#             tags = artist.get('attributes', {}).get('genreNames', [])
-#             for genre in tags:
-#                 genre_count[genre] = genre_count.get(genre, 0) + 1
-#         top_genres = sorted(genre_count.items(), key=lambda x: x[1], reverse=True)[:limit]
-#         genre_names = [genre[0] for genre in top_genres]
-#         self.map_to_neo4j(user, 'Genre', genre_names, 'AppleMusic')
-#         return genre_names
-
-#     def fetch_top_bands(self, user, limit=10):
-#         # Apple Music does not have a separate category for bands
-#         return []
-
-#     def fetch_top_albums(self, user, limit=10):
-#         response = self.apple_music.get_user_top_albums(limit=limit)
-#         top_albums = [album['attributes']['name'] for album in response['data']]
-#         self.map_to_neo4j(user, 'Album', top_albums, 'AppleMusic')
-#         return top_albums
 

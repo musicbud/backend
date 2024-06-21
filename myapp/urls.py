@@ -5,6 +5,7 @@ from .views import (
     not_found_view,
     error_view,
     login, spotify_refresh_token, spotify_callback,
+    ytmusic_callback,
     lastfm_callback,
     update_my_likes, set_my_bio,
     get_my_profile, get_bud_profile,
@@ -23,6 +24,7 @@ router = DefaultRouter()
 
 urlpatterns = [path('login', login, name='login'),
     path('spotify/callback', spotify_callback, name='spotify_callback'),
+    path('ytmusic/callback', ytmusic_callback, name='ytmusic_callback'),
     path('lastfm/callback', lastfm_callback, name='lastfm_callback'),
     path('soptify/refresh-token', spotify_refresh_token.as_view(), name='refresh_token'),
     path('update-my-likes', update_my_likes.as_view(), name='update_my_likes'),

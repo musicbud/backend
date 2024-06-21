@@ -1,7 +1,6 @@
 
 
 from .services import SpotifyService, LastFmService, YTmusicService 
-# from .services import AppleMusicAuthStrategy  
 from django.http import JsonResponse  
 from django.conf import settings
 import logging
@@ -15,8 +14,6 @@ def get_service(service):
             service_instance = SpotifyService(settings.SPOTIFY_CLIENT_ID, settings.SPOTIFY_CLIENT_SECRET, settings.SPOTIFY_REDIRECT_URI,settings.SPOTIFY_SCOPE)
         elif service == 'ytmusic':
             service_instance = YTmusicService(settings.YTMUSIC_CLIENT_ID, settings.YTMUSIC_CLIENT_SECRET, settings.YTMUSIC_REDIRECT_URI)
-        # elif service == 'apple':
-        #     service_instance = AppleService()
         else:
             return JsonResponse({'error': 'Unsupported service'}, status=400)
         return service_instance
