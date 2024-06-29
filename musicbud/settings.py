@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'django_neomodel',
     'django_pdb',
     'drf_yasg',
+    'adrf'
 
 ]
 

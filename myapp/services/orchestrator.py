@@ -1,6 +1,9 @@
 
 
-from .services import SpotifyService, LastFmService, YTmusicService 
+from .LastfmService import LastFmService
+from .SpotifyService import SpotifyService
+from .YTmusicService import YTmusicService 
+ 
 from django.http import JsonResponse  
 from django.conf import settings
 import logging

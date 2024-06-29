@@ -8,19 +8,18 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from rest_framework.exceptions import PermissionDenied
 from .CustomTokenAuthentication import CustomTokenAuthentication
-from .models import User
 from django.http import JsonResponse
 from .models import User
 
+from adrf.views import APIView as adrfAPIView
 from .services.orchestrator import get_service
 from .services.async_store_user_data import main
-from .services.services import LastFmService
 
 import logging
 logger = logging.getLogger(__name__)
 
 def login(request):
-    service = request.GET.get('service', 'lastfm')  # Default to 'lastfm' if no service is specified
+    service = request.GET.get('service', 'spotify')  # Default to 'lastfm' if no service is specified
     try:
         authorization_link = get_service(service).create_authorize_url()
         return JsonResponse({
@@ -45,7 +44,7 @@ def ytmusic_callback(request):
         except MultipleNodesReturned:
             return JsonResponse({'error': 'Multiple users found with this uid'}, status=500)
         except DoesNotExist:
-            user = User.create_from_ytmusic_profile(user_profile)
+            user = User.create_from_ytmusic_profile(user_profile,tokens)
 
         updated_user = User.update_ytmusic_tokens(user_profile,tokens)
         if updated_user is None:
@@ -55,7 +54,7 @@ def ytmusic_callback(request):
             'message': 'logged in successfully.',
             'code': 200,
             'status': 'HTTP OK',
-            'data':  tokens
+            'data':  tokens,
         })
     except Exception as e:
         logger.error(e)
@@ -68,19 +67,15 @@ def spotify_callback(request):
         
         tokens = get_service(service).get_tokens(code)
 
-        access_token = tokens['access_token']
-        refresh_token = tokens['refresh_token'] 
-        expires_at = tokens['expires_at']
-
-        user_profile = get_service(service).get_user_profile(access_token)
+        user_profile = get_service(service).get_user_profile(tokens)
         try:
             user = User.nodes.get(uid=user_profile['id'])
         except MultipleNodesReturned:
             return JsonResponse({'error': 'Multiple users found with this uid'}, status=500)
         except DoesNotExist:
-            user = User.create_from_spotify_profile(user_profile)
+            user = User.create_from_spotify_profile(user_profile,tokens)
 
-        updated_user = User.update_spotify_tokens(user_profile['id'], access_token, refresh_token, expires_at)
+        updated_user = User.update_spotify_tokens(user,tokens)
         if updated_user is None:
             return JsonResponse({'error': 'Error updating tokens'}, status=500)
 
@@ -88,7 +83,7 @@ def spotify_callback(request):
             'message': 'logged in successfully.',
             'code': 200,
             'status': 'HTTP OK',
-            'data': {'accessToken': access_token, 'refreshToken': refresh_token, 'expiresAt': expires_at}
+            'data': tokens
         })
     except Exception as e:
         logger.error(e)
@@ -110,7 +105,7 @@ def lastfm_callback(request):
         except DoesNotExist:
             user = User.create_from_lastfm_profile(user_profile,token)
 
-        updated_user = User.update_lastfm_tokens(user_profile, token)
+        updated_user = User.update_lastfm_tokens(user, token)
         if not updated_user:
             return JsonResponse({'error': 'Error updating user tokens'}, status=500)
 
@@ -133,24 +128,60 @@ class spotify_refresh_token(APIView):
     
     def post(self, request):
         try:
+            service = 'spotify'
             user = request.user  
-            new_data = refresh_access_token(user.refresh_token)
-            user.update_tokens(user.uid,new_data['access_token'], new_data['refresh_token'],new_data['expires_at'])
+            tokens = get_service(service).refresh_token(user)
+            user.update_spotify_tokens(user,tokens)
 
             return JsonResponse({
                 'message': 'refreshed successfully.',
                 'code': 200,
                 'status': 'HTTP OK',
                 'data': {
-                    'accessToken': new_data['access_token'],
-                    'refreshToken': new_data['refresh_token'],
-                    'expiresAt': new_data['expires_at']
+                    'access_token': tokens['access_token'],
+                    'refresh_token': tokens['refresh_token'],
+                    'expires_at': tokens['expires_at'],
+                    'expires_in': tokens['expires_in']
+
                 }
             })
         except Exception as e:
             print(e)
             logger.error(e)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)
+class ytmusic_refresh_token(APIView):
+    authentication_classes = [CustomTokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super(ytmusic_refresh_token, self).dispatch(*args, **kwargs)
+    
+    def post(self, request):
+        try:
+            service = 'ytmusic'
+            user = request.user  
+            tokens = get_service(service).refresh_token(user)
+            user.update_ytmusic_tokens(user,tokens)
+
+            return JsonResponse({
+                'message': 'refreshed successfully.',
+                'code': 200,
+                'status': 'HTTP OK',
+                'data': {
+                    'access_token': tokens['access_token'],
+                    'refresh_token': tokens['refresh_token'],
+                    'expires_at': tokens['expires_at'],
+                    'expires_in': tokens['expires_in']
+
+                }
+            })
+        except Exception as e:
+            print(e)
+            logger.error(e)
+            return JsonResponse({'error': 'Internal Server Error'}, status=500)
+
+#TODO edit response
 class get_my_profile(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [IsAuthenticated]
@@ -177,74 +208,17 @@ class update_my_likes(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [IsAuthenticated]
 
-    @method_decorator(csrf_exempt)
-    async def dispatch(self, *args, **kwargs):
-        return super(update_my_likes, self).dispatch(*args, **kwargs)
-    
-    async def post(self, request):
+    @csrf_exempt
+    def post(self, request):
         try:
             service = request.data.get('service')
-            user = request.user
+            user = request.user        
+            get_service(service).save_user_likes(user)
 
-            token = user.access_token         
+            # await main(user.username)
+            # await get_service(service).save_user_likes(user.username)
 
-            if service == 'spotify':
-                user_top_artists = get_service(service).fetch_top_artists(token)
-                user_top_tracks = get_service(service).fetch_top_tracks(token)
-                user_top_genres = get_service(service).fetch_top_genres(token)
-                user_top_albums = get_service(service).fetch_top_albums(token)
-                user_top_bands = get_service(service).fetch_top_bands(token)
-                
-               
-                # Extract artist and track IDs
-                artist_ids = [artist['id'] for artist in user_top_artists]
-                track_ids = [track['id'] for track in user_top_tracks]
-                genre_ids = [genre['id'] for genre in user_top_genres]
-                album_ids = [album['id'] for album in user_top_albums]
-                bands_ids = [band['id'] for band in user_top_bands]
-                
-                return JsonResponse({'message': 'Updated Likes'}, status=200)
-
-                # user.update_likes(user, artist_ids, track_ids, genre_ids, album_ids, bands_ids)
-
-            elif service == 'lastfm':
-                
-
-                await main(user.username)
-                user_top_artists = get_service(service).fetch_top_artists(user.username)
-                user_top_tracks = get_service(service).fetch_top_tracks(user.username)
-                user_top_genres = get_service(service).fetch_top_genres(user.username)
-                user_top_albums = get_service(service).fetch_top_albums(user.username)
-                user_top_bands = get_service(service).fetch_top_bands(user.username)
-                
-                # Extract artist and track IDs
-                artist_names = [artist.item.get_name() for artist in user_top_artists]
-                track_names = [track.item.get_name() for track in user_top_tracks]
-                genre_names = [genre[0] for genre in user_top_genres]
-                album_names = [album.item.get_name() for album in user_top_albums]
-                band_names = [band.item.get_name() for band in user_top_bands]
-                
-                await get_service(service).save_user_likes(user.username, artist_names, track_names, genre_names, album_names, band_names)
-
-                return JsonResponse({'message': 'Updated Likes'}, status=200)
-            elif service == 'ytmusic':
-                user_top_artists = get_service(service).fetch_top_artists(user.access_token)
-                user_top_tracks = get_service(service).fetch_top_tracks(user.access_token)
-                user_top_genres = get_service(service).fetch_top_genres(user.access_token)
-                user_top_albums = get_service(service).fetch_top_albums(user.access_token)
-                user_top_bands = get_service(service).fetch_top_bands(user.access_token)
-                
-                # Extract artist and track IDs
-                artist_names = [artist.item.get_name() for artist in user_top_artists]
-                track_names = [track.item.get_name() for track in user_top_tracks]
-                genre_names = [genre[0] for genre in user_top_genres]
-                album_names = [album.item.get_name() for album in user_top_albums]
-                bands_names = [band.item.get_name() for band in user_top_bands]
-                
-
-                return JsonResponse({'message': 'Updated Likes'}, status=200)
-            else:
-                return JsonResponse({'error': 'Service not supported'}, status=400)
+            return JsonResponse({'message': 'Updated Likes'}, status=200)
         except Exception as e:
             logger.error(e)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)

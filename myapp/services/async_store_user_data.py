@@ -1,7 +1,7 @@
 # Store data using neomodel
 from myapp.models import User,Artist,PlayedTrack
 from datetime import datetime
-from .services import LastFmService
+from .LastfmService import LastFmService
 from django.conf import settings
 
 import asyncio

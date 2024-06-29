@@ -1,12 +1,11 @@
 
-from neomodel import StructuredNode, \
-      IntegerProperty,db,BooleanProperty,ZeroOrMore \
-      ,StructuredNode, StructuredRel, StringProperty, IntegerProperty \
-      ,DateTimeProperty, FloatProperty, RelationshipTo, RelationshipFrom
+from neomodel import(StructuredNode, 
+      IntegerProperty,db,BooleanProperty,ZeroOrMore 
+      ,StructuredNode, StructuredRel, StringProperty, IntegerProperty 
+      ,DateTimeProperty, FloatProperty, RelationshipTo, RelationshipFrom,ArrayProperty)
 from neomodel.exceptions import MultipleNodesReturned, DoesNotExist
 import time
-import collections
-from datetime import datetime
+
 
 
 # TopItem relationship with weight
@@ -70,15 +69,7 @@ class Album(StructuredNode):
     artist = RelationshipFrom('Artist', 'HAS_ALBUM')
     tracks = RelationshipFrom('Track', 'IN_ALBUM')
 
-class Genre(StructuredNode):
-    uid = StringProperty()
-    name = StringProperty(unique_index=True, required=True)
-    artists = RelationshipTo(Artist, 'HAS_ARTIST')
 
-class Band(StructuredNode):
-    uid = StringProperty()
-    name = StringProperty(unique_index=True, required=True)
-    members = RelationshipFrom(Artist, 'MEMBER_OF')
 class Artist(LikedItem):
     uid = StringProperty( unique_index=True)
     href = StringProperty( unique_index=True, max_length=255)
@@ -129,6 +120,7 @@ class Genre(LikedItem):
     type = StringProperty( min_length=1, max_length=255)
     uri = StringProperty( min_length=1, max_length=255)
     liked_by = RelationshipFrom('User', 'LIKES_GENRE',cardinality=ZeroOrMore)
+    artists = RelationshipTo(Artist, 'HAS_ARTIST')
 
     def serialize(self):
         return {
@@ -139,10 +131,15 @@ class Genre(LikedItem):
             'type': self.type,
             'uri': self.uri
         }
-
+class Band(StructuredNode):
+    uid = StringProperty()
+    name = StringProperty(unique_index=True, required=True)
+    members = RelationshipFrom(Artist, 'MEMBER_OF')
 class User(StructuredNode):
     uid = StringProperty(unique_index=True)
+    browse_id = StringProperty(unique_index=True)
     username = StringProperty(unique_index=True)
+    video_id = StringProperty()
     channel_handle = StringProperty()
     account_name = StringProperty()
     email = StringProperty(unique_index=True, email=True, min_length=1, max_length=255)
@@ -156,8 +153,16 @@ class User(StructuredNode):
     bio = StringProperty()
     is_active = BooleanProperty()
     is_authenticated = BooleanProperty()
+    scope = ArrayProperty()
+    token_type = StringProperty()
+    source =  StringProperty()
 
     top_artists = RelationshipTo(Artist, 'TOP_ARTIST', model=TopItemRel)
+    top_tracks = RelationshipTo(Track, 'TOP_TRACK', model=TopItemRel)
+    top_genres = RelationshipTo(Genre, 'TOP_GENRE', model=TopItemRel)
+    top_albums = RelationshipTo(Album, 'TOP_ALBUM', model=TopItemRel)
+    top_bands = RelationshipTo(Band, 'TOP_BAND', model=TopItemRel)
+
     library_items = RelationshipTo(Artist, 'LIBRARY_ITEM', model=LibraryItemRel)
     played_tracks = RelationshipTo(PlayedTrack, 'PLAYED')
     loved_tracks = RelationshipTo(LovedTrack, 'LOVED')
@@ -178,30 +183,31 @@ class User(StructuredNode):
         }
     
     @classmethod
-    def update_spotify_tokens(cls, user_id, access_token, refresh_token, expires_at):
-        try:
-            user = cls.nodes.get(uid=user_id)
-        except MultipleNodesReturned:
-            # Handle the case where multiple users are found
-            print(f"Multiple users found with uid: {user_id}")
-            return None
-        except DoesNotExist:
-            # Handle the case where no user is found
-            print(f"No user found with uid: {user_id}")
-            return None
+    def update_spotify_tokens(cls, user,tokens):
+        user.access_token = tokens['access_token']
+        user.refresh_token = tokens['refresh_token']
+        user.expires_at = tokens['expires_at']
+        user.token_type = tokens['token_type']
+        user.expires_in = tokens['expires_in']
+        user.token_issue_time = time.time()
+        user.is_active= True
 
-        if user:
-            user.access_token = access_token
-            user.refresh_token = refresh_token
-            user.expires_at = expires_at
-            user.token_issue_time = time.time()
-            user.is_active= True
+        user.save()
+        return user
+    @classmethod
+    def update_ytmusic_tokens(cls, user,tokens):
+        user.access_token = tokens['access_token']
+        user.refresh_token = tokens['refresh_token']
+        user.expires_at = tokens['expires_at']
+        user.token_issue_time = time.time()
+        user.token_type = tokens['token_type']
+        user.expires_in = tokens['expires_in']
+        user.expires_at = tokens['expires_at']
+        user.scope = tokens['scope']
+        user.is_active= True
 
-            user.save()
-            return user
-        else:
-            print("User not found")
-            return None 
+        user.save()
+        return user
     @classmethod
     def update_lastfm_tokens(cls, profile, token):
         """
@@ -222,6 +228,7 @@ class User(StructuredNode):
         user.is_active = True
         user.save()
         return user
+    
     
     @classmethod
     def update_likes(self, user_instance, user_top_artists, user_top_tracks):
@@ -345,7 +352,7 @@ class User(StructuredNode):
 
         return buds
     @classmethod
-    def create_from_spotify_profile(cls, profile):
+    def create_from_spotify_profile(cls, profile,tokens):
         # Extract relevant data from the Spotify profile
         user_data = {
             'uid': profile.get('id', None),
@@ -353,6 +360,10 @@ class User(StructuredNode):
             'country' : profile.get('country', None),
             'display_name' : profile.get('display_name', None),
             'email' : profile.get('email', None),
+            'access_token' : tokens['access_token'],
+            'refresh_token' : tokens['refresh_token'],
+            'expires_in' : tokens['expires_in'],
+            'expires_at' : tokens['expires_at']
 
                 }
         
@@ -362,11 +373,19 @@ class User(StructuredNode):
         return user
     
     @classmethod
-    def create_from_ytmusic_profile(cls, profile):
+    def create_from_ytmusic_profile(cls, profile,tokens):
         # Extract relevant data from the Spotify profile
         user_data = {
             'account_name' : profile['accountName'] ,
-            'channel_handle': profile['channelHandle']
+            'channel_handle': profile['channelHandle'],
+             'access_token' :tokens['access_token'],
+            'refresh_token' :tokens['refresh_token'],
+            'expires_at' :tokens['expires_at'],
+            'token_issue_time' :time.time(),
+            'token_type' :tokens['token_type'],
+            'expires_in' :tokens['expires_in'],
+            'expires_at' :tokens['expires_at'],
+            'scope' :tokens['scope']
                 }
         
         # Create a new user instance with the extracted data
@@ -380,7 +399,6 @@ class User(StructuredNode):
         user_data = {
             'username': profile['username'],
             'access_token': token,
-
                 }
         
         # Create a new user instance with the extracted data
@@ -388,4 +406,6 @@ class User(StructuredNode):
         user.save()
         
         return user
+    
+    
 
