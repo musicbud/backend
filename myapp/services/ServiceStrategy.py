@@ -1,5 +1,9 @@
+from myapp.db_models.Artist import Artist
+from myapp.db_models.Track import Track
+from myapp.db_models.Genre import Genre
+from myapp.db_models.Band import Band
+from myapp.db_models.Album import Album
 
-from myapp.models import User,Artist,Track,Genre,Band,Album
 from abc import ABC, abstractmethod
 
 class ServiceStrategy(ABC):

@@ -2,7 +2,13 @@ from .ServiceStrategy import ServiceStrategy
 from google_auth_oauthlib.flow import InstalledAppFlow
 import ytmusicapi 
 from typing import List, Tuple
-from myapp.models import User,Artist,Track,Genre,Band,Album
+
+from myapp.db_models.Artist import Artist
+from myapp.db_models.Track import Track
+from myapp.db_models.Genre import Genre
+from myapp.db_models.Band import Band
+from myapp.db_models.Album import Album
+
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 import time

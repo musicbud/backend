@@ -9,11 +9,9 @@ from django.utils.decorators import method_decorator
 from rest_framework.exceptions import PermissionDenied
 from .CustomTokenAuthentication import CustomTokenAuthentication
 from django.http import JsonResponse
-from .models import User
+from .db_models.User import User
 
-from adrf.views import APIView as adrfAPIView
-from .services.orchestrator import get_service
-from .services.async_store_user_data import main
+from .services.SerivceSelector import get_service
 
 import logging
 logger = logging.getLogger(__name__)
@@ -181,7 +179,6 @@ class ytmusic_refresh_token(APIView):
             logger.error(e)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)
 
-#TODO edit response
 class get_my_profile(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [IsAuthenticated]
@@ -196,12 +193,15 @@ class get_my_profile(APIView):
             raise PermissionDenied("User not authenticated")
         user_profile = {
             'uid': user.uid,
+            'username':user.username,
+            'channel_handle':user.channel_handle,
+            'account_name':user.account_name,
+            'email': user.email,
+            'country': user.country,
             'display_name': user.display_name,
             'bio': user.bio,
-            'email': user.email,
-            'country': user.country
         }
-        return Response(user_profile, status=status.HTTP_200_OK)
+        return JsonResponse({'data':user_profile}, status=200)
 
 
 class update_my_likes(APIView):
@@ -218,7 +218,7 @@ class update_my_likes(APIView):
             # await main(user.username)
             # await get_service(service).save_user_likes(user.username)
 
-            return JsonResponse({'message': 'Updated Likes'}, status=200)
+            return JsonResponse({'message': 'Updated Likes successfully'}, status=200)
         except Exception as e:
             logger.error(e)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)
@@ -241,14 +241,9 @@ class set_my_bio(APIView):
                     'code': 400
                 }, status=400)
 
-            # Fetch the user node from the Neo4j database
-            user_node = User.nodes.get_or_none(uid=user.uid)
-            if user_node is None:
-                return JsonResponse({'error': 'User not found'}, status=404)
-
-            # Set the bio property of the user node
-            user_node.bio = bio
-            user_node.save()
+            # Set the bio property of the user
+            user.bio = bio
+            user.save()
 
             return JsonResponse({
                 'message': 'Bio updated successfully.',
@@ -275,19 +270,18 @@ class get_bud_profile(APIView):
             user = request.user
             bud_id = request.data.get('bud_id')
 
-            user_node = User.nodes.get_or_none(uid=user.uid)
             bud_node = User.nodes.get_or_none(uid=bud_id)
 
-            if user_node is None or bud_node is None:
+            if user is None or bud_node is None:
                 return JsonResponse({'error': 'User or bud not found'}, status=404)
 
 
             # Get all artists and tracks liked by the user and the bud
-            user_artists = {artist.uid for artist in user_node.likes_artist.all()} 
+            user_artists = {artist.uid for artist in user.likes_artist.all()} 
             bud_artists = {artist.uid for artist in bud_node.likes_artist.all()} 
-            user_tracks = {track.uid for track in user_node.likes_track.all()}  # Extracting track IDs
+            user_tracks = {track.uid for track in user.likes_track.all()}  # Extracting track IDs
             bud_tracks = {track.uid for track in bud_node.likes_track.all()}    # Extracting track IDs
-            user_genres = {genres.uid for genres in user_node.likes_genre.all()}  # Extracting genres IDs
+            user_genres = {genres.uid for genres in user.likes_genre.all()}  # Extracting genres IDs
             bud_genres = {genres.uid for genres in bud_node.likes_genre.all()}    # Extracting genres IDs
 
             # Find common artists and tracks

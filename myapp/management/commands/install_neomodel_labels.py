@@ -2,7 +2,6 @@
 
 from django.core.management.base import BaseCommand
 from neomodel import config, db
-from myapp.models import User, Track, Artist  # Import your Neomodel classes
 
 class Command(BaseCommand):
     help = 'Synchronize Neomodel models with Neo4j database'

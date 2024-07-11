@@ -1,9 +1,7 @@
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import AuthenticationFailed
-from rest_framework import HTTP_HEADER_ENCODING, exceptions
-from django.utils.translation import gettext_lazy as _
 import time
-from myapp.models import User 
+from myapp.db_models.User import User 
 
 class CustomTokenAuthentication(TokenAuthentication):
 
@@ -21,9 +19,7 @@ class CustomTokenAuthentication(TokenAuthentication):
         try:
             user = User.nodes.get(access_token=token_string)
         except User.DoesNotExist as e:
-            print(token_string)
             raise AuthenticationFailed(_('Invalid token.'))
-
         if not user.is_active:
             raise AuthenticationFailed(_('User inactive or deleted.'))
 

@@ -1,5 +1,7 @@
 # Store data using neomodel
-from myapp.models import User,Artist,PlayedTrack
+from myapp.db_models.User import User
+from myapp.db_models.Artist import Artist
+from myapp.db_models.Played_Track import PlayedTrack
 from datetime import datetime
 from .LastfmService import LastFmService
 from django.conf import settings

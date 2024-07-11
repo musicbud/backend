@@ -1,145 +1,26 @@
 
 from neomodel import(StructuredNode, 
       IntegerProperty,db,BooleanProperty,ZeroOrMore 
-      ,StructuredNode, StructuredRel, StringProperty, IntegerProperty 
-      ,DateTimeProperty, FloatProperty, RelationshipTo, RelationshipFrom,ArrayProperty)
+      ,StructuredNode, StringProperty, IntegerProperty 
+      , RelationshipTo,ArrayProperty)
 from neomodel.exceptions import MultipleNodesReturned, DoesNotExist
+from .Artist import Artist
+from .Track import Track
+from .Genre import Genre
+from .Band import Band
+from .Album import Album
+from .Played_Track import PlayedTrack
+from .Loved_Track import LovedTrack
+from .Top_Item_Rel import TopItemRel
+from .Library_Item_Rel import LibraryItemRel
 import time
 
 
 
-# TopItem relationship with weight
-class TopItemRel(StructuredRel):
-    weight = IntegerProperty()
 
-# SimilarItem relationship with match
-class SimilarItemRel(StructuredRel):
-    match = FloatProperty()
-
-# LibraryItem relationship with playcount and tagcount
-class LibraryItemRel(StructuredRel):
-    playcount = IntegerProperty()
-    tagcount = IntegerProperty()
-
-# PlayedTrack node
-class PlayedTrack(StructuredNode):
-    track = StringProperty()
-    album = StringProperty()
-    playback_date = DateTimeProperty()
-    timestamp = IntegerProperty()
-
-# LovedTrack node
-class LovedTrack(StructuredNode):
-    track = StringProperty()
-    date = DateTimeProperty()
-    timestamp = IntegerProperty()
-
-# ImageSizes node
-class ImageSizes(StructuredNode):
-    original = StringProperty()
-    large = StringProperty()
-    largesquare = StringProperty()
-    medium = StringProperty()
-    small = StringProperty()
-    extralarge = StringProperty()
-
-# Image node with a relationship to ImageSizes
-class Image(StructuredNode):
-    title = StringProperty()
-    url = StringProperty()
-    dateadded = DateTimeProperty()
-    format = StringProperty()
-    owner = StringProperty()
-    votes = IntegerProperty()
-    sizes = RelationshipTo(ImageSizes, 'HAS_SIZE')
-
-
-class LikedItem(StructuredNode):
-    uid = StringProperty(required=True, unique_index=True)
-
-    def serialize(self):
-        return {
-            'uid': self.uid,
-        }
-
-class Album(StructuredNode):
-    uid = StringProperty()
-    name = StringProperty(required=True)
-    href = StringProperty()
-    artist = RelationshipFrom('Artist', 'HAS_ALBUM')
-    tracks = RelationshipFrom('Track', 'IN_ALBUM')
-
-
-class Artist(LikedItem):
-    uid = StringProperty( unique_index=True)
-    href = StringProperty( unique_index=True, max_length=255)
-    name = StringProperty( max_length=255)
-    popularity = IntegerProperty( min_value=1, max_value=255)
-    type = StringProperty( max_length=255)
-    uri = StringProperty( max_length=255)
-    top_items = RelationshipFrom('User', 'TOP_ARTIST', model=TopItemRel)
-    similar_items = RelationshipFrom('Artist', 'SIMILAR_ARTIST', model=SimilarItemRel)
-    library_items = RelationshipFrom('User', 'LIBRARY_ITEM', model=LibraryItemRel)
-
-    liked_by = RelationshipFrom('User', 'LIKES_ARTIST',cardinality=ZeroOrMore)
-
-    def serialize(self):
-        return {
-            'uid': self.uid,
-            'href': self.href,
-            'name': self.name,
-            'popularity': self.popularity,
-            'type': self.type,
-            'uri': self.uri
-        }
-
-class Track(LikedItem):
-    uid = StringProperty( unique_index=True)
-    href = StringProperty( min_length=1, max_length=255)
-    name = StringProperty( min_length=1, max_length=255)
-    popularity = IntegerProperty( min_value=1, max_value=255)
-    type = StringProperty( min_length=1, max_length=255)
-    uri = StringProperty( min_length=1, max_length=255)
-    liked_by = RelationshipFrom('User', 'LIKES_TRACK',cardinality=ZeroOrMore)
-
-    def serialize(self):
-        return {
-            'uid': self.uid,
-            'href': self.href,
-            'name': self.name,
-            'popularity': self.popularity,
-            'type': self.type,
-            'uri': self.uri
-        }
-
-class Genre(LikedItem):
-    uid = StringProperty( unique_index=True)
-    href = StringProperty( min_length=1, max_length=255)
-    name = StringProperty( min_length=1, max_length=255)
-    popularity = IntegerProperty( min_value=1, max_value=255)
-    type = StringProperty( min_length=1, max_length=255)
-    uri = StringProperty( min_length=1, max_length=255)
-    liked_by = RelationshipFrom('User', 'LIKES_GENRE',cardinality=ZeroOrMore)
-    artists = RelationshipTo(Artist, 'HAS_ARTIST')
-
-    def serialize(self):
-        return {
-            'uid': self.uid,
-            'href': self.href,
-            'name': self.name,
-            'popularity': self.popularity,
-            'type': self.type,
-            'uri': self.uri
-        }
-class Band(StructuredNode):
-    uid = StringProperty()
-    name = StringProperty(unique_index=True, required=True)
-    members = RelationshipFrom(Artist, 'MEMBER_OF')
 class User(StructuredNode):
     uid = StringProperty(unique_index=True)
-    browse_id = StringProperty(unique_index=True)
     username = StringProperty(unique_index=True)
-    video_id = StringProperty()
     channel_handle = StringProperty()
     account_name = StringProperty()
     email = StringProperty(unique_index=True, email=True, min_length=1, max_length=255)
@@ -174,6 +55,9 @@ class User(StructuredNode):
     def serialize(self):
         return {
             'uid': self.uid,
+            'username':self.username,
+            'channel_handle':self.channel_handle,
+            'account_name':self.account_name,
             'email': self.email,
             'country': self.country,
             'display_name': self.display_name,
@@ -228,41 +112,7 @@ class User(StructuredNode):
         user.is_active = True
         user.save()
         return user
-    
-    
-    @classmethod
-    def update_likes(self, user_instance, user_top_artists, user_top_tracks):
 
-        # Get existing likes
-        existing_artist_likes = {rel.uid for rel in user_instance.likes_artist.all()}
-        existing_track_likes = {rel.uid for rel in user_instance.likes_track.all()}
-
-        # Create new likes relationships for top artists
-        for artist_id in user_top_artists:
-            if artist_id not in existing_artist_likes:
-                artist_node = Artist.nodes.get_or_none(uid=artist_id)
-                if artist_node is None:
-                    # Create a new artist node
-                    artist_node = Artist(uid=artist_id).save()
-                    
-                user_instance.likes_artist.connect(artist_node)
-
-        # Create new likes relationships for top tracks
-        for track_id in user_top_tracks:
-            if track_id not in existing_track_likes:
-                track_node = Track.nodes.get_or_none(uid=track_id)
-                if track_node is None:
-                    # Create a new track node
-                    track_node = Track(uid=track_id).save()
-                
-                user_instance.likes_track.connect(track_node)
-    @classmethod
-    def get_user_top_artists_ids(self):
-        return [artist.id for artist in self.likes.filter(_class='Artist')]
-    @classmethod
-    def get_user_top_tracks_ids(self):
-        return [track.id for track in self.likes.filter(_class='Track')]
-    
     @classmethod
     def set_and_update_bio(cls, user_id, bio):
         user = cls.nodes.get_or_none(uid=user_id)
