@@ -1,7 +1,8 @@
 
-from neomodel import StructuredNode, StringProperty,RelationshipFrom
+from neomodel import  StringProperty,RelationshipFrom,UniqueIdProperty
 from .Artist import Artist
-class Band(StructuredNode):
-    uid = StringProperty()
+from .Liked_Item import LikedItem
+class Band(LikedItem):
+    uid = UniqueIdProperty()
     name = StringProperty(unique_index=True, required=True)
     members = RelationshipFrom(Artist, 'MEMBER_OF')

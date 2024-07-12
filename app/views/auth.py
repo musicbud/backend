@@ -3,6 +3,10 @@ from neomodel.exceptions import MultipleNodesReturned, DoesNotExist
 from django.http import JsonResponse
 
 from ..db_models.User import User
+from ..db_models.spotify.Spotify_User import SpotifyUser
+from ..db_models.lastfm.Lastfm_User import LastfmUser
+from ..db_models.ytmusic.Ytmusic_User import YtmusicUser
+
 from ..services.ServiceSelector import get_service
 import logging
 
@@ -30,13 +34,13 @@ def ytmusic_callback(request):
         user_profile = get_service(service).get_user_profile(tokens)
 
         try:
-            user = User.nodes.get(channel_handle=user_profile['channelHandle'])
+            user = YtmusicUser.nodes.get(channel_handle=user_profile['channelHandle'])
         except MultipleNodesReturned:
             return JsonResponse({'error': 'Multiple users found with this uid'}, status=500)
         except DoesNotExist:
-            user = User.create_from_ytmusic_profile(user_profile,tokens)
+            user = YtmusicUser.create_from_ytmusic_profile(user_profile,tokens)
 
-        updated_user = User.update_ytmusic_tokens(user_profile,tokens)
+        updated_user = YtmusicUser.update_ytmusic_tokens(user_profile,tokens)
         if updated_user is None:
             return JsonResponse({'error': 'Error updating tokens'}, status=500)
 
@@ -59,13 +63,13 @@ def spotify_callback(request):
 
         user_profile = get_service(service).get_user_profile(tokens)
         try:
-            user = User.nodes.get(uid=user_profile['id'])
+            user = SpotifyUser.nodes.get(spotify_id=user_profile['id'])
         except MultipleNodesReturned:
             return JsonResponse({'error': 'Multiple users found with this uid'}, status=500)
         except DoesNotExist:
-            user = User.create_from_spotify_profile(user_profile,tokens)
+            user = SpotifyUser.create_from_spotify_profile(user_profile,tokens)
 
-        updated_user = User.update_spotify_tokens(user,tokens)
+        updated_user = SpotifyUser.update_spotify_tokens(user,tokens)
         if updated_user is None:
             return JsonResponse({'error': 'Error updating tokens'}, status=500)
 
@@ -89,13 +93,13 @@ def lastfm_callback(request):
 
         user_profile = get_service(service).get_user_profile(token)
         try:
-            user = User.nodes.get(username=user_profile['username'])
+            user = LastfmUser.nodes.get(username=user_profile['username'])
         except MultipleNodesReturned:
             return JsonResponse({'error': 'Multiple users found with this username'}, status=500)
         except DoesNotExist:
-            user = User.create_from_lastfm_profile(user_profile,token)
+            user = LastfmUser.create_from_lastfm_profile(user_profile,token)
 
-        updated_user = User.update_lastfm_tokens(user, token)
+        updated_user = LastfmUser.update_lastfm_tokens(user, token)
         if not updated_user:
             return JsonResponse({'error': 'Error updating user tokens'}, status=500)
 

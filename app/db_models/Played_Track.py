@@ -6,4 +6,3 @@ class PlayedTrack(StructuredNode):
     album = StringProperty()
     playback_date = DateTimeProperty()
     timestamp = IntegerProperty()
-

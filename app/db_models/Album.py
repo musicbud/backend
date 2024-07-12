@@ -1,8 +1,9 @@
-from neomodel import StructuredNode, StringProperty,RelationshipFrom
+from neomodel import  StringProperty,RelationshipFrom
+from .Liked_Item import LikedItem
 
-class Album(StructuredNode):
-    uid = StringProperty()
+class Album(LikedItem):
     name = StringProperty(required=True)
-    href = StringProperty()
-    artist = RelationshipFrom('Artist', 'HAS_ALBUM')
-    tracks = RelationshipFrom('Track', 'IN_ALBUM')
+
+    tracks = RelationshipFrom('.Track.Track', 'INCLUDED_IN')
+    artists = RelationshipFrom('.Artist.Artist', 'CONTRIBUTED_TO')
+   

@@ -1,11 +1,5 @@
-from neomodel import StructuredNode, StringProperty
+from neomodel import StructuredNode, UniqueIdProperty
 
 
 class LikedItem(StructuredNode):
-    uid = StringProperty(required=True, unique_index=True)
-
-    def serialize(self):
-        return {
-            'uid': self.uid,
-        }
-
+    uid = UniqueIdProperty()
