@@ -13,8 +13,8 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'musicbud.settings')
 django.setup()
 
 # Import Django models after setup
-from myapp.CustomTokenAuthentication import CustomTokenAuthentication
-from myapp.chat.models import Message
+from app.CustomTokenAuthentication import CustomTokenAuthentication
+from app.chat.models import Message
 
 User = get_user_model()
 connected_clients = set()
