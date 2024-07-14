@@ -134,6 +134,36 @@ class YTmusicService(ServiceStrategy):
                     'scope':user.scope
                 })
         return ytmusic.get_liked_songs(limit=limit)['tracks']
+    
+    def fetch_library_subscriptions(self, user: str, limit: int = 10) -> List[str]:
+        """
+        Fetches and maps the liked songs for a user.
+        """
+        ytmusic = ytmusicapi.YTMusic(
+            auth={
+                    'access_token':user.access_token,
+                    'expires_in':user.expires_in,
+                    'refresh_token':user.refresh_token,
+                    'token_type': user.token_type,
+                    'expires_at':user.expires_at,
+                    'scope':user.scope
+                })
+        return ytmusic.get_library_subscriptions(limit=limit)
+    
+    def fetch_history(self, user):
+        """
+        Fetches and maps the liked songs for a user.
+        """
+        ytmusic = ytmusicapi.YTMusic(
+            auth={
+                    'access_token':user.access_token,
+                    'expires_in':user.expires_in,
+                    'refresh_token':user.refresh_token,
+                    'token_type': user.token_type,
+                    'expires_at':user.expires_at,
+                    'scope':user.scope
+                })
+        return ytmusic.get_history()
 
 
     def map_to_neo4j(self, user, label, items, relation_type):
@@ -146,10 +176,15 @@ class YTmusicService(ServiceStrategy):
                 if not node:
                     node = YtmusicArtist(name=item['artist'],browse_id =item['browseId'] ,thumbnails=[image['url'] for image in item['thumbnails']]).save()
                 
-                
-                relationship = user.library_artists.relationship(node)
-                if relationship is None:
-                    relationship = user.library_artists.connect(node)
+
+                if relation_type == "library":
+                    relationship = user.library_artists.relationship(node)
+                    if relationship is None:
+                        relationship = user.library_artists.connect(node)
+                elif relation_type == "subscribed":
+                    relationship = user.subscriptions.relationship(node)
+                    if relationship is None:
+                        relationship = user.subscriptions.connect(node)
                 
             elif label == 'Track':
                 # Check if the track already exists
@@ -175,6 +210,10 @@ class YTmusicService(ServiceStrategy):
                     relationship = user.likes_track.relationship(node)
                     if relationship is None:
                         relationship = user.likes_track.connect(node)
+                elif relation_type == "played":
+                    relationship = user.played_track.relationship(node)
+                    if relationship is None:
+                        relationship = user.played_track.connect(node)
                 
             elif label == 'Album':
                 # Check if the album already exists
@@ -196,12 +235,18 @@ class YTmusicService(ServiceStrategy):
         user_library_tracks = self.fetch_library_tracks(user)
         user_library_albums = self.fetch_library_albums(user)
         user_liked_tracks = self.fetch_liked_tracks(user)
+        user_library_subscriptions = self.fetch_library_subscriptions(user)
+        user_history = self.fetch_history(user)
+    
 
         # Map data to Neo4j
         self.map_to_neo4j(user, 'Artist', user_library_artists,'library')
         self.map_to_neo4j(user, 'Track', user_library_tracks,'library') 
         self.map_to_neo4j(user, 'Album', user_library_albums,'library')
-        self.map_to_neo4j(user, 'Track', user_liked_tracks,'liked')
+        self.map_to_neo4j(user, 'Track', user_liked_tracks,'liked') 
+        self.map_to_neo4j(user, 'Artist', user_library_subscriptions,'subscribed')
+        self.map_to_neo4j(user, 'Track', user_history,'played')
+
 
 
     def refresh_token(self,user):

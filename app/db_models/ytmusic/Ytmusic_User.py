@@ -19,6 +19,8 @@ class YtmusicUser(User):
 
     likes_track = RelationshipTo(Track, 'LIKES_TRACK', cardinality=ZeroOrMore)
     
+    subscriptions = RelationshipTo(Artist, 'SUBSCRIBED_TO', cardinality=ZeroOrMore)
+    played_track = RelationshipTo(Track, 'PLAYED_TRACK', cardinality=ZeroOrMore)
     
 
     @classmethod
