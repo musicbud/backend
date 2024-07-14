@@ -1,11 +1,25 @@
 
 import time
-from neomodel import ( StringProperty)
+from neomodel import ( StringProperty,RelationshipTo,ZeroOrMore)
+
 from ..User import User
+from ..Artist import Artist
+from ..Track import Track
+from ..Genre import Genre
+from ..Album import Album
+from ..Library_Item_Rel import LibraryItemRel
 
 class YtmusicUser(User):
     channel_handle = StringProperty()
     account_name = StringProperty()
+
+    library_artists = RelationshipTo(Artist, 'LIBRARY_ARTIST', model=LibraryItemRel)
+    library_tracks = RelationshipTo(Track, 'LIBRARY_TRACK', model=LibraryItemRel)
+    library_albums = RelationshipTo(Album, 'LIBRARY_ALBUM', model=LibraryItemRel)
+
+    likes_track = RelationshipTo(Track, 'LIKES_TRACK', cardinality=ZeroOrMore)
+    
+    
 
     @classmethod
     def update_ytmusic_tokens(cls, user, tokens):

@@ -19,7 +19,7 @@ class update_my_likes(APIView):
     def post(self, request):
         try:
             service = request.data.get('service')
-            user = request.user        
+            user = request.user
             get_service(service).save_user_likes(user)
 
             # await main(user.username)

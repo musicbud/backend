@@ -32,15 +32,13 @@ def ytmusic_callback(request):
         code = request.GET.get('code')
         tokens = get_service(service).get_tokens(code=code)
         user_profile = get_service(service).get_user_profile(tokens)
-
         try:
             user = YtmusicUser.nodes.get(channel_handle=user_profile['channelHandle'])
         except MultipleNodesReturned:
             return JsonResponse({'error': 'Multiple users found with this uid'}, status=500)
         except DoesNotExist:
-            user = YtmusicUser.create_from_ytmusic_profile(user_profile,tokens)
-
-        updated_user = YtmusicUser.update_ytmusic_tokens(user_profile,tokens)
+            user = YtmusicUser.create_from_ytmusic_profile(user,tokens)
+        updated_user = YtmusicUser.update_ytmusic_tokens(user,tokens)
         if updated_user is None:
             return JsonResponse({'error': 'Error updating tokens'}, status=500)
 
@@ -92,13 +90,13 @@ def lastfm_callback(request):
             return JsonResponse({'error': 'Token not provided'}, status=400)
 
         user_profile = get_service(service).get_user_profile(token)
+
         try:
             user = LastfmUser.nodes.get(username=user_profile['username'])
         except MultipleNodesReturned:
             return JsonResponse({'error': 'Multiple users found with this username'}, status=500)
         except DoesNotExist:
             user = LastfmUser.create_from_lastfm_profile(user_profile,token)
-
         updated_user = LastfmUser.update_lastfm_tokens(user, token)
         if not updated_user:
             return JsonResponse({'error': 'Error updating user tokens'}, status=500)

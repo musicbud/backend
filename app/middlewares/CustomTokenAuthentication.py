@@ -19,9 +19,9 @@ class CustomTokenAuthentication(TokenAuthentication):
         try:
             user = User.nodes.get(access_token=token_string)
         except User.DoesNotExist as e:
-            raise AuthenticationFailed(_('Invalid token.'))
+            raise AuthenticationFailed('Invalid token.')
         if not user.is_active:
-            raise AuthenticationFailed(_('User inactive or deleted.'))
+            raise AuthenticationFailed('User inactive or deleted.')
 
         # if self.is_token_expired(user):
             # raise AuthenticationFailed(_('Access token expired.'))

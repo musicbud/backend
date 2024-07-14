@@ -2,7 +2,11 @@ from .ServiceStrategy import ServiceStrategy
 import pylast
 from typing import List, Tuple
 import os 
-# Strategy for Last.fm
+
+from app.db_models.lastfm.Lastfm_Artist import LastfmArtist
+from app.db_models.lastfm.Lastfm_Track import LastfmTrack
+from app.db_models.lastfm.Lastfm_Genre import LastfmGenre
+from app.db_models.lastfm.Lastfm_Album import LastfmAlbum
 
 class LastFmService(ServiceStrategy):
     """
@@ -47,6 +51,7 @@ class LastFmService(ServiceStrategy):
         
         return self.network.get_user(username).get_top_tracks(limit=limit)
 
+
     def fetch_top_genres(self, username: str, limit: int = 10) -> List[Tuple[str, int]]:
         """
         Fetches the top genres for a given user based on their top artists' tags.
@@ -67,27 +72,94 @@ class LastFmService(ServiceStrategy):
         # Convert dictionary to list of tuples for sorting
         sorted_genres = sorted(genre_count.items(), key=lambda x: x[1], reverse=True)[:limit]        
         return sorted_genres
-    def fetch_library(self, username: str):
+    
+    def fetch_liked_tracks(self, username: str):
         user = self.network.get_user(username)
-        library = user.get_library()
-        return library
+        loved_tracks = user.get_loved_tracks()
+        return loved_tracks
+    
 
-    def fetch_top_charts(self, limit: int = 10):
-        top_tracks = self.network.get_top_tracks(limit=limit)
-        top_artists = self.network.get_top_artists(limit=limit)
-        return top_tracks, top_artists
+    def map_to_neo4j(self, user, label, items,relation_type):
+        for item in items:
+            item_name = item.item.get_name()
+            item_id = item.item.get_mbid()  if item.item.get_mbid() is not None else item_name
 
+            item_weight = int(item.weight) if item.weight is not None else 0
+
+            node = None
+            if label == 'Artist':
+                node = LastfmArtist.nodes.get_or_none(lastfm_id=item_id)
+                if not node:
+                    node = LastfmArtist(lastfm_id=item_id, name=item_name).save()
+
+                if relation_type == "top":
+                    relationship = user.top_artists.relationship(node)
+                    if relationship is None:
+                        relationship = user.top_artists.connect(node)
+                elif relation_type == "loved":
+                    relationship = user.likes_artist.relationship(node)
+                    if relationship is None:
+                        relationship = user.likes_artist.connect(node)
+                relationship.weight = item_weight
+                relationship.save()
+
+            elif label == 'Track':
+                node = LastfmTrack.nodes.get_or_none(lastfm_id=item_id)
+                if not node:
+                    node = LastfmTrack(lastfm_id=item_id, name=item_name).save()
+                if relation_type == "top":
+                    relationship = user.top_tracks.relationship(node)
+                    if relationship is None:
+                        relationship = user.top_tracks.connect(node)
+                elif relation_type == "loved":
+                    relationship = user.likes_track.relationship(node)
+                    if relationship is None:
+                        relationship = user.likes_track.connect(node)
+                relationship.weight = item_weight
+                relationship.save()
+            
+            elif label == 'Album':
+                node = LastfmAlbum.nodes.get_or_none(lastfm_id=item_id)
+                if not node:
+                    node = LastfmAlbum(lastfm_id=item_id, name=item_name).save()
+                if relation_type == "top":
+                    relationship = user.top_albums.relationship(node)
+                    if relationship is None:
+                        relationship = user.top_albums.connect(node)
+                elif relation_type == "loved":
+                    relationship = user.likes_album.relationship(node)
+                    if relationship is None:
+                        relationship = user.likes_album.connect(node)
+                relationship.weight = item_weight
+                relationship.save()
+                
+            elif label == 'Genre':
+                node = LastfmGenre.nodes.get_or_none(lastfm_id=item_id)
+                if not node:
+                    node = LastfmGenre(lastfm_id=item_id,name=item_name).save()
+                if relation_type == "top":
+                    relationship = user.top_genres.relationship(node)
+                    if relationship is None:
+                        relationship = user.top_genres.connect(node)
+                elif relation_type == "loved":
+                    relationship = user.likes_genre.relationship(node)
+                    if relationship is None:
+                        relationship = user.likes_genre.connect(node)
+                relationship.weight = item_weight
+                relationship.save()
+            
     def save_user_likes(self, user):
+        
         user_top_artists =  self.fetch_top_artists(user.username)
         user_top_tracks =  self.fetch_top_tracks(user.username)
         user_top_genres =  self.fetch_top_genres(user.username)
+        user_liked_tracks =  self.fetch_liked_tracks(user.username)
+
         
-        # Extract artist, track, genre, album, and band names
-        artist_names = [artist.item.get_name() for artist in user_top_artists]
-        track_names = [track.item.get_name() for track in user_top_tracks]
-        genre_names = [genre[0] for genre in user_top_genres]
+
         
         # Map data to Neo4j
-        self.map_to_neo4j(user, 'Artist', artist_names, 'LastFM')
-        self.map_to_neo4j(user, 'Track', track_names, 'LastFM')
-        self.map_to_neo4j(user, 'Genre', genre_names, 'LastFM')
+        self.map_to_neo4j(user, 'Artist', user_top_artists,"top")
+        self.map_to_neo4j(user, 'Track', user_top_tracks,"top")
+        self.map_to_neo4j(user, 'Genre', user_top_genres,"top")
+        self.map_to_neo4j(user, 'Track', user_liked_tracks, "loved")

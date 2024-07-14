@@ -1,0 +1,7 @@
+
+from neomodel import StringProperty
+from ..Genre import Genre
+
+class LastfmGenre(Genre):
+    name = StringProperty( min_length=1, max_length=255)
+    

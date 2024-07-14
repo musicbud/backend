@@ -1,10 +1,25 @@
 import time
-from neomodel import ( StringProperty)
+from neomodel import ( StringProperty,RelationshipTo,ZeroOrMore)
+
 from ..User import User
+from ..Artist import Artist
+from ..Track import Track
+from ..Genre import Genre
+from ..Album import Album
+from ..Top_Item_Rel import TopItemRel
 
 class SpotifyUser(User):
     spotify_id = StringProperty(unique_index=True)
     username = StringProperty(unique_index=True)
+
+    top_artists = RelationshipTo(Artist, 'TOP_ARTIST', model=TopItemRel)
+    top_tracks = RelationshipTo(Track, 'TOP_TRACK', model=TopItemRel)
+    top_genres = RelationshipTo(Genre, 'TOP_GENRE', model=TopItemRel)
+
+    likes_artist = RelationshipTo(Artist, 'LIKES_ARTIST', cardinality=ZeroOrMore)
+    likes_track = RelationshipTo(Track, 'LIKES_TRACK', cardinality=ZeroOrMore)
+    likes_genre = RelationshipTo(Genre, 'LIKES_GENRE', cardinality=ZeroOrMore)
+    likes_album = RelationshipTo(Album, 'LIKES_ALBUM', cardinality=ZeroOrMore)
     
     @classmethod
     def update_spotify_tokens(cls, user, tokens):
