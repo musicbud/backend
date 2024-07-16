@@ -3,13 +3,32 @@ from ..Album import Album
 
 class SpotifyAlbum(Album):
     spotify_id = StringProperty()
-    name = StringProperty(required=True)
     href = StringProperty()
+    label = StringProperty()
     album_type = StringProperty()
     release_date = StringProperty()
     total_tracks = IntegerProperty()
     uri = StringProperty()
     spotify_url = StringProperty()
     images = ArrayProperty()
-
-    
+    upc= StringProperty()
+    total_tracks=IntegerProperty()
+    image_heights = ArrayProperty()
+    image_widthes = ArrayProperty()
+    def serialize(self):
+        return {
+            'uid': self.uid,
+            'spotify_id': self.spotify_id,
+            'name': self.name,
+            'href': self.href,
+            'label': self.label,
+            'album_type' :self.album_type ,
+            'release_date' : self.release_date,
+            'total_tracks' : self.total_tracks,
+            'uri' : self.uri,
+            'upc' : self.upc,
+            'spotify_url' : self.spotify_url,
+            'images' : self.images,
+            'artists': [artist.serialize() for artist in self.artists],
+            'tracks': [track.serialize() for track in self.tracks],
+        }

@@ -37,7 +37,7 @@ def ytmusic_callback(request):
         except MultipleNodesReturned:
             return JsonResponse({'error': 'Multiple users found with this uid'}, status=500)
         except DoesNotExist:
-            user = YtmusicUser.create_from_ytmusic_profile(user,tokens)
+            user = YtmusicUser.create_from_ytmusic_profile(user_profile,tokens)
         updated_user = YtmusicUser.update_ytmusic_tokens(user,tokens)
         if updated_user is None:
             return JsonResponse({'error': 'Error updating tokens'}, status=500)

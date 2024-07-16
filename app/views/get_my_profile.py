@@ -6,6 +6,7 @@ from django.utils.decorators import method_decorator
 from rest_framework.exceptions import PermissionDenied
 from django.http import JsonResponse
 
+from app.services.ServiceSelector import get_service
 from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
 
 import logging
@@ -21,16 +22,9 @@ class get_my_profile(APIView):
     
     def post(self, request):
         user = request.user
-        if not user.is_authenticated:
-            raise PermissionDenied("User not authenticated")
-        user_profile = {
-            'uid': user.uid,
-            'username':user.username,
-            'channel_handle':user.channel_handle,
-            'account_name':user.account_name,
-            'email': user.email,
-            'country': user.country,
-            'display_name': user.display_name,
-            'bio': user.bio,
-        }
-        return JsonResponse({'data':user_profile}, status=200)
+        user_profile = user.get_profile(user);
+
+        return JsonResponse({
+            'message': 'fetched user profile successfully',
+            'data':user_profile
+            }, status=200)

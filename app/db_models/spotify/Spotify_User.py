@@ -16,10 +16,10 @@ class SpotifyUser(User):
     top_tracks = RelationshipTo(Track, 'TOP_TRACK', model=TopItemRel)
     top_genres = RelationshipTo(Genre, 'TOP_GENRE', model=TopItemRel)
 
-    likes_artist = RelationshipTo(Artist, 'LIKES_ARTIST', cardinality=ZeroOrMore)
-    likes_track = RelationshipTo(Track, 'LIKES_TRACK', cardinality=ZeroOrMore)
-    likes_genre = RelationshipTo(Genre, 'LIKES_GENRE', cardinality=ZeroOrMore)
-    likes_album = RelationshipTo(Album, 'LIKES_ALBUM', cardinality=ZeroOrMore)
+    likes_artists = RelationshipTo(Artist, 'LIKES_ARTIST')
+    likes_tracks = RelationshipTo(Track, 'LIKES_TRACK')
+    likes_genres = RelationshipTo(Genre, 'LIKES_GENRE')
+    likes_albums = RelationshipTo(Album, 'LIKES_ALBUM')
     
     @classmethod
     def update_spotify_tokens(cls, user, tokens):
@@ -30,6 +30,7 @@ class SpotifyUser(User):
         user.expires_in = tokens['expires_in']
         user.token_issue_time = time.time()
         user.is_active = True
+        user.service = 'spotify'
         user.save()
         return user
 
@@ -43,10 +44,25 @@ class SpotifyUser(User):
             'access_token': tokens['access_token'],
             'refresh_token': tokens['refresh_token'],
             'expires_in': tokens['expires_in'],
-            'expires_at': tokens['expires_at']
+            'expires_at': tokens['expires_at'],
+            'spotify_id':profile.get('id', None),
+            'service' :'spotify'
+
         }
         user = cls(**user_data)
         user.save()
         return user
+    
+    @classmethod
+    def get_profile(cls, user):
+        return {
+            'top_artists': [artist.serialize() for artist in user.top_artists],
+            'top_tracks': [track.serialize() for track in user.top_tracks],
+            'top_genres': [genre.serialize() for genre in user.top_genres],
+            'likes_artists': [artist.serialize() for artist in user.likes_artists],
+            'likes_tracks': [track.serialize() for track in user.likes_tracks],
+            'likes_genres': [genre.serialize() for genre in user.likes_genres],
+            'likes_albums': [album.serialize() for album in user.likes_albums],
+        }
 
 

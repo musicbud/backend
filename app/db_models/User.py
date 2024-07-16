@@ -16,6 +16,7 @@ class User(StructuredNode):
     bio = StringProperty()
     is_active = BooleanProperty()
     is_authenticated = BooleanProperty()
+    service = StringProperty()
 
     access_token = StringProperty()
     refresh_token = StringProperty()
@@ -25,9 +26,6 @@ class User(StructuredNode):
     token_type = StringProperty()
     scope = ArrayProperty()
 
-
-    
-
     @classmethod
     def set_and_update_bio(cls, user_id, bio):
         user = cls.nodes.get_or_none(uid=user_id)
@@ -36,12 +34,7 @@ class User(StructuredNode):
             user.save()
             return True
         return False
-
-    @classmethod
-    def get_profile(cls, user_id):
-        user = cls.nodes.filter(uid=user_id).first()
-        return user
-
+    
     @classmethod
     def get_bud_profile(cls, user_id, bud_id, limit=50, skip=0):
         cypher_query = f"""

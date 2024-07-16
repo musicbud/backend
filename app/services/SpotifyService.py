@@ -7,6 +7,9 @@ from app.db_models.spotify.Spotify_Artist import SpotifyArtist
 from app.db_models.spotify.Spotify_Track import SpotifyTrack
 from app.db_models.spotify.Spotify_Genre import SpotifyGenre
 from app.db_models.spotify.Spotify_Album import SpotifyAlbum
+
+from django.http import JsonResponse
+
 class SpotifyService(ServiceStrategy):
     def __init__(self, client_id, client_secret, redirect_uri, scope):
         self.client_id = client_id
@@ -73,7 +76,13 @@ class SpotifyService(ServiceStrategy):
                         spotify_id=artist_data['id'],
                         name=artist_data['name'],
                         uri=artist_data['uri'],
-                        spotify_url=artist_data['external_urls']['spotify']
+                        spotify_url=artist_data['external_urls']['spotify'],
+                        followers=artist_data['followers']['total'],
+                        href= artist_data['href'],
+                        images= [image['url'] for image in artist_data['images']],
+                        image_heights =[image['height'] for image in artist_data['images']],
+                        image_widthes = [image['width'] for image in artist_data['images']],
+                        genres= artist_data['genres']
                     ).save()
                 if relation_type == "top":
                     user.top_artists.connect(node)
@@ -87,6 +96,7 @@ class SpotifyService(ServiceStrategy):
                     node = SpotifyTrack(
                         spotify_id=track_data['id'],
                         name=track_data['name'],
+                        href= track_data['href'],
                         duration_ms=track_data['duration_ms'],
                         disc_number=track_data['disc_number'],
                         explicit=track_data['explicit'],
@@ -95,7 +105,7 @@ class SpotifyService(ServiceStrategy):
                         preview_url=track_data['preview_url'],
                         track_number=track_data['track_number'],
                         uri=track_data['uri'],
-                        spotify_url=track_data['external_urls']['spotify']
+                        spotify_url=track_data['external_urls']['spotify'],
                     ).save()
                 if relation_type == "top":
                     user.top_tracks.connect(node)
@@ -114,7 +124,9 @@ class SpotifyService(ServiceStrategy):
                         total_tracks=album_data['total_tracks'],
                         uri=album_data['uri'],
                         spotify_url=album_data['external_urls']['spotify'],
-                        images=[image['url'] for image in album_data['images']]
+                        images= [image['url'] for image in album_data['images']],
+                        image_heights =[image['height'] for image in album_data['images']],
+                        image_widthes = [image['width'] for image in album_data['images']]
                     ).save()
                 node.album.connect(album_node)
 
@@ -123,15 +135,17 @@ class SpotifyService(ServiceStrategy):
                     artist_node = SpotifyArtist.nodes.get_or_none(spotify_id=artist_data['id'])
                     if not artist_node:
                         artist_node = SpotifyArtist(
-                            spotify_id=artist_data['id'],
-                            name=artist_data['name'],
-                            uri=artist_data['uri'],
-                            spotify_url=artist_data['external_urls']['spotify']
+                        spotify_id=artist_data['id'],
+                        name=artist_data['name'],
+                        uri=artist_data['uri'],
+                        spotify_url=artist_data['external_urls']['spotify'],
+                        href= artist_data['href'],
+                        type = artist_data['type']
                         ).save()
                     node.artists.connect(artist_node)
 
             elif label == 'Genre':
-                genre_data = item
+                genre_data = item[0]
                 node = SpotifyGenre.nodes.get_or_none(name=genre_data)
                 if not node:
                     node = SpotifyGenre(name=genre_data).save()
@@ -149,7 +163,11 @@ class SpotifyService(ServiceStrategy):
                         total_tracks=album_data['total_tracks'],
                         uri=album_data['uri'],
                         spotify_url=album_data['external_urls']['spotify'],
-                        images=[image['url'] for image in album_data['images']]
+                        genres= [genre[0] for genre in album_data['gemres']],
+                        images= [image['url'] for image in album_data['images']],
+                        image_heights =[image['height'] for image in album_data['images']],
+                        image_widthes = [image['width'] for image in album_data['images']]
+
                     ).save()
                 if relation_type == "top":
                     user.top_albums.connect(node)
@@ -163,7 +181,7 @@ class SpotifyService(ServiceStrategy):
         user_followed_artists = self.fetch_followed_artists(user)  
         user_saved_tracks = self.fetch_saved_tracks(user)  
         user_saved_albums = self.fetch_saved_albums(user)  
-
+            
         # Map data to Neo4j
         self.map_to_neo4j(user, 'Artist', user_top_artists, "top")
         self.map_to_neo4j(user, 'Track', user_top_tracks, "top")
@@ -173,6 +191,6 @@ class SpotifyService(ServiceStrategy):
         self.map_to_neo4j(user, 'Album', user_saved_albums, "saved")
 
 
-        def refresh_token(self,user):
-            return self.auth_manager.refresh_access_token(user.refresh_token)
+    def refresh_token(self,user):
+        return self.auth_manager.refresh_access_token(user.refresh_token)
             

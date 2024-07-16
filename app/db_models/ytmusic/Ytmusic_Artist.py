@@ -1,9 +1,27 @@
-from neomodel import StringProperty,ArrayProperty
+from neomodel import StringProperty,ArrayProperty,IntegerProperty
 
 from ..Artist import Artist
 
 
 class YtmusicArtist(Artist):
     ytmusic_id =StringProperty() 
-    browse_id = StringProperty(unique_index=True)
+    browseId = StringProperty(unique_index=True)
+    subscribers = IntegerProperty() 
     thumbnails = ArrayProperty()
+    thumbnail_heights = ArrayProperty()
+    thumbnail_widthes = ArrayProperty()
+
+    def serialize(self):
+        return {
+            'uid': self.uid,
+            'name': self.name,
+            'ytmusic_id':self.ytmusic_id,
+            'browseId':self.browseId,
+            'subscribers':self.subscribers,
+            'thumbnails':self.thumbnails,
+            'thumbnail_heights':self.thumbnail_heights,
+            'thumbnail_widthes':self.thumbnail_widthes
+            
+
+        }
+

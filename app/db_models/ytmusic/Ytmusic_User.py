@@ -33,6 +33,8 @@ class YtmusicUser(User):
         user.expires_in = tokens['expires_in']
         user.scope = tokens['scope']
         user.is_active = True
+        user.service = 'ytmusic'
+
         user.save()
         return user
 
@@ -47,8 +49,20 @@ class YtmusicUser(User):
             'token_issue_time': time.time(),
             'token_type': tokens['token_type'],
             'expires_in': tokens['expires_in'],
-            'scope': tokens['scope']
+            'scope': tokens['scope'],
+            'service': 'ytmusic'
         }
         user = cls(**user_data)
         user.save()
         return user
+    
+    @classmethod
+    def get_profile(cls, user):
+        return {
+            'library_artists': [artist.serialize() for artist in user.library_artists],
+            'library_tracks': [track.serialize() for track in user.library_tracks],
+            'library_genres': [genre.serialize() for genre in user.library_albums],
+            'likes_tracks': [track.serialize() for track in user.likes_track],
+            'played_track': [track.serialize() for track in user.played_track],
+            'subscriptions': [artist.serialize() for artist in user.subscriptions],
+        }

@@ -18,13 +18,9 @@ class update_my_likes(APIView):
     @csrf_exempt
     def post(self, request):
         try:
-            service = request.data.get('service')
             user = request.user
+            service = user.service
             get_service(service).save_user_likes(user)
-
-            # await main(user.username)
-            # await get_service(service).save_user_likes(user.username)
-
             return JsonResponse({'message': 'Updated Likes successfully'}, status=200)
         except Exception as e:
             logger.error(e)

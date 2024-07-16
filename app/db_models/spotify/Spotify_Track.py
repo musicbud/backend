@@ -1,4 +1,4 @@
-from neomodel import ( StringProperty,IntegerProperty,BooleanProperty)
+from neomodel import ( StringProperty,IntegerProperty,BooleanProperty,ArrayProperty)
 from ..Track import Track
 
 
@@ -13,8 +13,34 @@ class SpotifyTrack(Track):
     disc_number = IntegerProperty()
     explicit = BooleanProperty()
     isrc = StringProperty()
+    upc=StringProperty()
     preview_url = StringProperty()
     track_number = IntegerProperty()
     spotify_url = StringProperty()
+    images = ArrayProperty()
+    image_heights = ArrayProperty()
+    image_widthes = ArrayProperty()
     
+    def serialize(self):
+        return {
+            'uid': self.uid,
+            'name': self.name,
+            'spotify_id':self.spotify_id,
+            'href':self.href,
+            'popularity':self.popularity,
+            'type':self.type,
+            'uri':self.uri,
+            'duration_ms':self.duration_ms,
+            'disc_number':self.disc_number,
+            'explicit':self.explicit,
+            'preview_url':self.preview_url,
+            'track_number':self.track_number,
+            'spotify_url':self.spotify_url,
+            'images':self.images,
+            'image_heights':self.image_heights,
+            'image_widthes':self.image_widthes
+            
+
+        }
+
     
