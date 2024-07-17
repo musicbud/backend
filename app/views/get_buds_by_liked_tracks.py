@@ -11,44 +11,41 @@ from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
 import logging
 logger = logging.getLogger(__name__)
 
-class get_buds_by_genres(APIView):
+class get_buds_by_liked_tracks(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     @method_decorator(csrf_exempt)
     def dispatch(self, *args, **kwargs):
-        return super(get_buds_by_genres, self).dispatch(*args, **kwargs)
+        return super(get_buds_by_liked_tracks, self).dispatch(*args, **kwargs)
 
+    
     def post(self, request):
         try:
             user = request.user
-            user_id = request.user.uid
-            user_node = User.nodes.get_or_none(uid=user_id)
+            user_node = User.nodes.get_or_none(uid=user.uid)
+
             if not user_node:
                 return JsonResponse({'error': 'User not found'}, status=404)
 
             buds = []
-            for genre in user_node.likes_genre.all():
-                buds.extend(genre.liked_by.all())
+            for track in user_node.likes_tracks.all():
+                buds.extend(track.users.exclude(uid=user.uid))
 
-            # Filter out the user and duplicates
-            buds = list({bud.uid: bud for bud in buds if bud.uid != user_id}.values())
+            # Filter out duplicates
+            buds = list({bud.uid: bud for bud in buds}.values())
 
             buds_data = []
-            genre_ids = []
+            total_common_tracks_count = 0
 
             for bud in buds:
+                bud_liked_track_uids = [track.uid for track in bud.likes_tracks.all()]
 
-                bud_liked_genre_uids = [genre.uid for genre in bud.likes_genre.all()]
+                common_tracks = user_node.likes_tracks.filter(uid__in=bud_liked_track_uids)
+                common_tracks_count = len(common_tracks)
+                total_common_tracks_count += common_tracks_count
 
-                common_genres = user_node.likes_genre.filter(uid__in=bud_liked_genre_uids)
-
-                common_genres_count = len(common_genres)
-
-                 # Extract uid values into a list
-                genre_ids = [genre.uid for genre in common_genres]
-
-                bud_data = {
+                buds_data.append({
                     'uid': bud.uid,
                     'email': bud.email,
                     'country': bud.country,
@@ -56,14 +53,9 @@ class get_buds_by_genres(APIView):
                     'bio': bud.bio,
                     'is_active': bud.is_active,
                     'is_authenticated': bud.is_authenticated,
-                    'commonGenres': [{'name': genre.name} for genre in common_genres],
-                    'commonGenresCount': common_genres_count
-                }
-                buds_data.append(bud_data)
-            common_genres_data = fetch_genres(user.access_token,genre_ids)
-
-            for bud in buds_data:
-                bud['commonGenres'] = [genre for genre in common_genres_data if genre['id'] in genre_ids]
+                    'commonTracksCount': common_tracks_count,
+                    'commonTracks': [track.serialize() for track in common_tracks]
+                })
 
             return JsonResponse({
                 'message': 'Fetched buds successfully.',
@@ -71,7 +63,7 @@ class get_buds_by_genres(APIView):
                 'successful': True,
                 'data': {
                     'buds': buds_data,
-                    'totalCommonGenresCount': sum(bud['commonGenresCount'] for bud in buds_data)
+                    'totalCommonTracksCount': total_common_tracks_count
                 }
             })
         except Exception as e:

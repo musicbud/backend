@@ -31,38 +31,67 @@ class get_bud_profile(APIView):
                 return JsonResponse({'error': 'User or bud not found'}, status=404)
 
             # Get all artists and tracks liked by the user and the bud
-            user_artists = list(user.top_artists.all()) 
-            bud_artists = list(bud_node.top_artists.all()) 
-            user_tracks = list(user.top_tracks.all())  
-            bud_tracks = list(bud_node.top_tracks.all())    
-            user_genres = list(user.top_genres.all())  
-            bud_genres = list(bud_node.top_genres.all())
+            user_top_artists = list(user.top_artists.all()) 
+            bud_top_artists = list(bud_node.top_artists.all()) 
+            user_top_tracks = list(user.top_tracks.all())  
+            bud_top_tracks = list(bud_node.top_tracks.all())    
+            user_top_genres = list(user.top_genres.all())  
+            bud_top_genres = list(bud_node.top_genres.all())
+
+            user_likes_artists = list(user.likes_artists.all())  
+            bud_likes_artists = list(bud_node.likes_artists.all())
+
+            user_likes_tracks = list(user.likes_tracks.all())  
+            bud_likes_tracks = list(bud_node.likes_tracks.all())  
+            
+            user_likes_albums = list(user.likes_albums.all())
+            bud_likes_albums = list(bud_node.likes_albums.all())
+
 
 
             # Convert to sets of unique identifiers
-            user_artist_ids = set(artist.id for artist in user_artists)
-            bud_artist_ids = set(artist.id for artist in bud_artists)
-            user_track_ids = set(track.id for track in user_tracks)
-            bud_track_ids = set(track.id for track in bud_tracks)
-            user_genre_ids = set(genre.id for genre in user_genres)
-            bud_genre_ids = set(genre.id for genre in bud_genres)
+            user_top_artist_ids = set(artist.id for artist in user_top_artists)
+            bud_top_artist_ids = set(artist.id for artist in bud_top_artists)
+            user_top_track_ids = set(track.id for track in user_top_tracks)
+            bud_top_track_ids = set(track.id for track in bud_top_tracks)
+            user_top_genre_ids = set(genre.id for genre in user_top_genres)
+            bud_top_genre_ids = set(genre.id for genre in bud_top_genres)
+
+            user_likes_artist_ids = set(artist.id for artist in user_likes_artists)
+            bud_likes_artist_ids = set(artist.id for artist in bud_likes_artists)
+            user_likes_track_ids = set(track.id for track in user_likes_tracks)
+            bud_likes_track_ids = set(track.id for track in bud_likes_tracks)
+            user_likes_album_ids = set(album.id for album in user_likes_albums)
+            bud_likes_album_ids = set(album.id for album in bud_likes_albums)
+
 
             # Find common artists, tracks, and genres by unique identifiers
-            common_artist_ids = user_artist_ids.intersection(bud_artist_ids)
-            common_track_ids = user_track_ids.intersection(bud_track_ids)
-            common_genre_ids = user_genre_ids.intersection(bud_genre_ids)
+            common_top_artist_ids = user_top_artist_ids.intersection(bud_top_artist_ids)
+            common_top_track_ids = user_top_track_ids.intersection(bud_top_track_ids)
+            common_top_genre_ids = user_top_genre_ids.intersection(bud_top_genre_ids)
+
+            common_likes_artist_ids = user_likes_artist_ids.intersection(bud_likes_artist_ids)
+            common_likes_track_ids = user_likes_track_ids.intersection(bud_likes_track_ids)
+            common_likes_album_ids = user_likes_album_ids.intersection(bud_likes_album_ids)
 
             # Convert back to original objects
-            common_artists = [artist for artist in user_artists if artist.id in common_artist_ids]
-            common_tracks = [track for track in user_tracks if track.id in common_track_ids]
-            common_genres = [genre for genre in user_genres if genre.id in common_genre_ids]
+            common_top_artists = [artist for artist in user_top_artists if artist.id in common_top_artist_ids]
+            common_top_tracks = [track for track in user_top_tracks if track.id in common_top_track_ids]
+            common_top_genres = [genre for genre in user_top_genres if genre.id in common_top_genre_ids]
+
+            common_likes_artists = [artist for artist in user_likes_artists if artist.id in common_likes_artist_ids]
+            common_likes_tracks = [track for track in user_likes_tracks if track.id in common_likes_track_ids]
+            common_likes_albums = [album for album in user_likes_albums if album.id in common_likes_album_ids]
 
             return JsonResponse({
-                'message': 'Get Bud Profile',
+                'message': 'Fetched Bud Profile Successfully',
                 'data': {
-                    'common_artists_data': [artist.serialize() for artist in common_artists],
-                    'common_tracks_data': [track.serialize() for track in common_tracks],
-                    'common_genres_data': [genre.serialize() for genre in common_genres]
+                    'common_top_artists_data': [artist.serialize() for artist in common_top_artists],
+                    'common_top_tracks_data': [track.serialize() for track in common_top_tracks],
+                    'common_top_genres_data': [genre.serialize() for genre in common_top_genres],
+                    'common_likes_artists_data': [artist.serialize() for artist in common_likes_artists],
+                    'common_likes_tracks_data': [track.serialize() for track in common_likes_tracks],
+                    'common_likes_albums_data': [album.serialize() for album in common_likes_albums]
                 }
             }, status=200)
         

@@ -94,8 +94,8 @@ def create_user_seed(request):
               fake_genres_data[0],
               fake_genres_data[1]
         ]
-        get_service(service).map_to_neo4j(user, 'Genre', data, "top")
-# create followed artists 
+        get_service(service).map_to_neo4j(user, 'Genre', data, "Track")
+# create saved artists 
 
 
     json_file_path = os.path.join(os.path.dirname(__file__), 'user_followed_artists.json')
@@ -107,8 +107,22 @@ def create_user_seed(request):
               fake_artists_data[0],
               fake_artists_data[1]
         ]
-        get_service(service).map_to_neo4j(user, 'Artist', data, "saved")
+        get_service(service).map_to_neo4j(user, 'Artist', data, "followed")
 # create saved albums
+
+
+    json_file_path = os.path.join(os.path.dirname(__file__), 'user_saved_tracks.json')
+    with open(json_file_path, 'r') as file:
+        tracks_data = json.load(file)
+        data = [
+              tracks_data[0],
+              tracks_data[1],
+              fake_tracks_data[0],
+              fake_tracks_data[1]
+        ]
+        get_service(service).map_to_neo4j(user, 'Track', data, "saved")
+# create saved albums
+
 
     json_file_path = os.path.join(os.path.dirname(__file__), 'user_saved_albums.json')
     with open(json_file_path, 'r') as file:

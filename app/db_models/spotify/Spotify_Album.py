@@ -28,7 +28,8 @@ class SpotifyAlbum(Album):
             'uri' : self.uri,
             'upc' : self.upc,
             'spotify_url' : self.spotify_url,
-            'images' : self.images,
+            'image_heights' : self.image_heights,
+            'image_widthes' : self.image_widthes,
             'artists': [artist.serialize() for artist in self.artists],
             'tracks': [track.serialize() for track in self.tracks],
         }

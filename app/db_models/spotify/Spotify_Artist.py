@@ -29,5 +29,7 @@ class SpotifyArtist(Artist):
             'spotify_url':self.spotify_url,
             'followers':self.followers,
             'images':self.images,
+            'image_heights' : self.image_heights,
+            'image_widthes' : self.image_widthes,
             'genres':self.genres
         }

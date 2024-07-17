@@ -62,6 +62,14 @@ class SpotifyService(ServiceStrategy):
     def fetch_saved_albums(self, user, limit=50):
         sp = spotipy.Spotify(auth=user.access_token)
         return [item['album'] for item in sp.current_user_saved_albums(limit=limit)['items']]
+    
+    def fetch_followed_genres(self, user,limit=50):
+        followed_artists = self.fetch_followed_artists( user,limit)
+        genre_count = {}
+        for artist in followed_artists:
+            for genre in artist['genres']:
+                genre_count[genre] = genre_count.get(genre, 0) + 1
+        return sorted(genre_count.items(), key=lambda x: x[1], reverse=True)[:limit]
 
     def map_to_neo4j(self, user, label, items, relation_type="top"):
 
@@ -87,7 +95,7 @@ class SpotifyService(ServiceStrategy):
                 if relation_type == "top":
                     user.top_artists.connect(node)
                 elif relation_type == "followed":
-                    user.likes_artist.connect(node)
+                    user.likes_artists.connect(node)
 
             elif label == 'Track':
                 track_data = item
@@ -110,7 +118,7 @@ class SpotifyService(ServiceStrategy):
                 if relation_type == "top":
                     user.top_tracks.connect(node)
                 elif relation_type == "saved":
-                    user.likes_track.connect(node)
+                    user.likes_tracks.connect(node)
 
                 # Link track to album
                 album_data = track_data['album']
@@ -149,7 +157,10 @@ class SpotifyService(ServiceStrategy):
                 node = SpotifyGenre.nodes.get_or_none(name=genre_data)
                 if not node:
                     node = SpotifyGenre(name=genre_data).save()
-                user.top_genres.connect(node)
+                if relation_type == "top":
+                    user.top_genres.connect(node)
+                elif relation_type == "followed":
+                    user.likes_genres.connect(node)
 
             elif label == 'Album':
                 album_data = item
@@ -175,18 +186,20 @@ class SpotifyService(ServiceStrategy):
                     user.likes_albums.connect(node)
 
     def save_user_likes(self, user):
-        # user_top_artists = self.fetch_top_artists(user)
-        # user_top_tracks = self.fetch_top_tracks(user)
-        # user_top_genres = self.fetch_top_genres(user)
-        # user_followed_artists = self.fetch_followed_artists(user)  
-        # user_saved_tracks = self.fetch_saved_tracks(user)
+        user_top_artists = self.fetch_top_artists(user)
+        user_top_tracks = self.fetch_top_tracks(user)
+        user_top_genres = self.fetch_top_genres(user)
+        user_followed_artists = self.fetch_followed_artists(user)  
+        user_followed_genres = self.fetch_followed_genres(user)  
+        user_saved_tracks = self.fetch_saved_tracks(user)
         user_saved_albums = self.fetch_saved_albums(user)  
-        return user_saved_albums
+
         # Map data to Neo4j
         self.map_to_neo4j(user, 'Artist', user_top_artists, "top")
         self.map_to_neo4j(user, 'Track', user_top_tracks, "top")
         self.map_to_neo4j(user, 'Genre', user_top_genres, "top")
         self.map_to_neo4j(user, 'Artist', user_followed_artists, "followed")
+        self.map_to_neo4j(user, 'Genre', user_followed_genres, "followed")
         self.map_to_neo4j(user, 'Track', user_saved_tracks, "saved")
         self.map_to_neo4j(user, 'Album', user_saved_albums, "saved")
 
