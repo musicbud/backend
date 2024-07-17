@@ -1,0 +1,76 @@
+[
+    {
+        "external_urls": {
+            "spotify": "https://open.spotify.com/artist/klmdlsajnasdkjdsa"
+        },
+        "followers": {
+            "href": null,
+            "total": 572164
+        },
+        "genres": [
+            "alternative rock",
+            "dc hardcore",
+            "noise pop"
+        ],
+        "href": "https://api.spotify.com/v1/artists/kjlskdalkjdsaljdas",
+        "id": "kjlskdalkjdsaljdas",
+        "images": [
+            {
+                "height": 737,
+                "url": "https://i.scdn.co/image/0234b34b265a6ec22de6b4ebb52abc4d6c9d7371",
+                "width": 578
+            },
+            {
+                "height": 255,
+                "url": "https://i.scdn.co/image/4d6612201d8bbf1a8e5b3ef6ced9d5b0e92d1dd3",
+                "width": 200
+            },
+            {
+                "height": 82,
+                "url": "https://i.scdn.co/image/9f6d3f86533750a49e3dbc215ae9edf54b95a04c",
+                "width": 64
+            }
+        ],
+        "name": "Fake Artist 1",
+        "popularity": 57,
+        "type": "artist",
+        "uri": "spotify:artist:62sC6lUEWRjbFqXpMmOk4G"
+    },
+    {
+        "external_urls": {
+            "spotify": "https://open.spotify.com/artist/1s5mUpjVtK0XAScRqlErSE"
+        },
+        "followers": {
+            "href": null,
+            "total": 80476
+        },
+        "genres": [
+            "new england shoegaze",
+            "nu gaze",
+            "shoegaze"
+        ],
+        "href": "https://api.spotify.com/v1/artists/1s5mUpjVtK0XAScRqlErSE",
+        "id": "kjldaskjlasjdasd",
+        "images": [
+            {
+                "height": 640,
+                "url": "https://i.scdn.co/image/ab6761610000e5eb03d4ebe16e781d87e6e7ca0b",
+                "width": 640
+            },
+            {
+                "height": 320,
+                "url": "https://i.scdn.co/image/ab6761610000517403d4ebe16e781d87e6e7ca0b",
+                "width": 320
+            },
+            {
+                "height": 160,
+                "url": "https://i.scdn.co/image/ab6761610000f17803d4ebe16e781d87e6e7ca0b",
+                "width": 160
+            }
+        ],
+        "name": "Fake Artist 2",
+        "popularity": 38,
+        "type": "artist",
+        "uri": "spotify:artist:1s5mUpjVtK0XAScRqlErSE"
+    }
+]

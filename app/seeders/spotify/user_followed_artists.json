@@ -1,0 +1,74 @@
+[
+        {
+            "external_urls": {
+                "spotify": "https://open.spotify.com/artist/5abSRg0xN1NV3gLbuvX24M"
+            },
+            "followers": {
+                "href": null,
+                "total": 7614821
+            },
+            "genres": [
+                "arab pop",
+                "belly dance",
+                "egyptian pop",
+                "persian pop",
+                "rif"
+            ],
+            "href": "https://api.spotify.com/v1/artists/5abSRg0xN1NV3gLbuvX24M",
+            "id": "5abSRg0xN1NV3gLbuvX24M",
+            "images": [
+                {
+                    "height": 640,
+                    "url": "https://i.scdn.co/image/ab6761610000e5eb8a5d18b749217c6e6605bc6a",
+                    "width": 640
+                },
+                {
+                    "height": 320,
+                    "url": "https://i.scdn.co/image/ab676161000051748a5d18b749217c6e6605bc6a",
+                    "width": 320
+                },
+                {
+                    "height": 160,
+                    "url": "https://i.scdn.co/image/ab6761610000f1788a5d18b749217c6e6605bc6a",
+                    "width": 160
+                }
+            ],
+            "name": "Amr Diab",
+            "popularity": 65,
+            "type": "artist",
+            "uri": "spotify:artist:5abSRg0xN1NV3gLbuvX24M"
+        },
+        {
+            "external_urls": {
+                "spotify": "https://open.spotify.com/artist/6DsKuajPyq0DSlVnt4pvWQ"
+            },
+            "followers": {
+                "href": null,
+                "total": 67
+            },
+            "genres": [],
+            "href": "https://api.spotify.com/v1/artists/6DsKuajPyq0DSlVnt4pvWQ",
+            "id": "6DsKuajPyq0DSlVnt4pvWQ",
+            "images": [
+                {
+                    "height": 640,
+                    "url": "https://i.scdn.co/image/ab6761610000e5ebf8a786c6abc6740a10efc370",
+                    "width": 640
+                },
+                {
+                    "height": 320,
+                    "url": "https://i.scdn.co/image/ab67616100005174f8a786c6abc6740a10efc370",
+                    "width": 320
+                },
+                {
+                    "height": 160,
+                    "url": "https://i.scdn.co/image/ab6761610000f178f8a786c6abc6740a10efc370",
+                    "width": 160
+                }
+            ],
+            "name": "Genuinos Extractos Nihilistas G.E.N",
+            "popularity": 0,
+            "type": "artist",
+            "uri": "spotify:artist:6DsKuajPyq0DSlVnt4pvWQ"
+        }
+    ]

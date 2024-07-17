@@ -30,6 +30,4 @@ class SpotifyArtist(Artist):
             'followers':self.followers,
             'images':self.images,
             'genres':self.genres
-
-
         }

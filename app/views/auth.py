@@ -1,8 +1,6 @@
 from django.http import JsonResponse
 from neomodel.exceptions import MultipleNodesReturned, DoesNotExist
-from django.http import JsonResponse
 
-from ..db_models.User import User
 from ..db_models.spotify.Spotify_User import SpotifyUser
 from ..db_models.lastfm.Lastfm_User import LastfmUser
 from ..db_models.ytmusic.Ytmusic_User import YtmusicUser

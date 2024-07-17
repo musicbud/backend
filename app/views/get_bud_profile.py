@@ -30,51 +30,42 @@ class get_bud_profile(APIView):
             if user is None or bud_node is None:
                 return JsonResponse({'error': 'User or bud not found'}, status=404)
 
-
             # Get all artists and tracks liked by the user and the bud
-            user_artists = {artist.uid for artist in user.likes_artist.all()} 
-            bud_artists = {artist.uid for artist in bud_node.likes_artist.all()} 
-            user_tracks = {track.uid for track in user.likes_track.all()}  # Extracting track IDs
-            bud_tracks = {track.uid for track in bud_node.likes_track.all()}    # Extracting track IDs
-            user_genres = {genres.uid for genres in user.likes_genre.all()}  # Extracting genres IDs
-            bud_genres = {genres.uid for genres in bud_node.likes_genre.all()}    # Extracting genres IDs
-
-            # Find common artists and tracks
-            common_artists = user_artists.intersection(bud_artists)
-            common_tracks = user_tracks.intersection(bud_tracks)
-            common_genres = user_genres.intersection(bud_genres)
-
-            # Check if there are common artists
-            if common_artists != {None}:
-                # Extract IDs of common artists
-                common_artists_ids = [artist for artist in common_artists]
-            else:
-                # Handle case where there are no common artists
-                common_artists_ids = []
-
-            if common_tracks  != {None}:
-                # Convert set to list for iteration
-                common_tracks_ids = [track for track in common_tracks]
-            else:
-            # Handle case where there are no common tracks
-                common_tracks_ids = []
-            if common_genres  != {None}:
-                # Convert set to list for iteration
-                common_genres_ids = [genre for genre in common_genres]
-            else:
-            # Handle case where there are no common genres
-                common_genres_ids = []
+            user_artists = list(user.top_artists.all()) 
+            bud_artists = list(bud_node.top_artists.all()) 
+            user_tracks = list(user.top_tracks.all())  
+            bud_tracks = list(bud_node.top_tracks.all())    
+            user_genres = list(user.top_genres.all())  
+            bud_genres = list(bud_node.top_genres.all())
 
 
-            # Fetch additional details only if there are common artists or tracks
-            if common_artists_ids or common_tracks_ids or common_genres_ids:
-                # Fetch additional details about common artists and tracks using SpotifyService
-                common_artists_data, common_tracks_data , common_genres_data= fetch_common_artists_tracks_and_genres(user_node.access_token, common_artists_ids, common_tracks_ids,common_genres_ids)
-            # Return the bud profile as JSON response
+            # Convert to sets of unique identifiers
+            user_artist_ids = set(artist.id for artist in user_artists)
+            bud_artist_ids = set(artist.id for artist in bud_artists)
+            user_track_ids = set(track.id for track in user_tracks)
+            bud_track_ids = set(track.id for track in bud_tracks)
+            user_genre_ids = set(genre.id for genre in user_genres)
+            bud_genre_ids = set(genre.id for genre in bud_genres)
+
+            # Find common artists, tracks, and genres by unique identifiers
+            common_artist_ids = user_artist_ids.intersection(bud_artist_ids)
+            common_track_ids = user_track_ids.intersection(bud_track_ids)
+            common_genre_ids = user_genre_ids.intersection(bud_genre_ids)
+
+            # Convert back to original objects
+            common_artists = [artist for artist in user_artists if artist.id in common_artist_ids]
+            common_tracks = [track for track in user_tracks if track.id in common_track_ids]
+            common_genres = [genre for genre in user_genres if genre.id in common_genre_ids]
+
             return JsonResponse({
                 'message': 'Get Bud Profile',
-                'data': {'common_artists_count':len(common_artists_data),'common_artists_data':common_artists_data,'common_tracks_count':len(common_tracks_data),'common_tracks_data':common_tracks_data,'common_genres_count':len(common_genres_data),'common_genres_data':common_genres_data}
+                'data': {
+                    'common_artists_data': [artist.serialize() for artist in common_artists],
+                    'common_tracks_data': [track.serialize() for track in common_tracks],
+                    'common_genres_data': [genre.serialize() for genre in common_genres]
+                }
             }, status=200)
+        
         except Exception as e:
             # Handle exceptions
             logger.error(e)

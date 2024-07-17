@@ -163,7 +163,7 @@ class SpotifyService(ServiceStrategy):
                         total_tracks=album_data['total_tracks'],
                         uri=album_data['uri'],
                         spotify_url=album_data['external_urls']['spotify'],
-                        genres= [genre[0] for genre in album_data['gemres']],
+                        genres= [genre[0] for genre in album_data['genres']],
                         images= [image['url'] for image in album_data['images']],
                         image_heights =[image['height'] for image in album_data['images']],
                         image_widthes = [image['width'] for image in album_data['images']]
@@ -172,16 +172,16 @@ class SpotifyService(ServiceStrategy):
                 if relation_type == "top":
                     user.top_albums.connect(node)
                 elif relation_type == "saved":
-                    user.likes_album.connect(node)
+                    user.likes_albums.connect(node)
 
     def save_user_likes(self, user):
-        user_top_artists = self.fetch_top_artists(user)
-        user_top_tracks = self.fetch_top_tracks(user)
-        user_top_genres = self.fetch_top_genres(user)
-        user_followed_artists = self.fetch_followed_artists(user)  
-        user_saved_tracks = self.fetch_saved_tracks(user)  
+        # user_top_artists = self.fetch_top_artists(user)
+        # user_top_tracks = self.fetch_top_tracks(user)
+        # user_top_genres = self.fetch_top_genres(user)
+        # user_followed_artists = self.fetch_followed_artists(user)  
+        # user_saved_tracks = self.fetch_saved_tracks(user)
         user_saved_albums = self.fetch_saved_albums(user)  
-            
+        return user_saved_albums
         # Map data to Neo4j
         self.map_to_neo4j(user, 'Artist', user_top_artists, "top")
         self.map_to_neo4j(user, 'Track', user_top_tracks, "top")

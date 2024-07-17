@@ -1,0 +1,692 @@
+[
+{
+    "album_type": "album",
+    "artists": [
+        {
+            "external_urls": {
+                "spotify": "https://open.spotify.com/artist/1G0Xwj8mza6b03iYkVdzDP"
+            },
+            "href": "https://api.spotify.com/v1/artists/1G0Xwj8mza6b03iYkVdzDP",
+            "id": "1G0Xwj8mza6b03iYkVdzDP",
+            "name": "The Sugarcubes",
+            "type": "artist",
+            "uri": "spotify:artist:1G0Xwj8mza6b03iYkVdzDP"
+        }
+    ],
+    "available_markets": [],
+    "copyrights": [
+        {
+            "text": "© 1988 One Little Independent Records",
+            "type": "C"
+        },
+        {
+            "text": "℗ 1988 One Little Independent Records",
+            "type": "P"
+        }
+    ],
+    "external_ids": {
+        "upc": "05016958093129"
+    },
+    "external_urls": {
+        "spotify": "https://open.spotify.com/album/5I0rvDfkvXR89ext3Edr1j"
+    },
+    "genres": [],
+    "href": "https://api.spotify.com/v1/albums/5I0rvDfkvXR89ext3Edr1j",
+    "id": "lkjlksjdajadsldas",
+    "images": [
+        {
+            "height": 640,
+            "url": "https://i.scdn.co/image/ab67616d0000b27355250dbe424ef54196319192",
+            "width": 640
+        },
+        {
+            "height": 300,
+            "url": "https://i.scdn.co/image/ab67616d00001e0255250dbe424ef54196319192",
+            "width": 300
+        },
+        {
+            "height": 64,
+            "url": "https://i.scdn.co/image/ab67616d0000485155250dbe424ef54196319192",
+            "width": 64
+        }
+    ],
+    "label": "One Little Independent Records",
+    "name": "fake album 1",
+    "popularity": 3,
+    "release_date": "1988-01-01",
+    "release_date_precision": "day",
+    "total_tracks": 11,
+    "tracks": {
+        "href": "https://api.spotify.com/v1/albums/5I0rvDfkvXR89ext3Edr1j/tracks?offset=0&limit=50",
+        "items": [
+            {
+                "artists": [
+                    {
+                        "external_urls": {
+                            "spotify": "https://open.spotify.com/artist/1G0Xwj8mza6b03iYkVdzDP"
+                        },
+                        "href": "https://api.spotify.com/v1/artists/1G0Xwj8mza6b03iYkVdzDP",
+                        "id": "1G0Xwj8mza6b03iYkVdzDP",
+                        "name": "The Sugarcubes",
+                        "type": "artist",
+                        "uri": "spotify:artist:1G0Xwj8mza6b03iYkVdzDP"
+                    }
+                ],
+                "available_markets": [],
+                "disc_number": 1,
+                "duration_ms": 190400,
+                "explicit": false,
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/track/0oR1Cs1gwsX03EEcFAV9ww"
+                },
+                "href": "https://api.spotify.com/v1/tracks/0oR1Cs1gwsX03EEcFAV9ww",
+                "id": "0oR1Cs1gwsX03EEcFAV9ww",
+                "is_local": false,
+                "name": "Traitor",
+                "preview_url": null,
+                "track_number": 1,
+                "type": "track",
+                "uri": "spotify:track:0oR1Cs1gwsX03EEcFAV9ww"
+            },
+            {
+                "artists": [
+                    {
+                        "external_urls": {
+                            "spotify": "https://open.spotify.com/artist/1G0Xwj8mza6b03iYkVdzDP"
+                        },
+                        "href": "https://api.spotify.com/v1/artists/1G0Xwj8mza6b03iYkVdzDP",
+                        "id": "l;kjjklsdljads",
+                        "name": "The Sugarcubes",
+                        "type": "artist",
+                        "uri": "spotify:artist:1G0Xwj8mza6b03iYkVdzDP"
+                    }
+                ],
+                "available_markets": [],
+                "disc_number": 1,
+                "duration_ms": 143200,
+                "explicit": false,
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/track/0Ub0sdsdftYOQ3NpPSHuCd"
+                },
+                "href": "https://api.spotify.com/v1/tracks/0Ub0sdsdftYOQ3NpPSHuCd",
+                "id": "kjlkjslkjdas",
+                "is_local": false,
+                "name": "Motorcrash",
+                "preview_url": null,
+                "track_number": 2,
+                "type": "track",
+                "uri": "spotify:track:0Ub0sdsdftYOQ3NpPSHuCd"
+            },
+            {
+                "artists": [
+                    {
+                        "external_urls": {
+                            "spotify": "https://open.spotify.com/artist/1G0Xwj8mza6b03iYkVdzDP"
+                        },
+                        "href": "https://api.spotify.com/v1/artists/1G0Xwj8mza6b03iYkVdzDP",
+                        "id": "kjlkjsadljsad",
+                        "name": "The Sugarcubes",
+                        "type": "artist",
+                        "uri": "spotify:artist:1G0Xwj8mza6b03iYkVdzDP"
+                    }
+                ],
+                "available_markets": [],
+                "disc_number": 1,
+                "duration_ms": 238626,
+                "explicit": false,
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/track/60BmSp4whSDDysRNgkKdqd"
+                },
+                "href": "https://api.spotify.com/v1/tracks/60BmSp4whSDDysRNgkKdqd",
+                "id": "jklkjdsaljlkdas",
+                "is_local": false,
+                "name": "Birthday",
+                "preview_url": null,
+                "track_number": 3,
+                "type": "track",
+                "uri": "spotify:track:60BmSp4whSDDysRNgkKdqd"
+            },
+            {
+                "artists": [
+                    {
+                        "external_urls": {
+                            "spotify": "https://open.spotify.com/artist/1G0Xwj8mza6b03iYkVdzDP"
+                        },
+                        "href": "https://api.spotify.com/v1/artists/1G0Xwj8mza6b03iYkVdzDP",
+                        "id": "1G0Xwj8mza6b03iYkVdzDP",
+                        "name": "The Sugarcubes",
+                        "type": "artist",
+                        "uri": "spotify:artist:1G0Xwj8mza6b03iYkVdzDP"
+                    }
+                ],
+                "available_markets": [],
+                "disc_number": 1,
+                "duration_ms": 162133,
+                "explicit": false,
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/track/7kaVeJBi9lDY1joHQJM9uV"
+                },
+                "href": "https://api.spotify.com/v1/tracks/7kaVeJBi9lDY1joHQJM9uV",
+                "id": "lkjkljdsjkjkadsl",
+                "is_local": false,
+                "name": "Delicious Demon",
+                "preview_url": null,
+                "track_number": 4,
+                "type": "track",
+                "uri": "spotify:track:7kaVeJBi9lDY1joHQJM9uV"
+            },
+            {
+                "artists": [
+                    {
+                        "external_urls": {
+                            "spotify": "https://open.spotify.com/artist/1G0Xwj8mza6b03iYkVdzDP"
+                        },
+                        "href": "https://api.spotify.com/v1/artists/1G0Xwj8mza6b03iYkVdzDP",
+                        "id": "1G0Xwj8mza6b03iYkVdzDP",
+                        "name": "The Sugarcubes",
+                        "type": "artist",
+                        "uri": "spotify:artist:1G0Xwj8mza6b03iYkVdzDP"
+                    }
+                ],
+                "available_markets": [],
+                "disc_number": 1,
+                "duration_ms": 176306,
+                "explicit": false,
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/track/7ft9DQ0jzbM01xk4N1P0GK"
+                },
+                "href": "https://api.spotify.com/v1/tracks/7ft9DQ0jzbM01xk4N1P0GK",
+                "id": "lkjlkadjsljkdaslads",
+                "is_local": false,
+                "name": "Mama",
+                "preview_url": null,
+                "track_number": 5,
+                "type": "track",
+                "uri": "spotify:track:7ft9DQ0jzbM01xk4N1P0GK"
+            },
+            {
+                "artists": [
+                    {
+                        "external_urls": {
+                            "spotify": "https://open.spotify.com/artist/1G0Xwj8mza6b03iYkVdzDP"
+                        },
+                        "href": "https://api.spotify.com/v1/artists/1G0Xwj8mza6b03iYkVdzDP",
+                        "id": "kjlkadjslkadskjdas",
+                        "name": "The Sugarcubes",
+                        "type": "artist",
+                        "uri": "spotify:artist:1G0Xwj8mza6b03iYkVdzDP"
+                    }
+                ],
+                "available_markets": [],
+                "disc_number": 1,
+                "duration_ms": 196693,
+                "explicit": false,
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/track/1y0ajqgTuzUbvUbl7mIp8C"
+                },
+                "href": "https://api.spotify.com/v1/tracks/1y0ajqgTuzUbvUbl7mIp8C",
+                "id": "1y0ajqgTuzUbvUbl7mIp8C",
+                "is_local": false,
+                "name": "Coldsweat",
+                "preview_url": null,
+                "track_number": 6,
+                "type": "track",
+                "uri": "spotify:track:1y0ajqgTuzUbvUbl7mIp8C"
+            },
+            {
+                "artists": [
+                    {
+                        "external_urls": {
+                            "spotify": "https://open.spotify.com/artist/1G0Xwj8mza6b03iYkVdzDP"
+                        },
+                        "href": "https://api.spotify.com/v1/artists/1G0Xwj8mza6b03iYkVdzDP",
+                        "id": "mnljdasljsaddas",
+                        "name": "The Sugarcubes",
+                        "type": "artist",
+                        "uri": "spotify:artist:1G0Xwj8mza6b03iYkVdzDP"
+                    }
+                ],
+                "available_markets": [],
+                "disc_number": 1,
+                "duration_ms": 157400,
+                "explicit": false,
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/track/5lU2PZA4Naa6tU2ho2egMZ"
+                },
+                "href": "https://api.spotify.com/v1/tracks/5lU2PZA4Naa6tU2ho2egMZ",
+                "id": "kljldasjadjslkdas",
+                "is_local": false,
+                "name": "Blue Eyed Pop",
+                "preview_url": null,
+                "track_number": 7,
+                "type": "track",
+                "uri": "spotify:track:5lU2PZA4Naa6tU2ho2egMZ"
+            },
+            {
+                "artists": [
+                    {
+                        "external_urls": {
+                            "spotify": "https://open.spotify.com/artist/1G0Xwj8mza6b03iYkVdzDP"
+                        },
+                        "href": "https://api.spotify.com/v1/artists/1G0Xwj8mza6b03iYkVdzDP",
+                        "id": "kjljdaslkadsljk",
+                        "name": "The Sugarcubes",
+                        "type": "artist",
+                        "uri": "spotify:artist:1G0Xwj8mza6b03iYkVdzDP"
+                    }
+                ],
+                "available_markets": [],
+                "disc_number": 1,
+                "duration_ms": 248373,
+                "explicit": false,
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/track/2XKMDUbdsTsrVNOhBgwyXd"
+                },
+                "href": "https://api.spotify.com/v1/tracks/2XKMDUbdsTsrVNOhBgwyXd",
+                "id": "lkjdaslljkadsljkad",
+                "is_local": false,
+                "name": "Deus",
+                "preview_url": null,
+                "track_number": 8,
+                "type": "track",
+                "uri": "spotify:track:2XKMDUbdsTsrVNOhBgwyXd"
+            },
+            {
+                "artists": [
+                    {
+                        "external_urls": {
+                            "spotify": "https://open.spotify.com/artist/1G0Xwj8mza6b03iYkVdzDP"
+                        },
+                        "href": "https://api.spotify.com/v1/artists/1G0Xwj8mza6b03iYkVdzDP",
+                        "id": "lkjadslkjlskad",
+                        "name": "The Sugarcubes",
+                        "type": "artist",
+                        "uri": "spotify:artist:1G0Xwj8mza6b03iYkVdzDP"
+                    }
+                ],
+                "available_markets": [],
+                "disc_number": 1,
+                "duration_ms": 194066,
+                "explicit": false,
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/track/5TTHHN83n4CCfGefEabCUK"
+                },
+                "href": "https://api.spotify.com/v1/tracks/5TTHHN83n4CCfGefEabCUK",
+                "id": ";kdasjadjlklajds",
+                "is_local": false,
+                "name": "Sick For Toys",
+                "preview_url": null,
+                "track_number": 9,
+                "type": "track",
+                "uri": "spotify:track:5TTHHN83n4CCfGefEabCUK"
+            },
+            {
+                "artists": [
+                    {
+                        "external_urls": {
+                            "spotify": "https://open.spotify.com/artist/1G0Xwj8mza6b03iYkVdzDP"
+                        },
+                        "href": "https://api.spotify.com/v1/artists/1G0Xwj8mza6b03iYkVdzDP",
+                        "id": "1G0Xwj8mza6b03iYkVdzDP",
+                        "name": "The Sugarcubes",
+                        "type": "artist",
+                        "uri": "spotify:artist:1G0Xwj8mza6b03iYkVdzDP"
+                    }
+                ],
+                "available_markets": [],
+                "disc_number": 1,
+                "duration_ms": 201866,
+                "explicit": false,
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/track/6ZLSijFikFPYsJFNenriZN"
+                },
+                "href": "https://api.spotify.com/v1/tracks/6ZLSijFikFPYsJFNenriZN",
+                "id": "kjladsjkljlkjlkads",
+                "is_local": false,
+                "name": "F***ing In Rhythm And Sorrow",
+                "preview_url": null,
+                "track_number": 10,
+                "type": "track",
+                "uri": "spotify:track:6ZLSijFikFPYsJFNenriZN"
+            },
+            {
+                "artists": [
+                    {
+                        "external_urls": {
+                            "spotify": "https://open.spotify.com/artist/1G0Xwj8mza6b03iYkVdzDP"
+                        },
+                        "href": "https://api.spotify.com/v1/artists/1G0Xwj8mza6b03iYkVdzDP",
+                        "id": "jshjkhadskjkhads",
+                        "name": "The Sugarcubes",
+                        "type": "artist",
+                        "uri": "spotify:artist:1G0Xwj8mza6b03iYkVdzDP"
+                    }
+                ],
+                "available_markets": [],
+                "disc_number": 1,
+                "duration_ms": 88933,
+                "explicit": false,
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/track/4x9THsBvzcFbgnF8qz5Koi"
+                },
+                "href": "https://api.spotify.com/v1/tracks/4x9THsBvzcFbgnF8qz5Koi",
+                "id": "ljkdasljklkjsdjla",
+                "is_local": false,
+                "name": "Take Some Petrol Darling",
+                "preview_url": null,
+                "track_number": 11,
+                "type": "track",
+                "uri": "spotify:track:4x9THsBvzcFbgnF8qz5Koi"
+            }
+        ],
+        "limit": 50,
+        "next": null,
+        "offset": 0,
+        "previous": null,
+        "total": 11
+    },
+    "type": "album",
+    "uri": "spotify:album:5I0rvDfkvXR89ext3Edr1j"
+},
+{
+    "album_type": "album",
+    "artists": [
+        {
+            "external_urls": {
+                "spotify": "https://open.spotify.com/artist/3WXwKkckMExWhQ8rhKM6U9"
+            },
+            "href": "https://api.spotify.com/v1/artists/3WXwKkckMExWhQ8rhKM6U9",
+            "id": "ljklkjsadjlkads",
+            "name": "G.E.N.",
+            "type": "artist",
+            "uri": "spotify:artist:3WXwKkckMExWhQ8rhKM6U9"
+        }
+    ],
+    "available_markets": [],
+    "copyrights": [
+        {
+            "text": "2014 G.E.N.",
+            "type": "C"
+        },
+        {
+            "text": "2014 G.E.N.",
+            "type": "P"
+        }
+    ],
+    "external_ids": {
+        "upc": "191061689942"
+    },
+    "external_urls": {
+        "spotify": "https://open.spotify.com/album/38jizT7EKXd4qF6veylRFQ"
+    },
+    "genres": [],
+    "href": "https://api.spotify.com/v1/albums/38jizT7EKXd4qF6veylRFQ",
+    "id": "38jizT7EKXd4qF6veylRFQ",
+    "images": [
+        {
+            "height": 640,
+            "url": "https://i.scdn.co/image/ab67616d0000b2737e83bab5f3e5364248be30d2",
+            "width": 640
+        },
+        {
+            "height": 300,
+            "url": "https://i.scdn.co/image/ab67616d00001e027e83bab5f3e5364248be30d2",
+            "width": 300
+        },
+        {
+            "height": 64,
+            "url": "https://i.scdn.co/image/ab67616d000048517e83bab5f3e5364248be30d2",
+            "width": 64
+        }
+    ],
+    "label": "Sun Empire Productions",
+    "name": "No Ink for a Self Portrait",
+    "popularity": 0,
+    "release_date": "2014-02-13",
+    "release_date_precision": "day",
+    "total_tracks": 8,
+    "tracks": {
+        "href": "https://api.spotify.com/v1/albums/38jizT7EKXd4qF6veylRFQ/tracks?offset=0&limit=50",
+        "items": [
+            {
+                "artists": [
+                    {
+                        "external_urls": {
+                            "spotify": "https://open.spotify.com/artist/3WXwKkckMExWhQ8rhKM6U9"
+                        },
+                        "href": "https://api.spotify.com/v1/artists/3WXwKkckMExWhQ8rhKM6U9",
+                        "id": "3WXwKkckMExWhQ8rhKM6U9",
+                        "name": "G.E.N.",
+                        "type": "artist",
+                        "uri": "spotify:artist:3WXwKkckMExWhQ8rhKM6U9"
+                    }
+                ],
+                "available_markets": [],
+                "disc_number": 1,
+                "duration_ms": 449026,
+                "explicit": false,
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/track/0zQiX2SG1SOLmm6QOVK4vF"
+                },
+                "href": "https://api.spotify.com/v1/tracks/0zQiX2SG1SOLmm6QOVK4vF",
+                "id": "kjladsjladsjlksajdlk",
+                "is_local": false,
+                "name": "Monologue of an Isolated Man, Pt. I",
+                "preview_url": null,
+                "track_number": 1,
+                "type": "track",
+                "uri": "spotify:track:0zQiX2SG1SOLmm6QOVK4vF"
+            },
+            {
+                "artists": [
+                    {
+                        "external_urls": {
+                            "spotify": "https://open.spotify.com/artist/3WXwKkckMExWhQ8rhKM6U9"
+                        },
+                        "href": "https://api.spotify.com/v1/artists/3WXwKkckMExWhQ8rhKM6U9",
+                        "id": "3WXwKkckMExWhQ8rhKM6U9",
+                        "name": "G.E.N.",
+                        "type": "artist",
+                        "uri": "spotify:artist:3WXwKkckMExWhQ8rhKM6U9"
+                    }
+                ],
+                "available_markets": [],
+                "disc_number": 1,
+                "duration_ms": 414200,
+                "explicit": false,
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/track/5U69UUYzsg8C8lP0plUGqT"
+                },
+                "href": "https://api.spotify.com/v1/tracks/5U69UUYzsg8C8lP0plUGqT",
+                "id": "kjjlljadsjlkadsjlkdas",
+                "is_local": false,
+                "name": "Shadow of Light",
+                "preview_url": null,
+                "track_number": 2,
+                "type": "track",
+                "uri": "spotify:track:5U69UUYzsg8C8lP0plUGqT"
+            },
+            {
+                "artists": [
+                    {
+                        "external_urls": {
+                            "spotify": "https://open.spotify.com/artist/3WXwKkckMExWhQ8rhKM6U9"
+                        },
+                        "href": "https://api.spotify.com/v1/artists/3WXwKkckMExWhQ8rhKM6U9",
+                        "id": "klnldasjkljkdasas",
+                        "name": "G.E.N.",
+                        "type": "artist",
+                        "uri": "spotify:artist:3WXwKkckMExWhQ8rhKM6U9"
+                    }
+                ],
+                "available_markets": [],
+                "disc_number": 1,
+                "duration_ms": 419480,
+                "explicit": false,
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/track/1bCwVAIPZHQyTbt7tThCl2"
+                },
+                "href": "https://api.spotify.com/v1/tracks/1bCwVAIPZHQyTbt7tThCl2",
+                "id": "knlldajslkjsad",
+                "is_local": false,
+                "name": "Dead Tears",
+                "preview_url": null,
+                "track_number": 3,
+                "type": "track",
+                "uri": "spotify:track:1bCwVAIPZHQyTbt7tThCl2"
+            },
+            {
+                "artists": [
+                    {
+                        "external_urls": {
+                            "spotify": "https://open.spotify.com/artist/3WXwKkckMExWhQ8rhKM6U9"
+                        },
+                        "href": "https://api.spotify.com/v1/artists/3WXwKkckMExWhQ8rhKM6U9",
+                        "id": "kljladsjkljkadss",
+                        "name": "G.E.N.",
+                        "type": "artist",
+                        "uri": "spotify:artist:3WXwKkckMExWhQ8rhKM6U9"
+                    }
+                ],
+                "available_markets": [],
+                "disc_number": 1,
+                "duration_ms": 388960,
+                "explicit": false,
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/track/48sRUq9Hv4rOhdnSJKtFgv"
+                },
+                "href": "https://api.spotify.com/v1/tracks/48sRUq9Hv4rOhdnSJKtFgv",
+                "id": "kjdasjlkkjlads",
+                "is_local": false,
+                "name": "Catarsis",
+                "preview_url": null,
+                "track_number": 4,
+                "type": "track",
+                "uri": "spotify:track:48sRUq9Hv4rOhdnSJKtFgv"
+            },
+            {
+                "artists": [
+                    {
+                        "external_urls": {
+                            "spotify": "https://open.spotify.com/artist/3WXwKkckMExWhQ8rhKM6U9"
+                        },
+                        "href": "https://api.spotify.com/v1/artists/3WXwKkckMExWhQ8rhKM6U9",
+                        "id": "lkadsljkadslkjads",
+                        "name": "G.E.N.",
+                        "type": "artist",
+                        "uri": "spotify:artist:3WXwKkckMExWhQ8rhKM6U9"
+                    }
+                ],
+                "available_markets": [],
+                "disc_number": 1,
+                "duration_ms": 594653,
+                "explicit": false,
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/track/2TNCgZSn8gpV9DEFH5u2TT"
+                },
+                "href": "https://api.spotify.com/v1/tracks/2TNCgZSn8gpV9DEFH5u2TT",
+                "id": "jkjdasklkjadsljdas",
+                "is_local": false,
+                "name": "Monologue of an Isolated Man, Pt. II",
+                "preview_url": null,
+                "track_number": 5,
+                "type": "track",
+                "uri": "spotify:track:2TNCgZSn8gpV9DEFH5u2TT"
+            },
+            {
+                "artists": [
+                    {
+                        "external_urls": {
+                            "spotify": "https://open.spotify.com/artist/3WXwKkckMExWhQ8rhKM6U9"
+                        },
+                        "href": "https://api.spotify.com/v1/artists/3WXwKkckMExWhQ8rhKM6U9",
+                        "id": "knldaslkjajdslkads",
+                        "name": "G.E.N.",
+                        "type": "artist",
+                        "uri": "spotify:artist:3WXwKkckMExWhQ8rhKM6U9"
+                    }
+                ],
+                "available_markets": [],
+                "disc_number": 1,
+                "duration_ms": 467640,
+                "explicit": false,
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/track/5jSjOUSU6Y721bsIfiZ3nI"
+                },
+                "href": "https://api.spotify.com/v1/tracks/5jSjOUSU6Y721bsIfiZ3nI",
+                "id": "kjlsadljkadjslk",
+                "is_local": false,
+                "name": "Farewell",
+                "preview_url": null,
+                "track_number": 6,
+                "type": "track",
+                "uri": "spotify:track:5jSjOUSU6Y721bsIfiZ3nI"
+            },
+            {
+                "artists": [
+                    {
+                        "external_urls": {
+                            "spotify": "https://open.spotify.com/artist/3WXwKkckMExWhQ8rhKM6U9"
+                        },
+                        "href": "https://api.spotify.com/v1/artists/3WXwKkckMExWhQ8rhKM6U9",
+                        "id": "kjlsadlkjjlkadsa",
+                        "name": "G.E.N.",
+                        "type": "artist",
+                        "uri": "spotify:artist:3WXwKkckMExWhQ8rhKM6U9"
+                    }
+                ],
+                "available_markets": [],
+                "disc_number": 1,
+                "duration_ms": 407186,
+                "explicit": false,
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/track/3kzgIy1kcLQ7JAy0eUNnYI"
+                },
+                "href": "https://api.spotify.com/v1/tracks/3kzgIy1kcLQ7JAy0eUNnYI",
+                "id": "kjldasljkadjslkads",
+                "is_local": false,
+                "name": "Manifesto",
+                "preview_url": null,
+                "track_number": 7,
+                "type": "track",
+                "uri": "spotify:track:3kzgIy1kcLQ7JAy0eUNnYI"
+            },
+            {
+                "artists": [
+                    {
+                        "external_urls": {
+                            "spotify": "https://open.spotify.com/artist/3WXwKkckMExWhQ8rhKM6U9"
+                        },
+                        "href": "https://api.spotify.com/v1/artists/3WXwKkckMExWhQ8rhKM6U9",
+                        "id": "3WXwKkckMExWhQ8rhKM6U9",
+                        "name": "G.E.N.",
+                        "type": "artist",
+                        "uri": "spotify:artist:3WXwKkckMExWhQ8rhKM6U9"
+                    }
+                ],
+                "available_markets": [],
+                "disc_number": 1,
+                "duration_ms": 516306,
+                "explicit": false,
+                "external_urls": {
+                    "spotify": "https://open.spotify.com/track/5t16iYZHqv7kWGYH9KHQjl"
+                },
+                "href": "https://api.spotify.com/v1/tracks/5t16iYZHqv7kWGYH9KHQjl",
+                "id": "ljkadsljkdasjlkads",
+                "is_local": false,
+                "name": "Epilogo de un Retirado",
+                "preview_url": null,
+                "track_number": 8,
+                "type": "track",
+                "uri": "spotify:track:5t16iYZHqv7kWGYH9KHQjl"
+            }
+        ],
+        "limit": 50,
+        "next": null,
+        "offset": 0,
+        "previous": null,
+        "total": 8
+    },
+    "type": "album",
+    "uri": "spotify:album:38jizT7EKXd4qF6veylRFQ"
+}]

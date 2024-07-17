@@ -2,6 +2,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 import time
 from app.db_models.User import User 
+from ..services.ServiceSelector import get_service
 
 class CustomTokenAuthentication(TokenAuthentication):
 

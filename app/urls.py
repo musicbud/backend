@@ -21,6 +21,8 @@ from .views.get_buds_by_genres import get_buds_by_genres
 from .views.get_buds_by_aio import get_buds_by_aio
 from .views.search_users import search_users
 
+from .seeders.spotify.create_user_seed import create_user_seed
+
 router = DefaultRouter()
 
 urlpatterns = [path('login', login, name='login'),
@@ -39,6 +41,10 @@ urlpatterns = [path('login', login, name='login'),
     path('get-buds-by-aio', get_buds_by_aio.as_view(), name='get_buds_by_aio'),
     path('search-channels-and-users', search_users.as_view(), name='search_channels_and_users'),
     path('docs/', TemplateView.as_view(template_name="index.html")),
+    # seeders
+    path('spotify/create-user-seed', create_user_seed, name='create_user_seed'),
+
+
 ]
 
 

@@ -1,0 +1,130 @@
+[
+        {
+            "external_urls": {
+                "spotify": "https://open.spotify.com/artist/62sC6lUEWRjbFqXpMmOk4G"
+            },
+            "followers": {
+                "href": null,
+                "total": 572164
+            },
+            "genres": [
+                "alternative rock",
+                "dc hardcore",
+                "noise pop",
+                "noise rock",
+                "post-hardcore",
+                "post-punk",
+                "punk"
+            ],
+            "href": "https://api.spotify.com/v1/artists/62sC6lUEWRjbFqXpMmOk4G",
+            "id": "62sC6lUEWRjbFqXpMmOk4G",
+            "images": [
+                {
+                    "height": 737,
+                    "url": "https://i.scdn.co/image/0234b34b265a6ec22de6b4ebb52abc4d6c9d7371",
+                    "width": 578
+                },
+                {
+                    "height": 255,
+                    "url": "https://i.scdn.co/image/4d6612201d8bbf1a8e5b3ef6ced9d5b0e92d1dd3",
+                    "width": 200
+                },
+                {
+                    "height": 82,
+                    "url": "https://i.scdn.co/image/9f6d3f86533750a49e3dbc215ae9edf54b95a04c",
+                    "width": 64
+                }
+            ],
+            "name": "Fugazi",
+            "popularity": 57,
+            "type": "artist",
+            "uri": "spotify:artist:62sC6lUEWRjbFqXpMmOk4G"
+        },
+        {
+            "external_urls": {
+                "spotify": "https://open.spotify.com/artist/1s5mUpjVtK0XAScRqlErSE"
+            },
+            "followers": {
+                "href": null,
+                "total": 80476
+            },
+            "genres": [
+                "american shoegaze",
+                "boston rock",
+                "dream pop",
+                "new england shoegaze",
+                "nu gaze",
+                "shoegaze"
+            ],
+            "href": "https://api.spotify.com/v1/artists/1s5mUpjVtK0XAScRqlErSE",
+            "id": "1s5mUpjVtK0XAScRqlErSE",
+            "images": [
+                {
+                    "height": 640,
+                    "url": "https://i.scdn.co/image/ab6761610000e5eb03d4ebe16e781d87e6e7ca0b",
+                    "width": 640
+                },
+                {
+                    "height": 320,
+                    "url": "https://i.scdn.co/image/ab6761610000517403d4ebe16e781d87e6e7ca0b",
+                    "width": 320
+                },
+                {
+                    "height": 160,
+                    "url": "https://i.scdn.co/image/ab6761610000f17803d4ebe16e781d87e6e7ca0b",
+                    "width": 160
+                }
+            ],
+            "name": "Drop Nineteens",
+            "popularity": 38,
+            "type": "artist",
+            "uri": "spotify:artist:1s5mUpjVtK0XAScRqlErSE"
+        },
+        {
+            "external_urls": {
+                "spotify": "https://open.spotify.com/artist/0sTTw3dw3EA0c7NaZnrJd2"
+            },
+            "followers": {
+                "href": null,
+                "total": 96592
+            },
+            "genres": [
+                "alternative rock",
+                "grunge",
+                "hardcore punk",
+                "no wave",
+                "portland punk",
+                "post-hardcore",
+                "post-punk",
+                "punk"
+            ],
+            "href": "https://api.spotify.com/v1/artists/0sTTw3dw3EA0c7NaZnrJd2",
+            "id": "0sTTw3dw3EA0c7NaZnrJd2",
+            "images": [
+                {
+                    "height": 1097,
+                    "url": "https://i.scdn.co/image/e9002e3d81c706d2c11e1da9a69bbfac8fed4227",
+                    "width": 1000
+                },
+                {
+                    "height": 702,
+                    "url": "https://i.scdn.co/image/5801f0271984354c8eeed56cd7ad09187811d00e",
+                    "width": 640
+                },
+                {
+                    "height": 219,
+                    "url": "https://i.scdn.co/image/15a8599579547e7e38583a129c1007f4ff364586",
+                    "width": 200
+                },
+                {
+                    "height": 70,
+                    "url": "https://i.scdn.co/image/229910f4bb4b2c2d264e59b80aebc5973aae64ee",
+                    "width": 64
+                }
+            ],
+            "name": "Wipers",
+            "popularity": 39,
+            "type": "artist",
+            "uri": "spotify:artist:0sTTw3dw3EA0c7NaZnrJd2"
+        }
+    ]

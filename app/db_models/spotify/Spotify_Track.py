@@ -17,9 +17,7 @@ class SpotifyTrack(Track):
     preview_url = StringProperty()
     track_number = IntegerProperty()
     spotify_url = StringProperty()
-    images = ArrayProperty()
-    image_heights = ArrayProperty()
-    image_widthes = ArrayProperty()
+    
     
     def serialize(self):
         return {
@@ -36,9 +34,7 @@ class SpotifyTrack(Track):
             'preview_url':self.preview_url,
             'track_number':self.track_number,
             'spotify_url':self.spotify_url,
-            'images':self.images,
-            'image_heights':self.image_heights,
-            'image_widthes':self.image_widthes
+           
             
 
         }

@@ -22,18 +22,14 @@ class get_buds_by_artists(APIView):
     def post(self, request):
         try:
             user = request.user
-            user_node = User.nodes.get_or_none(uid=user.uid)
-
-            if not user_node:
-                return JsonResponse({'error': 'User not found'}, status=404)
 
             buds = []
-            for artist in user_node.likes_artist.all():
-                buds.extend(artist.liked_by.all())
+            for artist in user.likes_artist.all():
+                buds.extend(artist.users.all())
             
             # Filter out the user and duplicates
-            buds = list({bud.uid: bud for bud in buds if bud.uid != user.uid}.values())
-
+            buds = list({bud: bud for bud in buds if bud.uid != user.uid}.values())
+            
             buds_data = []
             artist_ids = []
             track_ids = []
