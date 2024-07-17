@@ -20,6 +20,8 @@ class LastfmUser(User):
     likes_tracks = RelationshipTo(Track, 'LIKES_TRACK', cardinality=ZeroOrMore)
     likes_genres = RelationshipTo(Genre, 'LIKES_GENRE', cardinality=ZeroOrMore)
     likes_albums = RelationshipTo(Album, 'LIKES_ALBUM', cardinality=ZeroOrMore)
+    played_tracks = RelationshipTo(Track, 'PLAYED_TRACK', cardinality=ZeroOrMore)
+
 
     @classmethod
     def update_lastfm_tokens(cls, user, token):
@@ -52,4 +54,6 @@ class LastfmUser(User):
             'likes_tracks': [track.serialize() for track in user.likes_tracks],
             'likes_genres': [genre.serialize() for genre in user.likes_genres],
             'likes_albums': [album.serialize() for album in user.likes_albums],
+            'played_tracks': [track.serialize() for track in user.played_tracks],
+
         }

@@ -94,6 +94,8 @@ class SpotifyService(ServiceStrategy):
                     ).save()
                 if relation_type == "top":
                     user.top_artists.connect(node)
+                    user.likes_artists.connect(node)
+
                 elif relation_type == "followed":
                     user.likes_artists.connect(node)
 
@@ -117,6 +119,8 @@ class SpotifyService(ServiceStrategy):
                     ).save()
                 if relation_type == "top":
                     user.top_tracks.connect(node)
+                    user.likes_tracks.connect(node)
+
                 elif relation_type == "saved":
                     user.likes_tracks.connect(node)
 
@@ -159,6 +163,8 @@ class SpotifyService(ServiceStrategy):
                     node = SpotifyGenre(name=genre_data).save()
                 if relation_type == "top":
                     user.top_genres.connect(node)
+                    user.likes_genres.connect(node)
+
                 elif relation_type == "followed":
                     user.likes_genres.connect(node)
 
@@ -182,6 +188,8 @@ class SpotifyService(ServiceStrategy):
                     ).save()
                 if relation_type == "top":
                     user.top_albums.connect(node)
+                    user.likes_albums.connect(node)
+
                 elif relation_type == "saved":
                     user.likes_albums.connect(node)
 

@@ -179,15 +179,7 @@ class YTmusicService(ServiceStrategy):
                                          thumbnail_heights=[image['height'] for image in item['thumbnails']],
                                          thumbnail_widthes=[image['width'] for image in item['thumbnails']]).save()
                 
-
-                if relation_type == "library":
-                    relationship = user.library_artists.relationship(node)
-                    if relationship is None:
-                        relationship = user.library_artists.connect(node)
-                elif relation_type == "subscribed":
-                    relationship = user.subscriptions.relationship(node)
-                    if relationship is None:
-                        relationship = user.subscriptions.connect(node)
+                user.likes_artists.connect(node)
                 
             elif label == 'Track':
                 # Check if the track already exists
@@ -209,51 +201,20 @@ class YTmusicService(ServiceStrategy):
                 album_node = YtmusicAlbum.nodes.get_or_none(name=album['name'],ytmusic_id= album['id'])
                 if album_node:
                     node.album.connect(album_node)                
-                if relation_type == "library":
-                    relationship = user.library_tracks.relationship(node)
-                    if relationship is None:
-                        relationship = user.library_tracks.connect(node)
                 elif relation_type == "liked":
-                    relationship = user.likes_track.relationship(node)
-                    if relationship is None:
-                        relationship = user.likes_track.connect(node)
+                   user.likes_tracks.connect(node)
                 elif relation_type == "played":
-                    relationship = user.played_track.relationship(node)
-                    if relationship is None:
-                        relationship = user.played_track.connect(node)
+                   user.played_tracks.connect(node)
                 
-            elif label == 'Album':
-                # Check if the album already exists
-                node = YtmusicAlbum.nodes.get_or_none(name=item['title'])
-                if not node:
-                    node = YtmusicAlbum(name=item['title'],browseId =item['browseId'] ,
-                                        thumbnails=[image['url'] for image in item['thumbnails']],
-                                        thumbnail_heights=[image['height'] for image in item['thumbnails']],
-                                        thumbnail_widthes=[image['width'] for image in item['thumbnails']]).save()
-                # Link album to artists
-                for artist in item['artists']:
-                    artist_node = YtmusicArtist.nodes.get_or_none(name=artist['name'],ytmusic_id= artist['id'])
-                    if artist_node:
-                        node.artists.connect(artist_node)
-                
-                relationship = user.library_albums.relationship(node)
-                if relationship is None:
-                    relationship = user.library_albums.connect(node)
 
     def save_user_likes(self, user):
 
-        user_library_artists = self.fetch_library_artists(user)
-        user_library_tracks = self.fetch_library_tracks(user)
-        user_library_albums = self.fetch_library_albums(user)
         user_liked_tracks = self.fetch_liked_tracks(user)
         user_library_subscriptions = self.fetch_library_subscriptions(user)
         user_history = self.fetch_history(user)
     
 
         # # Map data to Neo4j
-        self.map_to_neo4j(user, 'Artist', user_library_artists,'library')
-        self.map_to_neo4j(user, 'Track', user_library_tracks,'library') 
-        self.map_to_neo4j(user, 'Album', user_library_albums,'library')
         self.map_to_neo4j(user, 'Track', user_liked_tracks,'liked') 
         self.map_to_neo4j(user, 'Artist', user_library_subscriptions,'subscribed')
         self.map_to_neo4j(user, 'Track', user_history,'played')

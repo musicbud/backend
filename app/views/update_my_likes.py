@@ -20,7 +20,7 @@ class update_my_likes(APIView):
         try:
             user = request.user
             service = user.service
-            return JsonResponse({'data':get_service(service).save_user_likes(user)})
+            get_service(service).save_user_likes(user)
             return JsonResponse({'message': 'Updated Likes successfully'}, status=200)
         except Exception as e:
             logger.error(e)

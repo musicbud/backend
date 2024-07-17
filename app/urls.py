@@ -23,6 +23,10 @@ from .views.get_buds_by_liked_aio import get_buds_by_liked_aio
 from .views.get_buds_by_top_artists import get_buds_by_top_artists
 from .views.get_buds_by_top_tracks import get_buds_by_top_tracks
 from .views.get_buds_by_top_genres import get_buds_by_top_genres
+from .views.get_buds_by_played_tracks import get_buds_by_played_tracks
+from .views.get_buds_by_artist import get_buds_by_artist
+from .views.get_buds_by_track import get_buds_by_track
+from .views.get_buds_by_genre import get_buds_by_genre
 
 
 from .views.search_users import search_users
@@ -49,6 +53,10 @@ urlpatterns = [path('login', login, name='login'),
     path('get-buds-by-top-artists', get_buds_by_top_artists.as_view(), name='get_buds_by_top_artists'),
     path('get-buds-by-top-tracks', get_buds_by_top_tracks.as_view(), name='get_buds_by_top_tracks'),
     path('get-buds-by-top-genres', get_buds_by_top_genres.as_view(), name='get_buds_by_top_genres'),
+    path('get-buds-by-played-tracks', get_buds_by_played_tracks.as_view(), name='get_buds_by_played_tracks'),
+    path('get-buds-by-artist', get_buds_by_artist.as_view(), name='get_buds_by_artist'),
+    path('get-buds-by-track', get_buds_by_track.as_view(), name='get_buds_by_track'),
+    path('get-buds-by-genre', get_buds_by_genre.as_view(), name='get_buds_by_genre'),
 
     path('search-channels-and-users', search_users.as_view(), name='search_channels_and_users'),
     path('docs/', TemplateView.as_view(template_name="index.html")),

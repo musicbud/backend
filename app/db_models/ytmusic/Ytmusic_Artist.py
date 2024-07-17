@@ -6,7 +6,7 @@ from ..Artist import Artist
 class YtmusicArtist(Artist):
     ytmusic_id =StringProperty() 
     browseId = StringProperty(unique_index=True)
-    subscribers = IntegerProperty() 
+    subscribers = StringProperty() 
     thumbnails = ArrayProperty()
     thumbnail_heights = ArrayProperty()
     thumbnail_widthes = ArrayProperty()

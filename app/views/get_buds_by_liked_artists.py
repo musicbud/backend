@@ -36,7 +36,7 @@ class get_buds_by_liked_artists(APIView):
             for bud in buds:
                 bud_liked_artist_uids = [artist.uid for artist in bud.likes_artists.all()]
 
-                common_artists = user.likes_artist.filter(uid__in=bud_liked_artist_uids)
+                common_artists = user.likes_artists.filter(uid__in=bud_liked_artist_uids)
                 common_artists_count = len(common_artists)
                 total_common_artists_count += common_artists_count
 

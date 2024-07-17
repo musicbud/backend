@@ -2,6 +2,7 @@ from .ServiceStrategy import ServiceStrategy
 import pylast
 from typing import List, Tuple
 import os 
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 from app.db_models.lastfm.Lastfm_Artist import LastfmArtist
 from app.db_models.lastfm.Lastfm_Track import LastfmTrack
@@ -34,7 +35,21 @@ class LastFmService(ServiceStrategy):
         Generates a URL for user authorization.
         """
         skg = pylast.SessionKeyGenerator(self.network)
-        return skg.get_web_auth_url()
+        url = skg.get_web_auth_url()
+        parsed_url = urlparse(url)
+
+        # Parse the query parameters
+        query_params = parse_qs(parsed_url.query)
+
+        # Remove the token parameter
+        query_params.pop('token', None)
+
+        # Reconstruct the query string without the token
+        query_string = urlencode(query_params, doseq=True)
+
+        # Reconstruct the full URL without the token parameter
+        return urlunparse((parsed_url.scheme, parsed_url.netloc, parsed_url.path, parsed_url.params, query_string, parsed_url.fragment))
+
 
     def fetch_top_artists(self, username: str, limit: int = 10) -> List[pylast.TopItem]:
         """
@@ -50,8 +65,7 @@ class LastFmService(ServiceStrategy):
         limit = int(limit)  # Convert limit to integer if it's passed as a string or other type
         
         return self.network.get_user(username).get_top_tracks(limit=limit)
-
-
+        
     def fetch_top_genres(self, username: str, limit: int = 10) -> List[Tuple[str, int]]:
         """
         Fetches the top genres for a given user based on their top artists' tags.
@@ -78,6 +92,10 @@ class LastFmService(ServiceStrategy):
         loved_tracks = user.get_loved_tracks()
         return loved_tracks
     
+    def fetch_recent_tracks(self,username):
+        user = self.network.get_user(username)
+        played_tracks = user.get_recent_tracks()
+        return played_tracks
 
     def map_to_neo4j(self, user, label, items,relation_type):
         for item in items:
@@ -85,79 +103,54 @@ class LastFmService(ServiceStrategy):
             if label == 'Artist':
                 item_name = item.item.get_name()
                 item_id = item.item.get_mbid()  if item.item.get_mbid() is not None else item_name
-                item_weight = int(item.weight) if item.weight is not None else 0
-
-                node = LastfmArtist.nodes.get_or_none(lastfm_id=item_id)
+                node = LastfmArtist.nodes.get_or_none(name=item_name)
                 if not node:
                     node = LastfmArtist(lastfm_id=item_id, name=item_name).save()
 
                 if relation_type == "top":
-                    relationship = user.top_artists.relationship(node)
-                    if relationship is None:
-                        relationship = user.top_artists.connect(node)
-                elif relation_type == "loved":
-                    relationship = user.likes_artist.relationship(node)
-                    if relationship is None:
-                        relationship = user.likes_artist.connect(node)
-                relationship.weight = item_weight
-                relationship.save()
+                        user.top_artists.connect(node)
+                        user.likes_artists.connect(node)
+
+                elif relation_type == "liked":
+                    user.likes_artists.connect(node)
+               
 
             elif label == 'Track':
                 item_name = item.item.get_name()
                 item_id = item.item.get_mbid()  if item.item.get_mbid() is not None else item_name
-                item_weight = int(item.weight) if item.weight is not None else 0
                 
-                node = LastfmTrack.nodes.get_or_none(lastfm_id=item_id)
+                node = LastfmTrack.nodes.get_or_none(name=item_name)
                 if not node:
                     node = LastfmTrack(lastfm_id=item_id, name=item_name).save()
                 if relation_type == "top":
-                    relationship = user.top_tracks.relationship(node)
-                    if relationship is None:
-                        relationship = user.top_tracks.connect(node)
-                elif relation_type == "loved":
-                    relationship = user.likes_track.relationship(node)
-                    if relationship is None:
-                        relationship = user.likes_track.connect(node)
-                relationship.weight = item_weight
-                relationship.save()
-            
-            elif label == 'Album':
-                item_name = item.item.get_name()
-                item_id = item.item.get_mbid()  if item.item.get_mbid() is not None else item_name
-                item_weight = int(item.weight) if item.weight is not None else 0
-                
-                node = LastfmAlbum.nodes.get_or_none(lastfm_id=item_id)
+                    user.top_tracks.connect(node)
+                    user.likes_tracks.connect(node)
+                elif relation_type == "liked":
+                    user.likes_tracks.connect(node)
+
+
+            elif label == 'Played_Track':
+                track_name = item.track.get_name()
+                node = LastfmTrack.nodes.get_or_none(name=track_name)
+
                 if not node:
-                    node = LastfmAlbum(lastfm_id=item_id, name=item_name).save()
-                if relation_type == "top":
-                    relationship = user.top_albums.relationship(node)
-                    if relationship is None:
-                        relationship = user.top_albums.connect(node)
-                elif relation_type == "loved":
-                    relationship = user.likes_album.relationship(node)
-                    if relationship is None:
-                        relationship = user.likes_album.connect(node)
-                relationship.weight = item_weight
-                relationship.save()
-                
+                    node = LastfmTrack(name=track_name).save()
+                user.played_tracks.connect(node)
+
             elif label == 'Genre':
                 item_name = item[0]
-                item_weight = item[1]
 
                 
                 node = LastfmGenre.nodes.get_or_none(name=item_name)
                 if not node:
                     node = LastfmGenre(name=item_name).save()
-                if relation_type == "top":
-                    relationship = user.top_genres.relationship(node)
-                    if relationship is None:
-                        relationship = user.top_genres.connect(node)
-                elif relation_type == "loved":
-                    relationship = user.likes_genre.relationship(node)
-                    if relationship is None:
-                        relationship = user.likes_genre.connect(node)
-                relationship.weight = item_weight
-                relationship.save()
+                if relation_type == "top":                    
+                    user.top_genres.connect(node)
+                    user.likes_genres.connect(node)
+
+                elif relation_type == "liked":
+                    user.likes_genres.connect(node)
+               
             
     def save_user_likes(self, user):
         
@@ -165,9 +158,11 @@ class LastFmService(ServiceStrategy):
         user_top_tracks =  self.fetch_top_tracks(user.username)
         user_top_genres =  self.fetch_top_genres(user.username)
         user_liked_tracks =  self.fetch_liked_tracks(user.username)
+        user_played_tracks =  self.fetch_recent_tracks(user.username)
         
         # Map data to Neo4j
         self.map_to_neo4j(user, 'Artist', user_top_artists,"top")
         self.map_to_neo4j(user, 'Track', user_top_tracks,"top")
         self.map_to_neo4j(user, 'Genre', user_top_genres,"top")
-        self.map_to_neo4j(user, 'Track', user_liked_tracks, "loved")
+        self.map_to_neo4j(user, 'Track', user_liked_tracks, "liked")
+        self.map_to_neo4j(user, 'Played_Track', user_played_tracks, "played")

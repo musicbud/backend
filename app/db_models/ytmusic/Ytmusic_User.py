@@ -13,14 +13,9 @@ class YtmusicUser(User):
     channel_handle = StringProperty()
     account_name = StringProperty()
 
-    library_artists = RelationshipTo(Artist, 'LIBRARY_ARTIST', model=LibraryItemRel)
-    library_tracks = RelationshipTo(Track, 'LIBRARY_TRACK', model=LibraryItemRel)
-    library_albums = RelationshipTo(Album, 'LIBRARY_ALBUM', model=LibraryItemRel)
-
-    likes_track = RelationshipTo(Track, 'LIKES_TRACK', cardinality=ZeroOrMore)
-    
-    subscriptions = RelationshipTo(Artist, 'SUBSCRIBED_TO', cardinality=ZeroOrMore)
-    played_track = RelationshipTo(Track, 'PLAYED_TRACK', cardinality=ZeroOrMore)
+    likes_tracks = RelationshipTo(Track, 'LIKES_TRACK', cardinality=ZeroOrMore)    
+    likes_artists = RelationshipTo(Artist, 'LIKES_ARTIST', cardinality=ZeroOrMore)
+    played_tracks = RelationshipTo(Track, 'PLAYED_TRACK', cardinality=ZeroOrMore)
     
 
     @classmethod
@@ -59,10 +54,7 @@ class YtmusicUser(User):
     @classmethod
     def get_profile(cls, user):
         return {
-            'library_artists': [artist.serialize() for artist in user.library_artists],
-            'library_tracks': [track.serialize() for track in user.library_tracks],
-            'library_genres': [genre.serialize() for genre in user.library_albums],
-            'likes_tracks': [track.serialize() for track in user.likes_track],
-            'played_track': [track.serialize() for track in user.played_track],
-            'subscriptions': [artist.serialize() for artist in user.subscriptions],
+            'likes_tracks': [track.serialize() for track in user.likes_tracks],
+            'played_tracks': [track.serialize() for track in user.played_tracks],
+            'likes_artists': [artist.serialize() for artist in user.likes_artists],
         }
