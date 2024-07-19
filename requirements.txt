@@ -1,3 +1,4 @@
+adrf==0.1.6
 aiobotocore @ file:///croot/aiobotocore_1701291493089/work
 aiohttp @ file:///croot/aiohttp_1707342283163/work
 aioitertools @ file:///tmp/build/80754af9/aioitertools_1607109665762/work
@@ -21,6 +22,7 @@ astroid @ file:///work/ci_py311/astroid_1676920975848/work
 astropy @ file:///croot/astropy_1697468907928/work
 asttokens @ file:///opt/conda/conda-bld/asttokens_1646925590279/work
 async-lru @ file:///croot/async-lru_1699554519285/work
+async-property==0.2.2
 atomicwrites==1.4.0
 attrs @ file:///croot/attrs_1695717823297/work
 Automat @ file:///tmp/build/80754af9/automat_1600298431173/work
@@ -71,6 +73,7 @@ cssselect @ file:///croot/cssselect_1707339882883/work
 cycler @ file:///tmp/build/80754af9/cycler_1637851556182/work
 cytoolz @ file:///croot/cytoolz_1701723583781/work
 dask @ file:///croot/dask-core_1701396095060/work
+dataclasses==0.6
 datashader @ file:///croot/datashader_1699542882288/work
 debugpy @ file:///croot/debugpy_1690905042057/work
 decorator @ file:///opt/conda/conda-bld/decorator_1643638310831/work
@@ -84,6 +87,7 @@ django-cors-headers==4.3.1
 django-pdb==0.6.2
 django_neomodel==0.2.0
 djangorestframework==3.15.1
+dnspython==2.6.1
 docstring-to-markdown @ file:///work/ci_py311/docstring-to-markdown_1676851973684/work
 docutils @ file:///work/ci_py311/docutils_1676822773036/work
 drf-yasg==1.21.7
@@ -102,10 +106,20 @@ gensim @ file:///work/ci_py311/gensim_1677033391129/work
 gitdb @ file:///tmp/build/80754af9/gitdb_1617117951232/work
 GitPython @ file:///croot/gitpython_1696936983078/work
 gmpy2 @ file:///work/ci_py311/gmpy2_1676839849213/work
+google-api-core==2.19.0
+google-api-python-client==2.133.0
+google-auth==2.30.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.0
+googleapis-common-protos==1.63.1
 greenlet @ file:///croot/greenlet_1702059959679/work
+h11==0.14.0
 h5py @ file:///croot/h5py_1691589708553/work
 HeapDict @ file:///Users/ktietz/demo/mc3/conda-bld/heapdict_1630598515714/work
 holoviews @ file:///croot/holoviews_1707836454244/work
+httpcore==1.0.5
+httplib2==0.22.0
+httpx==0.27.0
 hvplot @ file:///croot/hvplot_1706712387811/work
 hyperlink @ file:///tmp/build/80754af9/hyperlink_1610130746837/work
 idna @ file:///work/ci_py311/idna_1676822698822/work
@@ -173,16 +187,19 @@ mccabe @ file:///opt/conda/conda-bld/mccabe_1644221741721/work
 mdit-py-plugins @ file:///work/ci_py311/mdit-py-plugins_1676837111662/work
 mdurl @ file:///work/ci_py311/mdurl_1676827289376/work
 menuinst @ file:///croot/menuinst_1706732933928/work
+mido-fix==1.2.12
 mistune @ file:///work/ci_py311/mistune_1676823683049/work
 mkl-fft @ file:///croot/mkl_fft_1695058164594/work
 mkl-random @ file:///croot/mkl_random_1695059800811/work
 mkl-service==2.4.0
+mongoengine==0.28.2
 more-itertools @ file:///croot/more-itertools_1700662129964/work
 mpmath @ file:///croot/mpmath_1690848262763/work
 msgpack @ file:///work/ci_py311/msgpack-python_1676823037805/work
 multidict @ file:///croot/multidict_1701096859099/work
 multipledispatch @ file:///work/ci_py311/multipledispatch_1676841220684/work
 munkres==1.1.4
+musicpy==6.89
 mypy @ file:///croot/mypy-split_1708366513367/work
 mypy-extensions @ file:///croot/mypy_extensions_1695130926492/work
 navigator-updater @ file:///croot/navigator-updater_1695210188412/work
@@ -200,6 +217,7 @@ numba @ file:///croot/numba_1707085079500/work
 numexpr @ file:///croot/numexpr_1696515281613/work
 numpy @ file:///croot/numpy_and_numpy_base_1708638617955/work/dist/numpy-1.26.4-cp311-cp311-linux_x86_64.whl#sha256=5f96f274d410a1682519282ae769c877d32fdbf171aa8badec7bf5e1d3a1748a
 numpydoc @ file:///work/ci_py311/numpydoc_1676845056742/work
+oauthlib==3.2.2
 openpyxl==3.0.10
 overrides @ file:///croot/overrides_1699371140756/work
 packaging @ file:///croot/packaging_1693575174725/work
@@ -225,6 +243,7 @@ ply==3.11
 prometheus-client @ file:///work/ci_py311_2/prometheus_client_1679340520168/work
 prompt-toolkit @ file:///croot/prompt-toolkit_1704404351921/work
 Protego @ file:///tmp/build/80754af9/protego_1598657180827/work
+proto-plus==1.23.0
 protobuf==3.20.3
 psutil @ file:///work/ci_py311_2/psutil_1679337388738/work
 ptyprocess @ file:///tmp/build/80754af9/ptyprocess_1609355006118/work/dist/ptyprocess-0.7.0-py2.py3-none-any.whl
@@ -244,11 +263,14 @@ PyDispatcher==2.0.5
 pydocstyle @ file:///work/ci_py311/pydocstyle_1677708708066/work
 pyerfa @ file:///work/ci_py311/pyerfa_1676838574038/work
 pyflakes @ file:///work/ci_py311/pyflakes_1677708650266/work
+pygame==2.5.2
 Pygments @ file:///croot/pygments_1684279966437/work
 PyJWT @ file:///work/ci_py311/pyjwt_1676827385359/work
+pylast==5.3.0
 pylint @ file:///work/ci_py311/pylint_1676920998643/work
 pylint-venv @ file:///work/ci_py311/pylint-venv_1677706395472/work
 pyls-spyder==0.4.0
+pymongo==4.7.3
 pyodbc @ file:///croot/pyodbc_1705431351638/work
 pyOpenSSL @ file:///croot/pyopenssl_1708380408460/work
 pyparsing @ file:///work/ci_py311/pyparsing_1677811559502/work
@@ -283,12 +305,14 @@ referencing @ file:///croot/referencing_1699012038513/work
 regex @ file:///croot/regex_1696515298636/work
 requests @ file:///croot/requests_1707355572290/work
 requests-file @ file:///Users/ktietz/demo/mc3/conda-bld/requests-file_1629455781986/work
+requests-oauthlib==2.0.0
 requests-toolbelt @ file:///croot/requests-toolbelt_1690874004362/work
 rfc3339-validator @ file:///croot/rfc3339-validator_1683077044675/work
 rfc3986-validator @ file:///croot/rfc3986-validator_1683058983515/work
 rich @ file:///croot/rich_1684282154404/work
 rope @ file:///work/ci_py311/rope_1677708536193/work
 rpds-py @ file:///croot/rpds-py_1698945930462/work
+rsa==4.9
 Rtree @ file:///work/ci_py311/rtree_1676845693189/work
 ruamel-yaml-conda @ file:///work/ci_py311/ruamel_yaml_1676845707897/work
 ruamel.yaml @ file:///work/ci_py311/ruamel.yaml_1676838772170/work
@@ -362,6 +386,7 @@ watchdog @ file:///work/ci_py311/watchdog_1676846191736/work
 wcwidth @ file:///Users/ktietz/demo/mc3/conda-bld/wcwidth_1629357192024/work
 webencodings==0.5.1
 websocket-client @ file:///work/ci_py311/websocket-client_1676824890004/work
+websockets==12.0
 Werkzeug @ file:///croot/werkzeug_1679489717957/work
 whatthepatch @ file:///work/ci_py311/whatthepatch_1677708379946/work
 widgetsnbextension @ file:///croot/widgetsnbextension_1701273613663/work
@@ -371,6 +396,7 @@ xarray @ file:///croot/xarray_1689041471350/work
 xyzservices @ file:///work/ci_py311/xyzservices_1676828923127/work
 yapf @ file:///tmp/build/80754af9/yapf_1615749224965/work
 yarl @ file:///croot/yarl_1701105127787/work
+ytmusicapi==1.7.3
 zict @ file:///croot/zict_1695832839030/work
 zipp @ file:///croot/zipp_1704206909481/work
 zope.interface @ file:///work/ci_py311/zope.interface_1676905896080/work

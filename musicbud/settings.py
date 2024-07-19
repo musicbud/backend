@@ -3,6 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 import logging.config
 
+load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -13,7 +14,7 @@ SECRET_KEY = 'your-secret-key'
 DEBUG = True
 
 HOST = os.environ.get('HOST')
-ALLOWED_HOSTS = ['127.0.0.1','localhost']
+ALLOWED_HOSTS = ['127.0.0.1','localhost','152.70.49.208']
 
 # Application definition
 INSTALLED_APPS = [
@@ -110,8 +111,8 @@ YTMUSIC_REDIRECT_URI = os.environ.get('YTMUSIC_REDIRECT_URI')
 
 # Neo4j database settings
 
-NEOMODEL_NEO4J_BOLT_URL = 'bolt://neo4j:12345678@192.168.49.2:30087'
-# NEOMODEL_NEO4J_BOLT_URL = 'bolt://neo4j:12345678@127.0.0.1:7687'
+# NEOMODEL_NEO4J_BOLT_URL = 'bolt://neo4j:12345678@152.70.49.208:7687'
+NEOMODEL_NEO4J_BOLT_URL = 'bolt://neo4j:12345678@127.0.0.1:7687'
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
