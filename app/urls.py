@@ -59,7 +59,6 @@ urlpatterns = [path('login', login, name='login'),
     path('get-buds-by-genre', get_buds_by_genre.as_view(), name='get_buds_by_genre'),
 
     path('search-channels-and-users', search_users.as_view(), name='search_channels_and_users'),
-    path('docs/', TemplateView.as_view(template_name="index.html")),
     # seeders
     path('spotify/create-user-seed', create_user_seed, name='create_user_seed'),
 
