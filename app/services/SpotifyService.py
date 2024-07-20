@@ -19,9 +19,7 @@ class SpotifyService(ServiceStrategy):
         self.auth_manager = SpotifyOAuth(client_id=self.client_id,
                                          client_secret=self.client_secret,
                                          redirect_uri=self.redirect_uri,
-                                         scope=self.scope)
-        self.sp = spotipy.Spotify(auth_manager=self.auth_manager)
-    
+                                         scope=self.scope)    
     def create_authorize_url(self):
         return self.auth_manager.get_authorize_url()
     

@@ -42,8 +42,8 @@ Find buds profile with common:
 ### Installing
 
 1. install neo4j
-  - using apt-get (install-and-configure-neo4j)[https://www.digitalocean.com/community/tutorials/how-to-install-and-configure-neo4j-on-ubuntu-20-04]
-  - using kubernetes (neo4j5-on-kubernetes)[https://github.com/synyx/neo4j5-on-kubernetes/tree/main] 
+  - using apt-get [install-and-configure-neo4j](https://www.digitalocean.com/community/tutorials/how-to-install-and-configure-neo4j-on-ubuntu-20-04)
+  - using kubernetes [neo4j5-on-kubernetes](https://github.com/synyx/neo4j5-on-kubernetes/tree/main) 
 2. ```pip3 install requirements.txt```
 3. change .env accordindly 
-Hit `localhost/musicbud/docs`
+Hit `127.0.0.1/login`
