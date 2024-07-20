@@ -7,6 +7,7 @@ from django.http import JsonResponse
 
 from ..db_models.User import User
 from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
+from ..pagination import StandardResultsSetPagination
 
 import logging
 logger = logging.getLogger(__name__)
@@ -57,20 +58,19 @@ class get_buds_by_liked_genres(APIView):
                 }
                 buds_data.append(bud_data)
 
+            paginator = StandardResultsSetPagination()
+            paginated_buds = paginator.paginate_queryset(buds_data, request)
 
-            # Update buds_data with additional genre information if fetched
-            # for bud in buds_data:
-            #     bud['commonGenres'] = [genre for genre in common_genres_data if genre['id'] in genre_ids]
-
-            return JsonResponse({
+            paginated_response = paginator.get_paginated_response(paginated_buds)
+            paginated_response.update({
                 'message': 'Fetched buds successfully.',
                 'code': 200,
                 'successful': True,
-                'data': {
-                    'buds': buds_data,
-                    'totalCommonGenresCount': sum(bud['commonGenresCount'] for bud in buds_data)
-                }
             })
+            return JsonResponse(paginated_response)
+
+
+            return JsonResponse(paginated_response)
         except Exception as e:
             logger.error(e)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)

@@ -7,6 +7,7 @@ from django.http import JsonResponse
 
 from ..db_models.User import User
 from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
+from ..pagination import StandardResultsSetPagination
 
 import logging
 logger = logging.getLogger(__name__)
@@ -98,18 +99,19 @@ class get_buds_by_liked_aio(APIView):
                 bud['commonTracks'] = [track.serialize() for track in common_tracks if track['uid'] in track_ids and track['uid'] != bud_uid]
                 bud['commonGenres'] = [genre.serialize() for genre in common_genres if genre['uid'] in genre_ids and genre['uid'] != bud_uid]
                 bud['commonAlbums'] = [album.serialize() for album in common_albums if album.uid in album_ids and album.uid != bud_uid]
-            return JsonResponse({
+
+            paginator = StandardResultsSetPagination()
+            paginated_buds = paginator.paginate_queryset(buds_data, request)
+
+            paginated_response = paginator.get_paginated_response(paginated_buds)
+            paginated_response.update({
                 'message': 'Fetched buds successfully.',
                 'code': 200,
                 'successful': True,
-                'data': {
-                    'buds': buds_data,
-                    'totalCommonArtistsCount': sum(bud['commonArtistsCount'] for bud in buds_data),
-                    'totalCommonTracksCount': sum(bud['commonTracksCount'] for bud in buds_data),
-                    'totalCommonGenresCount': sum(bud['commonGenresCount'] for bud in buds_data),
-                    'totalCommonAlbumsCount': sum(bud['commonAlbumsCount'] for bud in buds_data),
-                }
             })
+
+            return JsonResponse(paginated_response)
+
         except Exception as e:
             logger.error(e)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)

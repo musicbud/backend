@@ -32,7 +32,7 @@ INSTALLED_APPS = [
     'django_neomodel',
     'django_pdb',
     'drf_yasg',
-    'adrf'
+    'adrf',
 
 ]
 
@@ -80,6 +80,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'musicbud.wsgi.application'
+ASGI_APPLICATION = "musicbud.asgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
@@ -95,7 +96,7 @@ DATABASES = {
 SPOTIFY_CLIENT_ID = os.environ.get('SPOTIFY_CLIENT_ID')
 SPOTIFY_CLIENT_SECRET = os.environ.get('SPOTIFY_CLIENT_SECRET')
 SPOTIFY_REDIRECT_URI = os.environ.get('SPOTIFY_REDIRECT_URI')
-SPOTIFY_SCOPE = "user-library-read user-read-private user-top-read user-follow-read"
+SPOTIFY_SCOPE = "user-library-read user-read-private user-top-read user-follow-read user-read-recently-played"
 
 #LASTFM secrets
 LASTFM_API_KEY = os.environ.get('LASTFM_API_KEY')
@@ -111,8 +112,7 @@ YTMUSIC_REDIRECT_URI = os.environ.get('YTMUSIC_REDIRECT_URI')
 
 # Neo4j database settings
 
-# NEOMODEL_NEO4J_BOLT_URL = 'bolt://neo4j:12345678@152.70.49.208:7687'
-NEOMODEL_NEO4J_BOLT_URL = 'bolt://neo4j:12345678@127.0.0.1:7687'
+NEOMODEL_NEO4J_BOLT_URL = os.environ.get('NEOMODEL_NEO4J_BOLT_URL')
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators

@@ -20,6 +20,7 @@ class SpotifyUser(User):
     likes_tracks = RelationshipTo(Track, 'LIKES_TRACK')
     likes_genres = RelationshipTo(Genre, 'LIKES_GENRE')
     likes_albums = RelationshipTo(Album, 'LIKES_ALBUM')
+    played_tracks = RelationshipTo(Track, 'PLAYED_TRACK', cardinality=ZeroOrMore)
     
     @classmethod
     def update_spotify_tokens(cls, user, tokens):

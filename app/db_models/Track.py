@@ -8,6 +8,6 @@ class Track(LikedItem):
     name = StringProperty( min_length=1, max_length=255)
     
     album =  RelationshipTo(Album, 'INCLUDED_IN')
-    artists = RelationshipTo('.Artist.Artist', 'PERFORMED_BY')
+    artist = RelationshipTo('.Artist.Artist', 'PERFORMED_BY')
     users = RelationshipFrom('.User.User', 'LIKES_TRACK')
     

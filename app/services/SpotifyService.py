@@ -35,41 +35,103 @@ class SpotifyService(ServiceStrategy):
         sp = spotipy.Spotify(auth=tokens['access_token'])
         return sp.current_user()
 
-    def fetch_top_artists(self, user,limit=50,time_range='long_term'):
-        sp = spotipy.Spotify(auth=user.access_token)
-        return  sp.current_user_top_artists(limit=limit,time_range=time_range)['items']
+    def fetch_top_artists(self, user, limit=50):
+        return self.fetch_all_items(user, 'top_artists', limit)
 
-    def fetch_top_tracks(self, user,limit=50,time_range='long_term'):
-        sp = spotipy.Spotify(auth=user.access_token)
-        return sp.current_user_top_tracks(limit=limit,time_range=time_range)['items']
+    def fetch_top_tracks(self, user, limit=50):
+        return self.fetch_all_items(user, 'top_tracks', limit)
 
-    def fetch_top_genres(self, user,limit=50):
-        top_artists = self.fetch_top_artists( user,limit)
+    def fetch_followed_artists(self, user, limit=50):
+        return self.fetch_all_items(user, 'followed_artists', limit)
+
+    def fetch_saved_tracks(self, user, limit=50):
+        return self.fetch_all_items(user, 'saved_tracks', limit)
+
+    def fetch_saved_albums(self, user, limit=50):
+        return self.fetch_all_items(user, 'saved_albums', limit)
+
+    def fetch_top_genres(self, user, limit=50):
+        top_artists = self.fetch_top_artists(user, limit)
         genre_count = {}
         for artist in top_artists:
             for genre in artist['genres']:
                 genre_count[genre] = genre_count.get(genre, 0) + 1
         return sorted(genre_count.items(), key=lambda x: x[1], reverse=True)[:limit]
     
-    def fetch_followed_artists(self, user, limit=50):
-        sp = spotipy.Spotify(auth=user.access_token)
-        return sp.current_user_followed_artists(limit=limit)['artists']['items']
-
-    def fetch_saved_tracks(self, user, limit=50):
-        sp = spotipy.Spotify(auth=user.access_token)
-        return [item['track'] for item in sp.current_user_saved_tracks(limit=limit)['items']]
-
-    def fetch_saved_albums(self, user, limit=50):
-        sp = spotipy.Spotify(auth=user.access_token)
-        return [item['album'] for item in sp.current_user_saved_albums(limit=limit)['items']]
-    
-    def fetch_followed_genres(self, user,limit=50):
-        followed_artists = self.fetch_followed_artists( user,limit)
+    def fetch_followed_genres(self, user, limit=50):
+        followed_artists = self.fetch_followed_artists(user, limit)
         genre_count = {}
         for artist in followed_artists:
             for genre in artist['genres']:
                 genre_count[genre] = genre_count.get(genre, 0) + 1
         return sorted(genre_count.items(), key=lambda x: x[1], reverse=True)[:limit]
+    
+
+    def fetch_all_items(self, user, item_type, limit=50):
+        sp = spotipy.Spotify(auth=user.access_token)
+        items = []
+        offset = 0
+        after = None
+        before = None
+        
+        while True:
+            if item_type == 'top_artists':
+                response = sp.current_user_top_artists(limit=limit, offset=offset, time_range='long_term')
+                items.extend(response['items'])
+                if len(response['items']) < limit:
+                    break
+                offset += limit
+            elif item_type == 'top_tracks':
+                response = sp.current_user_top_tracks(limit=limit, offset=offset, time_range='long_term')
+                items.extend(response['items'])
+                if len(response['items']) < limit:
+                    break
+                offset += limit
+            elif item_type == 'followed_artists':
+                response = sp.current_user_followed_artists(limit=limit, after=after)
+                items.extend(response['artists']['items'])
+                if len(response['artists']['items']) < limit:
+                    break
+                after = response['artists']['cursors']['after']
+            elif item_type == 'saved_tracks':
+                response = sp.current_user_saved_tracks(limit=limit, offset=offset)
+                items.extend([item['track'] for item in response['items']])
+                if len(response['items']) < limit:
+                    break
+                offset += limit
+            elif item_type == 'saved_albums':
+                response = sp.current_user_saved_albums(limit=limit, offset=offset)
+                items.extend([item['album'] for item in response['items']])
+                if len(response['items']) < limit:
+                    break
+                offset += limit
+            elif item_type == 'recently_played':
+                response = sp.current_user_recently_played(limit=limit, after=after, before=before)
+                items.extend([item['track'] for item in response['items']])
+                if len(response['items']) < limit:
+                    break
+                after = response['items'][-1]['played_at']
+            else:
+                raise ValueError("Invalid item_type.")
+        
+        return items
+
+    def fetch_top_artists(self, user, limit=50):
+        return self.fetch_all_items(user, 'top_artists', limit)
+
+    def fetch_top_tracks(self, user, limit=50):
+        return self.fetch_all_items(user, 'top_tracks', limit)
+
+    def fetch_followed_artists(self, user, limit=50):
+        return self.fetch_all_items(user, 'followed_artists', limit)
+
+    def fetch_saved_tracks(self, user, limit=50):
+        return self.fetch_all_items(user, 'saved_tracks', limit)
+
+    def fetch_saved_albums(self, user, limit=50):
+        return self.fetch_all_items(user, 'saved_albums', limit)
+    def fetch_recently_played(self, user, limit=50):
+        return self.fetch_all_items(user, 'recently_played', limit)
 
     def map_to_neo4j(self, user, label, items, relation_type="top"):
 
@@ -101,6 +163,7 @@ class SpotifyService(ServiceStrategy):
 
             elif label == 'Track':
                 track_data = item
+                print(item)
                 node = SpotifyTrack.nodes.get_or_none(spotify_id=track_data['id'])
                 if not node:
                     node = SpotifyTrack(
@@ -123,6 +186,9 @@ class SpotifyService(ServiceStrategy):
 
                 elif relation_type == "saved":
                     user.likes_tracks.connect(node)
+
+                elif relation_type == "played":
+                    user.played_tracks.connect(node)
 
                 # Link track to album
                 album_data = track_data['album']
@@ -197,11 +263,12 @@ class SpotifyService(ServiceStrategy):
         user_top_artists = self.fetch_top_artists(user)
         user_top_tracks = self.fetch_top_tracks(user)
         user_top_genres = self.fetch_top_genres(user)
-        user_followed_artists = self.fetch_followed_artists(user)  
+        user_followed_artists = self.fetch_followed_artists(user)
         user_followed_genres = self.fetch_followed_genres(user)  
         user_saved_tracks = self.fetch_saved_tracks(user)
         user_saved_albums = self.fetch_saved_albums(user)  
-
+        user_played_tracks = self.fetch_recently_played(user)  
+        
         # Map data to Neo4j
         self.map_to_neo4j(user, 'Artist', user_top_artists, "top")
         self.map_to_neo4j(user, 'Track', user_top_tracks, "top")
@@ -210,6 +277,7 @@ class SpotifyService(ServiceStrategy):
         self.map_to_neo4j(user, 'Genre', user_followed_genres, "followed")
         self.map_to_neo4j(user, 'Track', user_saved_tracks, "saved")
         self.map_to_neo4j(user, 'Album', user_saved_albums, "saved")
+        self.map_to_neo4j(user, 'Track', user_played_tracks, "played")
 
 
     def refresh_token(self,user):

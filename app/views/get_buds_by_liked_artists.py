@@ -7,6 +7,7 @@ from django.http import JsonResponse
 
 from ..db_models.User import User
 from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
+from ..pagination import StandardResultsSetPagination
 
 import logging
 logger = logging.getLogger(__name__)
@@ -46,15 +47,17 @@ class get_buds_by_liked_artists(APIView):
                     'common_artists': [artist.serialize() for artist in common_artists]
                 })
 
-            return JsonResponse({
+            paginator = StandardResultsSetPagination()
+            paginated_buds = paginator.paginate_queryset(buds_data, request)
+
+            paginated_response = paginator.get_paginated_response(paginated_buds)
+            paginated_response.update({
                 'message': 'Fetched buds successfully.',
                 'code': 200,
                 'successful': True,
-                'data': {
-                    'buds': buds_data,
-                    'totalCommonArtistsCount': total_common_artists_count,
-                }
             })
+            return JsonResponse(paginated_response)
+
         except Exception as e:
             logger.error(e)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)

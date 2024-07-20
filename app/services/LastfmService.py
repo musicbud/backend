@@ -51,30 +51,28 @@ class LastFmService(ServiceStrategy):
         return urlunparse((parsed_url.scheme, parsed_url.netloc, parsed_url.path, parsed_url.params, query_string, parsed_url.fragment))
 
 
-    def fetch_top_artists(self, username: str, limit: int = 10) -> List[pylast.TopItem]:
+    def fetch_top_artists(self, username: str) -> List[pylast.TopItem]:
         """
         Fetches the top artists for a given user.
         """
-        return self.network.get_user(username).get_top_artists(limit=limit)
+        return self.network.get_user(username).get_top_artists()
 
-    def fetch_top_tracks(self, username: str, limit: int = 10) -> List[pylast.TopItem]:
+    def fetch_top_tracks(self, username: str) -> List[pylast.TopItem]:
         """
         Fetches the top tracks for a given user.
         """
-        # Ensure limit is an integer
-        limit = int(limit)  # Convert limit to integer if it's passed as a string or other type
         
-        return self.network.get_user(username).get_top_tracks(limit=limit)
+        return self.network.get_user(username).get_top_tracks()
         
-    def fetch_top_genres(self, username: str, limit: int = 10) -> List[Tuple[str, int]]:
+    def fetch_top_genres(self, username: str) -> List[Tuple[str, int]]:
         """
         Fetches the top genres for a given user based on their top artists' tags.
         """
-        top_artists = self.fetch_top_artists(username, limit)
+        top_artists = self.fetch_top_artists(username)
         genre_count = {}
         
         for artist in top_artists:
-            tags = artist.item.get_top_tags(limit=5)
+            tags = artist.item.get_top_tags()
             for tag in tags:
                 
                 genre = tag.item.get_name()
@@ -84,7 +82,7 @@ class LastFmService(ServiceStrategy):
                     genre_count[genre] = tag.weight
         
         # Convert dictionary to list of tuples for sorting
-        sorted_genres = sorted(genre_count.items(), key=lambda x: x[1], reverse=True)[:limit]        
+        sorted_genres = sorted(genre_count.items(), key=lambda x: x[1], reverse=True)        
         return sorted_genres
     
     def fetch_liked_tracks(self, username: str):

@@ -8,7 +8,7 @@ from ..db_models.User import User
 from ..db_models.Track import Track
 from ..db_models.Artist import Artist  # Ensure you import the Artist model
 from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
-
+from ..pagination import StandardResultsSetPagination
 import logging
 logger = logging.getLogger(__name__)
 
@@ -38,17 +38,18 @@ class get_buds_by_artist(APIView):
                 return JsonResponse({'error': 'Artist not found'}, status=404)
 
             # Find tracks by the specified artist
-            artist_tracks = Track.nodes.filter(artist=artist_node)
+            artist_tracks = artist_node.tracks.all()
             if not artist_tracks:
                 return JsonResponse({'error': 'No tracks found for this artist'}, status=404)
-
             # Find users who liked tracks by this artist
-            buds = set()
+            buds = []
+
             for track in artist_tracks:
-                buds.update(track.users.exclude(uid=user.uid))
+                buds.extend(track.users.exclude(uid=user.uid))
 
             buds_data = []
             total_common_tracks_count = 0
+
 
             for bud in buds:
                 bud_liked_track_uids = [track.uid for track in bud.likes_tracks.all()]
@@ -68,15 +69,18 @@ class get_buds_by_artist(APIView):
                     'commonTracks': [track.serialize() for track in common_tracks]
                 })
 
-            return JsonResponse({
+        
+            paginator = StandardResultsSetPagination()
+            paginated_buds = paginator.paginate_queryset(buds_data, request)
+
+            paginated_response = paginator.get_paginated_response(paginated_buds)
+            paginated_response.update({
                 'message': 'Fetched buds successfully.',
                 'code': 200,
                 'successful': True,
-                'data': {
-                    'buds': buds_data,
-                    'totalCommonTracksCount': total_common_tracks_count
-                }
             })
+
+            return JsonResponse(paginated_response)
         except Exception as e:
             logger.error(e)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)

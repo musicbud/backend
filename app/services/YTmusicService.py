@@ -73,7 +73,7 @@ class YTmusicService(ServiceStrategy):
                           }
         return ytmusicapi.YTMusic(auth=token_filtered).get_account_info()  
     
-    def fetch_library_artists(self, user: str, limit: int = 10) -> List[str]:
+    def fetch_library_artists(self, user: str) -> List[str]:
         """
         Fetches and maps the library artists for a user.
         """
@@ -86,11 +86,11 @@ class YTmusicService(ServiceStrategy):
                     'expires_at':user.expires_at,
                     'scope':user.scope
                 })
-        return ytmusic.get_library_artists(limit=limit)
+        return ytmusic.get_library_artists()
             
            
 
-    def fetch_library_tracks(self, user: str, limit: int = 10) -> List[str]:
+    def fetch_library_tracks(self, user: str) -> List[str]:
         """
         Fetches and maps the library tracks for a user.
         """
@@ -103,9 +103,9 @@ class YTmusicService(ServiceStrategy):
                     'expires_at':user.expires_at,
                     'scope':user.scope
                 })
-        return ytmusic.get_library_songs(limit=limit)
+        return ytmusic.get_library_songs()
 
-    def fetch_library_albums(self, user: str, limit: int = 10) -> List[str]:
+    def fetch_library_albums(self, user: str) -> List[str]:
         """
         Fetches and maps the library albums for a user.
         """
@@ -118,9 +118,9 @@ class YTmusicService(ServiceStrategy):
                     'expires_at':user.expires_at,
                     'scope':user.scope
                 })
-        return ytmusic.get_library_albums(limit=limit)
+        return ytmusic.get_library_albums()
     
-    def fetch_liked_tracks(self, user: str, limit: int = 10) -> List[str]:
+    def fetch_liked_tracks(self, user: str) -> List[str]:
         """
         Fetches and maps the liked songs for a user.
         """
@@ -133,9 +133,9 @@ class YTmusicService(ServiceStrategy):
                     'expires_at':user.expires_at,
                     'scope':user.scope
                 })
-        return ytmusic.get_liked_songs(limit=limit)['tracks']
+        return ytmusic.get_liked_songs()['tracks']
     
-    def fetch_library_subscriptions(self, user: str, limit: int = 10) -> List[str]:
+    def fetch_library_subscriptions(self, user: str) -> List[str]:
         """
         Fetches and maps the liked songs for a user.
         """
@@ -148,7 +148,7 @@ class YTmusicService(ServiceStrategy):
                     'expires_at':user.expires_at,
                     'scope':user.scope
                 })
-        return ytmusic.get_library_subscriptions(limit=limit)
+        return ytmusic.get_library_subscriptions()
     
     def fetch_history(self, user):
         """
@@ -192,19 +192,22 @@ class YTmusicService(ServiceStrategy):
                                         thumbnail_widthes=[image['width'] for image in item['thumbnails']]).save()
                 
                 # Link track to artists
-                for artist in item['artists']:
-                    artist_node = YtmusicArtist.nodes.get_or_none(name=artist['name'],ytmusic_id= artist['id'])
-                    if artist_node:
-                        node.artists.connect(artist_node)
-                # Link track to album
-                album = item['album']
-                album_node = YtmusicAlbum.nodes.get_or_none(name=album['name'],ytmusic_id= album['id'])
-                if album_node:
-                    node.album.connect(album_node)                
-                elif relation_type == "liked":
-                   user.likes_tracks.connect(node)
-                elif relation_type == "played":
-                   user.played_tracks.connect(node)
+                if item['artists'] :
+                    for artist in item['artists']:
+                        artist_node = YtmusicArtist.nodes.get_or_none(name=artist['name'],ytmusic_id= artist['id'])
+                        if artist_node:
+                            node.artists.connect(artist_node)
+                    # Link track to album
+                if item['album']:
+                    
+                    album = item['album']
+                    album_node = YtmusicAlbum.nodes.get_or_none(name=album['name'],ytmusic_id= album['id'])
+                    if album_node:
+                        node.album.connect(album_node)                
+                    elif relation_type == "liked":
+                        user.likes_tracks.connect(node)
+                    elif relation_type == "played":
+                        user.played_tracks.connect(node)
                 
 
     def save_user_likes(self, user):

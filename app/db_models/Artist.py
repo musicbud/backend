@@ -12,8 +12,8 @@ class Artist(LikedItem):
     library_items = RelationshipFrom('.User.User', 'LIBRARY_ITEM', model=LibraryItemRel)
 
     users = RelationshipFrom('.User.User', 'LIKES_ARTIST')
-    tracks = RelationshipTo('.Track.Track', 'PERFORMED_BY')
-    albums = RelationshipTo('.Album.Album', 'CONTRIBUTED_TO')
+    tracks = RelationshipFrom('.Track.Track', 'PERFORMED_BY')
+    albums = RelationshipFrom('.Album.Album', 'CONTRIBUTED_TO')
 
     def serialize(self):
         return {

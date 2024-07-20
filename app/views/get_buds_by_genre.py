@@ -8,6 +8,7 @@ from ..db_models.User import User
 from ..db_models.Track import Track
 from ..db_models.Genre import Genre  # Ensure you import the Genre model
 from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
+from ..pagination import StandardResultsSetPagination
 
 import logging
 logger = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ class get_buds_by_genre(APIView):
                 return JsonResponse({'error': 'Genre not found'}, status=404)
 
             # Find tracks by the specified genre
-            genre_tracks = Track.nodes.filter(genre=genre_node)
+            genre_tracks = genre_node.tracks.all()
             if not genre_tracks:
                 return JsonResponse({'error': 'No tracks found for this genre'}, status=404)
 
@@ -68,15 +69,17 @@ class get_buds_by_genre(APIView):
                     'commonTracks': [track.serialize() for track in common_tracks]
                 })
 
-            return JsonResponse({
+            paginator = StandardResultsSetPagination()
+            paginated_buds = paginator.paginate_queryset(buds_data, request)
+
+            paginated_response = paginator.get_paginated_response(paginated_buds)
+            paginated_response.update({
                 'message': 'Fetched buds successfully.',
                 'code': 200,
                 'successful': True,
-                'data': {
-                    'buds': buds_data,
-                    'totalCommonTracksCount': total_common_tracks_count
-                }
             })
+            return JsonResponse(paginated_response)
+
         except Exception as e:
             logger.error(e)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)

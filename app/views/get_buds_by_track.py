@@ -7,6 +7,7 @@ from django.utils.decorators import method_decorator
 from ..db_models.User import User
 from ..db_models.Track import Track  
 from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
+from ..pagination import StandardResultsSetPagination
 
 import logging
 logger = logging.getLogger(__name__)
@@ -37,7 +38,6 @@ class get_buds_by_track(APIView):
                 return JsonResponse({'error': 'Track not found'}, status=404)
 
             buds = track_node.users.exclude(uid=user.uid)
-            print(track_node.users.all())
             buds_data = []
             total_common_tracks_count = 0
 
@@ -59,15 +59,17 @@ class get_buds_by_track(APIView):
                     'commonTracks': [track.serialize() for track in common_tracks]
                 })
 
-            return JsonResponse({
+            paginator = StandardResultsSetPagination()
+            paginated_buds = paginator.paginate_queryset(buds_data, request)
+
+            paginated_response = paginator.get_paginated_response(paginated_buds)
+            paginated_response.update({
                 'message': 'Fetched buds successfully.',
                 'code': 200,
                 'successful': True,
-                'data': {
-                    'buds': buds_data,
-                    'totalCommonTracksCount': total_common_tracks_count
-                }
             })
+            return JsonResponse(paginated_response)
+
         except Exception as e:
             logger.error(e)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)

@@ -1,5 +1,5 @@
 from django.http import JsonResponse
-from rest_framework.views import APIView
+from rest_framework.views import  APIView
 from rest_framework.permissions import IsAuthenticated
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
