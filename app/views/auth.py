@@ -6,11 +6,15 @@ from ..db_models.lastfm.Lastfm_User import LastfmUser
 from ..db_models.ytmusic.Ytmusic_User import YtmusicUser
 
 from ..services.ServiceSelector import get_service
+
+import asyncio
+
 import logging
 
 logger = logging.getLogger(__name__)
+from asgiref.sync  import sync_to_async
 
-def login(request):
+async def login(request):
     service = request.GET.get('service', 'spotify')  # Default to 'lastfm' if no service is specified
     try:
         authorization_link = get_service(service).create_authorize_url()

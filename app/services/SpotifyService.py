@@ -163,7 +163,6 @@ class SpotifyService(ServiceStrategy):
 
             elif label == 'Track':
                 track_data = item
-                print(item)
                 node = SpotifyTrack.nodes.get_or_none(spotify_id=track_data['id'])
                 if not node:
                     node = SpotifyTrack(
@@ -220,7 +219,7 @@ class SpotifyService(ServiceStrategy):
                         href= artist_data['href'],
                         type = artist_data['type']
                         ).save()
-                    node.artists.connect(artist_node)
+                    node.artist.connect(artist_node)
 
             elif label == 'Genre':
                 genre_data = item[0]

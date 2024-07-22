@@ -32,6 +32,8 @@ from .views.get_buds_by_genre import get_buds_by_genre
 from .views.search_users import search_users
 
 from .seeders.spotify.create_user_seed import create_user_seed
+from .views.merge_similars import merge_similars
+
 
 router = DefaultRouter()
 
@@ -61,6 +63,13 @@ urlpatterns = [path('login', login, name='login'),
     path('search-channels-and-users', search_users.as_view(), name='search_channels_and_users'),
     # seeders
     path('spotify/create-user-seed', create_user_seed, name='create_user_seed'),
+<<<<<<< Updated upstream
+=======
+    path('merge-similars', merge_similars, name='merge_similars'),
+
+]
+
+>>>>>>> Stashed changes
 
 
 ]
