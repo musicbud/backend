@@ -28,14 +28,19 @@ class get_buds_by_played_tracks(APIView):
                 return JsonResponse({'error': 'User not found'}, status=404)
 
             buds = {}
-            account_ids = [account.uid for account in user_node.associated_accounts.values() if account is not None]
+            account_ids = []
 
-            # Fetch played tracks from associated accounts and gather users who played those tracks
+            # Ensure only valid accounts are processed
+            for account in user_node.associated_accounts.values():
+                if account is not None:
+                    account_ids.append(account.uid)  # Collect valid account UIDs
+
+            # Iterate over associated accounts to fetch played tracks
             for account in user_node.associated_accounts.values():
                 if account and hasattr(account, 'played_tracks'):
                     played_tracks = await account.played_tracks.all()
-                    logger.debug(f"User account {account.uid} played tracks: {[track.uid for track in played_tracks]}")
                     for track in played_tracks:
+                        # Fetch users who played the track, excluding the current user's accounts
                         track_users = await track.users.exclude(uid__in=account_ids).all()
                         for user in track_users:
                             if user.uid not in account_ids:

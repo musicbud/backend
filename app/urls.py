@@ -43,6 +43,9 @@ from .views.merge_similars import merge_similars
 from .views.merge_similars import merge_similars
 
 
+from .views.merge_similars import merge_similars
+
+
 router = DefaultRouter()
 
 urlpatterns = [
