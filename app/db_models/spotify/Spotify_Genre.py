@@ -4,7 +4,7 @@ from ..Genre import Genre
 
 class SpotifyGenre(Genre):
     
-    def serialize(self):
+    async def serialize(self):
         return {
             'uid': self.uid,
             'name': self.name,

@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-import logging.config
+from datetime import timedelta
 
 load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -30,11 +30,11 @@ INSTALLED_APPS = [
     'rest_framework',  # Add Django REST framework
     'rest_framework.authtoken',
     'django_neomodel',
-    'django_pdb',
-    'drf_yasg',
     'adrf',
+    'rest_framework_simplejwt',
 
 ]
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -45,21 +45,18 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django_pdb.middleware.PdbMiddleware',
 
 ]
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
-    ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'app.middlewares.CustomTokenAuthentication.CustomTokenAuthentication'
+    ],
+    
 }
-
-CORS_ALLOW_ALL_ORIGINS = True  # Allow all origins for CORS
 
 ROOT_URLCONF = 'musicbud.urls'
 
@@ -109,10 +106,24 @@ YTMUSIC_CLIENT_SECRET = os.environ.get('YTMUSIC_CLIENT_SECRET')
 YTMUSIC_REDIRECT_URI = os.environ.get('YTMUSIC_REDIRECT_URI')
 
 
-
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+}
 # Neo4j database settings
 
 NEOMODEL_NEO4J_BOLT_URL = os.environ.get('NEOMODEL_NEO4J_BOLT_URL')
+DATABASE_MAX_CONNECTION_POOL_SIZE = 1000
+
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
@@ -149,6 +160,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 STATIC_URL = '/static/'
 
@@ -179,25 +192,30 @@ LOGGING = {
             'format': '{levelname} {message}',
             'style': '{',
         },
+         'custom': {
+            '()': 'app.logger.CustomFormatter',  
+            'json_logging': False,  # Set to True if you want JSON logging
+            'node_uuid': os.getenv('NODE_UUID', 'default_uuid')  # Use an environment variable or a default value
+        },
     },
     'handlers': {
         'file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
             'filename': os.path.join(BASE_DIR, 'debug.log'),
-            'formatter': 'verbose',
+            'formatter': 'custom',
         },
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
-            'formatter': 'simple',
+            'formatter': 'custom',
         },
     },
     'loggers': {
-        'app': {  # Replace 'myapp' with your app's name
+        'app': { 
             'handlers': ['file', 'console'],
             'level': 'DEBUG',
-            'propagate': False,
+            'propagate': True,
         },
     }
 }

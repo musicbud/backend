@@ -11,7 +11,7 @@ class YtmusicTrack(Track):
     thumbnail_widthes = ArrayProperty()
 
 
-    def serialize(self):
+    async def serialize(self):
         return {
             'uid': self.uid,
             'name': self.name,

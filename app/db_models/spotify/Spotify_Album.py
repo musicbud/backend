@@ -15,7 +15,8 @@ class SpotifyAlbum(Album):
     total_tracks=IntegerProperty()
     image_heights = ArrayProperty()
     image_widthes = ArrayProperty()
-    def serialize(self):
+    
+    async def serialize(self):
         return {
             'uid': self.uid,
             'spotify_id': self.spotify_id,
@@ -30,6 +31,6 @@ class SpotifyAlbum(Album):
             'spotify_url' : self.spotify_url,
             'image_heights' : self.image_heights,
             'image_widthes' : self.image_widthes,
-            'artists': [artist.serialize() for artist in self.artists],
-            'tracks': [track.serialize() for track in self.tracks],
+            'artists': [await artist.serialize() for artist in await self.artists.all()],
+            'tracks': [await track.serialize() for track in await self.tracks.all()],
         }

@@ -1,8 +1,9 @@
-from .ServiceStrategy import ServiceStrategy
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
+from asgiref.sync import sync_to_async
 from typing import List, Tuple
 
+from .ServiceStrategy import ServiceStrategy
 from app.db_models.spotify.Spotify_Artist import SpotifyArtist
 from app.db_models.spotify.Spotify_Track import SpotifyTrack
 from app.db_models.spotify.Spotify_Genre import SpotifyGenre
@@ -10,8 +11,16 @@ from app.db_models.spotify.Spotify_Album import SpotifyAlbum
 
 from django.http import JsonResponse
 
+import asyncio
+from asgiref.sync import sync_to_async
+
+import logging
+
+logger = logging.getLogger('app')
+
 class SpotifyService(ServiceStrategy):
     def __init__(self, client_id, client_secret, redirect_uri, scope):
+        logger.debug('Initializing SpotifyService with client_id=%s', client_id)
         self.client_id = client_id
         self.client_secret = client_secret
         self.redirect_uri = redirect_uri
@@ -20,54 +29,78 @@ class SpotifyService(ServiceStrategy):
                                          client_secret=self.client_secret,
                                          redirect_uri=self.redirect_uri,
                                          scope=self.scope)
-        self.sp = spotipy.Spotify(auth_manager=self.auth_manager)
-    
-    def create_authorize_url(self):
+        logger.info('SpotifyService initialized successfully.')
+
+    async def create_authorize_url(self):
+        logger.debug('Creating authorize URL')
         return self.auth_manager.get_authorize_url()
     
-    def get_tokens(self, code):
-        return self.auth_manager.get_access_token(code=code, check_cache=False)
-    def refresh_access_token(self, refresh_token):
-        token_info = self.auth_manager.refresh_access_token(refresh_token)
-        return token_info
+    async def get_tokens(self, code):
+        logger.debug('Getting tokens for code=%s', code)
+        tokens = await sync_to_async(self.auth_manager.get_access_token)(code=code, check_cache=False)
+        logger.info('Tokens retrieved successfully')
+        return tokens
+    
+    async def refresh_access_token(self, refresh_token):
+        logger.debug('Refreshing access token for refresh_token=%s', refresh_token)
+        tokens = await sync_to_async(self.auth_manager.refresh_access_token)(refresh_token)
+        logger.info('Access token refreshed successfully')
+        return tokens
 
-    def get_user_profile(self, tokens):
+    async def get_user_profile(self, tokens):
+        logger.debug('Getting user profile with access_token')
         sp = spotipy.Spotify(auth=tokens['access_token'])
-        return sp.current_user()
+        user_profile = await sync_to_async(sp.current_user)()
+        logger.info('User profile retrieved successfully')
+        return user_profile
+    
+    async def fetch_top_artists(self, user, limit=50):
+        logger.debug('Fetching top artists for user=%s with limit=%d', user, limit)
+        return await self.fetch_all_items(user, 'top_artists', limit)
 
-    def fetch_top_artists(self, user, limit=50):
-        return self.fetch_all_items(user, 'top_artists', limit)
+    async def fetch_top_tracks(self, user, limit=50):
+        logger.debug('Fetching top tracks for user=%s with limit=%d', user, limit)
+        return await self.fetch_all_items(user, 'top_tracks', limit)
 
-    def fetch_top_tracks(self, user, limit=50):
-        return self.fetch_all_items(user, 'top_tracks', limit)
+    async def fetch_followed_artists(self, user, limit=50):
+        logger.debug('Fetching followed artists for user=%s with limit=%d', user, limit)
+        return await self.fetch_all_items(user, 'followed_artists', limit)
 
-    def fetch_followed_artists(self, user, limit=50):
-        return self.fetch_all_items(user, 'followed_artists', limit)
+    async def fetch_saved_tracks(self, user, limit=50):
+        logger.debug('Fetching saved tracks for user=%s with limit=%d', user, limit)
+        return await self.fetch_all_items(user, 'saved_tracks', limit)
 
-    def fetch_saved_tracks(self, user, limit=50):
-        return self.fetch_all_items(user, 'saved_tracks', limit)
+    async def fetch_saved_albums(self, user, limit=50):
+        logger.debug('Fetching saved albums for user=%s with limit=%d', user, limit)
+        return await self.fetch_all_items(user, 'saved_albums', limit)
 
-    def fetch_saved_albums(self, user, limit=50):
-        return self.fetch_all_items(user, 'saved_albums', limit)
-
-    def fetch_top_genres(self, user, limit=50):
-        top_artists = self.fetch_top_artists(user, limit)
+    async def fetch_top_genres(self, user, limit=50):
+        logger.debug('Fetching top genres for user=%s with limit=%d', user, limit)
+        top_artists = await self.fetch_top_artists(user, limit)
         genre_count = {}
         for artist in top_artists:
             for genre in artist['genres']:
                 genre_count[genre] = genre_count.get(genre, 0) + 1
+        logger.info('Top genres retrieved successfully')
         return sorted(genre_count.items(), key=lambda x: x[1], reverse=True)[:limit]
     
-    def fetch_followed_genres(self, user, limit=50):
-        followed_artists = self.fetch_followed_artists(user, limit)
+    async def fetch_followed_genres(self, user, limit=50):
+        logger.debug('Fetching followed genres for user=%s with limit=%d', user, limit)
+        followed_artists = await self.fetch_followed_artists(user, limit)
         genre_count = {}
         for artist in followed_artists:
             for genre in artist['genres']:
                 genre_count[genre] = genre_count.get(genre, 0) + 1
+        logger.info('Followed genres retrieved successfully')
         return sorted(genre_count.items(), key=lambda x: x[1], reverse=True)[:limit]
-    
 
-    def fetch_all_items(self, user, item_type, limit=50):
+    async def fetch_recently_played(self, user, limit=50):
+        logger.debug('Fetching recently played tracks for user=%s with limit=%d', user, limit)
+        return await self.fetch_all_items(user, 'recently_played', limit)
+
+    
+    async def fetch_all_items(self, user, item_type, limit=50):
+        logger.debug('Fetching all items of type=%s for user=%s with limit=%d', item_type, user, limit)
         sp = spotipy.Spotify(auth=user.access_token)
         items = []
         offset = 0
@@ -76,73 +109,61 @@ class SpotifyService(ServiceStrategy):
         
         while True:
             if item_type == 'top_artists':
-                response = sp.current_user_top_artists(limit=limit, offset=offset, time_range='long_term')
+                response = await sync_to_async(sp.current_user_top_artists)(limit=limit, offset=offset, time_range='long_term')
                 items.extend(response['items'])
                 if len(response['items']) < limit:
                     break
                 offset += limit
             elif item_type == 'top_tracks':
-                response = sp.current_user_top_tracks(limit=limit, offset=offset, time_range='long_term')
+                response = await sync_to_async(sp.current_user_top_tracks)(limit=limit, offset=offset, time_range='long_term')
                 items.extend(response['items'])
                 if len(response['items']) < limit:
                     break
                 offset += limit
             elif item_type == 'followed_artists':
-                response = sp.current_user_followed_artists(limit=limit, after=after)
+                response = await sync_to_async(sp.current_user_followed_artists)(limit=limit, after=after)
                 items.extend(response['artists']['items'])
                 if len(response['artists']['items']) < limit:
                     break
                 after = response['artists']['cursors']['after']
             elif item_type == 'saved_tracks':
-                response = sp.current_user_saved_tracks(limit=limit, offset=offset)
+                response = await sync_to_async(sp.current_user_saved_tracks)(limit=limit, offset=offset)
                 items.extend([item['track'] for item in response['items']])
                 if len(response['items']) < limit:
                     break
                 offset += limit
             elif item_type == 'saved_albums':
-                response = sp.current_user_saved_albums(limit=limit, offset=offset)
+                response = await sync_to_async(sp.current_user_saved_albums)(limit=limit, offset=offset)
                 items.extend([item['album'] for item in response['items']])
                 if len(response['items']) < limit:
                     break
                 offset += limit
             elif item_type == 'recently_played':
-                response = sp.current_user_recently_played(limit=limit, after=after, before=before)
+                response = await sync_to_async(sp.current_user_recently_played)(limit=limit, after=after, before=before)
                 items.extend([item['track'] for item in response['items']])
                 if len(response['items']) < limit:
                     break
                 after = response['items'][-1]['played_at']
             else:
+                logger.error('Invalid item_type: %s', item_type)
                 raise ValueError("Invalid item_type.")
         
+        logger.info('Items of type=%s fetched successfully for user=%s', item_type, user)
         return items
 
-    def fetch_top_artists(self, user, limit=50):
-        return self.fetch_all_items(user, 'top_artists', limit)
-
-    def fetch_top_tracks(self, user, limit=50):
-        return self.fetch_all_items(user, 'top_tracks', limit)
-
-    def fetch_followed_artists(self, user, limit=50):
-        return self.fetch_all_items(user, 'followed_artists', limit)
-
-    def fetch_saved_tracks(self, user, limit=50):
-        return self.fetch_all_items(user, 'saved_tracks', limit)
-
-    def fetch_saved_albums(self, user, limit=50):
-        return self.fetch_all_items(user, 'saved_albums', limit)
-    def fetch_recently_played(self, user, limit=50):
-        return self.fetch_all_items(user, 'recently_played', limit)
-
-    def map_to_neo4j(self, user, label, items, relation_type="top"):
+    async def map_to_neo4j(self, user, label, items, relation_type="top"):
+        logger.debug('Mapping items to Neo4j for user=%s, label=%s, relation_type=%s', user, label, relation_type)
 
         for item in items:
             node = None
 
             if label == 'Artist':
                 artist_data = item
-                node = SpotifyArtist.nodes.get_or_none(spotify_id=artist_data['id'])
+                logger.debug('Processing Artist: %s', artist_data['name'])
+                node = await SpotifyArtist.nodes.get_or_none(spotify_id=artist_data['id'])
                 if not node:
-                    node = SpotifyArtist(
+                    logger.debug('Creating new Artist node: %s', artist_data['name'])
+                    node = await SpotifyArtist(
                         spotify_id=artist_data['id'],
                         name=artist_data['name'],
                         uri=artist_data['uri'],
@@ -155,17 +176,28 @@ class SpotifyService(ServiceStrategy):
                         genres= artist_data['genres']
                     ).save()
                 if relation_type == "top":
-                    user.top_artists.connect(node)
-                    user.likes_artists.connect(node)
+                    logger.info(f"user {type (user)}")
+                    logger.info(f"user {user}")
 
+                    logger.info(f"node  {type (node)}")
+                    logger.info(f"node {node}")
+                    
+                    logger.info(f"likes rel  {type(user.top_artists)}")
+
+                    await user.top_artists.connect(node)
+                    logger.info(f"user.likes_artists {user.top_artists}")
+                    await user.likes_artists.connect(node)
                 elif relation_type == "followed":
-                    user.likes_artists.connect(node)
+                    await user.likes_artists.connect(node)
+                logger.debug('Artist processed: %s', artist_data['name'])
 
             elif label == 'Track':
                 track_data = item
-                node = SpotifyTrack.nodes.get_or_none(spotify_id=track_data['id'])
+                logger.debug('Processing Track: %s', track_data['name'])
+                node = await SpotifyTrack.nodes.get_or_none(spotify_id=track_data['id'])
                 if not node:
-                    node = SpotifyTrack(
+                    logger.debug('Creating new Track node: %s', track_data['name'])
+                    node = await SpotifyTrack(
                         spotify_id=track_data['id'],
                         name=track_data['name'],
                         href= track_data['href'],
@@ -180,20 +212,20 @@ class SpotifyService(ServiceStrategy):
                         spotify_url=track_data['external_urls']['spotify'],
                     ).save()
                 if relation_type == "top":
-                    user.top_tracks.connect(node)
-                    user.likes_tracks.connect(node)
-
+                    await user.top_tracks.connect(node)
+                    await user.likes_tracks.connect(node)
                 elif relation_type == "saved":
-                    user.likes_tracks.connect(node)
-
+                    await user.likes_tracks.connect(node)
                 elif relation_type == "played":
-                    user.played_tracks.connect(node)
+                    await user.played_tracks.connect(node)
+                logger.debug('Track processed: %s', track_data['name'])
 
                 # Link track to album
                 album_data = track_data['album']
-                album_node = SpotifyAlbum.nodes.get_or_none(spotify_id=album_data['id'])
+                album_node = await SpotifyAlbum.nodes.get_or_none(spotify_id=album_data['id'])
                 if not album_node:
-                    album_node = SpotifyAlbum(
+                    logger.debug('Creating new Album node: %s', album_data['name'])
+                    album_node = await SpotifyAlbum(
                         spotify_id=album_data['id'],
                         name=album_data['name'],
                         album_type=album_data['album_type'],
@@ -205,39 +237,46 @@ class SpotifyService(ServiceStrategy):
                         image_heights =[image['height'] for image in album_data['images']],
                         image_widthes = [image['width'] for image in album_data['images']]
                     ).save()
-                node.album.connect(album_node)
+                await node.album.connect(album_node)
+                logger.debug('Track connected to Album: %s -> %s', track_data['name'], album_data['name'])
 
                 # Link track to artists
                 for artist_data in track_data['artists']:
-                    artist_node = SpotifyArtist.nodes.get_or_none(spotify_id=artist_data['id'])
+                    artist_node = await SpotifyArtist.nodes.get_or_none(spotify_id=artist_data['id'])
                     if not artist_node:
-                        artist_node = SpotifyArtist(
-                        spotify_id=artist_data['id'],
-                        name=artist_data['name'],
-                        uri=artist_data['uri'],
-                        spotify_url=artist_data['external_urls']['spotify'],
-                        href= artist_data['href'],
-                        type = artist_data['type']
+                        logger.debug('Creating new Artist node for track: %s', artist_data['name'])
+                        artist_node = await SpotifyArtist(
+                            spotify_id=artist_data['id'],
+                            name=artist_data['name'],
+                            uri=artist_data['uri'],
+                            spotify_url=artist_data['external_urls']['spotify'],
+                            href= artist_data['href'],
+                            type = artist_data['type']
                         ).save()
-                    node.artist.connect(artist_node)
+                    await node.artists.connect(artist_node)
+                    logger.debug('Track connected to Artist: %s -> %s', track_data['name'], artist_data['name'])
 
             elif label == 'Genre':
                 genre_data = item[0]
-                node = SpotifyGenre.nodes.get_or_none(name=genre_data)
+                logger.debug('Processing Genre: %s', genre_data)
+                node = await SpotifyGenre.nodes.get_or_none(name=genre_data)
                 if not node:
-                    node = SpotifyGenre(name=genre_data).save()
+                    logger.debug('Creating new Genre node: %s', genre_data)
+                    node = await SpotifyGenre(name=genre_data).save()
+                logger.debug('connecting top Genre node: %s', user.likes_genres)
                 if relation_type == "top":
-                    user.top_genres.connect(node)
-                    user.likes_genres.connect(node)
-
+                    await user.likes_genres.connect(node)
                 elif relation_type == "followed":
-                    user.likes_genres.connect(node)
+                    await user.likes_genres.connect(node)
+                logger.debug('Genre processed: %s', genre_data)
 
             elif label == 'Album':
                 album_data = item
-                node = SpotifyAlbum.nodes.get_or_none(spotify_id=album_data['id'])
+                logger.debug('Processing Album: %s', album_data['name'])
+                node = await SpotifyAlbum.nodes.get_or_none(spotify_id=album_data['id'])
                 if not node:
-                    node = SpotifyAlbum(
+                    logger.debug('Creating new Album node: %s', album_data['name'])
+                    node = await SpotifyAlbum(
                         spotify_id=album_data['id'],
                         name=album_data['name'],
                         album_type=album_data['album_type'],
@@ -245,40 +284,42 @@ class SpotifyService(ServiceStrategy):
                         total_tracks=album_data['total_tracks'],
                         uri=album_data['uri'],
                         spotify_url=album_data['external_urls']['spotify'],
-                        genres= [genre[0] for genre in album_data['genres']],
                         images= [image['url'] for image in album_data['images']],
                         image_heights =[image['height'] for image in album_data['images']],
                         image_widthes = [image['width'] for image in album_data['images']]
-
                     ).save()
-                if relation_type == "top":
-                    user.top_albums.connect(node)
-                    user.likes_albums.connect(node)
+                if relation_type == "saved":
+                    await user.likes_albums.connect(node)
+                logger.debug('Album processed: %s', album_data['name'])
 
-                elif relation_type == "saved":
-                    user.likes_albums.connect(node)
+        logger.info('Items mapped to Neo4j successfully for user=%s, label=%s, relation_type=%s', user, label, relation_type)
 
-    def save_user_likes(self, user):
-        user_top_artists = self.fetch_top_artists(user)
-        user_top_tracks = self.fetch_top_tracks(user)
-        user_top_genres = self.fetch_top_genres(user)
-        user_followed_artists = self.fetch_followed_artists(user)
-        user_followed_genres = self.fetch_followed_genres(user)  
-        user_saved_tracks = self.fetch_saved_tracks(user)
-        user_saved_albums = self.fetch_saved_albums(user)  
-        user_played_tracks = self.fetch_recently_played(user)  
+    async def save_user_likes(self, user):
+        logger.debug('Saving user likes for user=%s', user)
+        user_top_artists = await self.fetch_top_artists(user)
+        user_top_tracks = await self.fetch_top_tracks(user)
+        user_top_genres = await self.fetch_top_genres(user)
+        user_followed_artists = await self.fetch_followed_artists(user)
+        user_followed_genres = await self.fetch_followed_genres(user)  
+        user_saved_tracks = await self.fetch_saved_tracks(user)
+        user_saved_albums = await self.fetch_saved_albums(user)  
+        user_played_tracks = await self.fetch_recently_played(user)  
         
         # Map data to Neo4j
-        self.map_to_neo4j(user, 'Artist', user_top_artists, "top")
-        self.map_to_neo4j(user, 'Track', user_top_tracks, "top")
-        self.map_to_neo4j(user, 'Genre', user_top_genres, "top")
-        self.map_to_neo4j(user, 'Artist', user_followed_artists, "followed")
-        self.map_to_neo4j(user, 'Genre', user_followed_genres, "followed")
-        self.map_to_neo4j(user, 'Track', user_saved_tracks, "saved")
-        self.map_to_neo4j(user, 'Album', user_saved_albums, "saved")
-        self.map_to_neo4j(user, 'Track', user_played_tracks, "played")
+        await asyncio.gather(
+            self.map_to_neo4j(user, 'Artist', user_top_artists, "top"),
+            self.map_to_neo4j(user, 'Track', user_top_tracks, "top"),
+            self.map_to_neo4j(user, 'Genre', user_top_genres, "top"),
+            self.map_to_neo4j(user, 'Artist', user_followed_artists, "followed"),
+            self.map_to_neo4j(user, 'Genre', user_followed_genres, "followed"),
+            self.map_to_neo4j(user, 'Track', user_saved_tracks, "saved"),
+            self.map_to_neo4j(user, 'Album', user_saved_albums, "saved"),
+            self.map_to_neo4j(user, 'Track', user_played_tracks, "played")
+        )
+        logger.info('User likes saved successfully for user=%s', user)
 
-
-    def refresh_token(self,user):
-        return self.auth_manager.refresh_access_token(user.refresh_token)
-            
+    async def refresh_token(self, user):
+        logger.debug('Refreshing token for user=%s', user)
+        tokens = await self.refresh_access_token(user.refresh_token)
+        logger.info('Token refreshed successfully for user=%s', user)
+        return tokens

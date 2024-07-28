@@ -1,25 +1,22 @@
-
 import time
-from neomodel import ( StringProperty,RelationshipTo,ZeroOrMore)
-
 from ..User import User
-from ..Artist import Artist
-from ..Track import Track
-from ..Genre import Genre
-from ..Album import Album
-from ..Library_Item_Rel import LibraryItemRel
+from neomodel import (AsyncStructuredNode, StringProperty, IntegerProperty,AsyncRelationshipFrom,
+    UniqueIdProperty, AsyncRelationshipTo)
 
-class YtmusicUser(User):
+class YtmusicUser( User):
     channel_handle = StringProperty()
     account_name = StringProperty()
 
-    likes_tracks = RelationshipTo(Track, 'LIKES_TRACK', cardinality=ZeroOrMore)    
-    likes_artists = RelationshipTo(Artist, 'LIKES_ARTIST', cardinality=ZeroOrMore)
-    played_tracks = RelationshipTo(Track, 'PLAYED_TRACK', cardinality=ZeroOrMore)
-    
+    likes_tracks = AsyncRelationshipTo('..Track.Track', 'LIKES_TRACK')    
+    likes_artists = AsyncRelationshipTo('..Artist.Artist', 'LIKES_ARTIST')
+    played_tracks = AsyncRelationshipTo('..Track.Track', 'PLAYED_TRACK')
+
+    parent = AsyncRelationshipFrom('..User.User', 'CONNECTED_TO_YTMUSIC')
+
+
 
     @classmethod
-    def update_ytmusic_tokens(cls, user, tokens):
+    async def update_ytmusic_tokens(cls, user, tokens):
         user.access_token = tokens['access_token']
         user.refresh_token = tokens['refresh_token']
         user.expires_at = tokens['expires_at']
@@ -30,11 +27,11 @@ class YtmusicUser(User):
         user.is_active = True
         user.service = 'ytmusic'
 
-        user.save()
+        await user.save()
         return user
 
     @classmethod
-    def create_from_ytmusic_profile(cls, profile, tokens):
+    async def create_from_ytmusic_profile(cls, profile, tokens):
         user_data = {
             'account_name': profile['accountName'],
             'channel_handle': profile['channelHandle'],
@@ -48,13 +45,26 @@ class YtmusicUser(User):
             'service': 'ytmusic'
         }
         user = cls(**user_data)
-        user.save()
+        await user.save()
         return user
     
-    @classmethod
-    def get_profile(cls, user):
+    async def get_likes(self):
         return {
-            'likes_tracks': [track.serialize() for track in user.likes_tracks],
-            'played_tracks': [track.serialize() for track in user.played_tracks],
-            'likes_artists': [artist.serialize() for artist in user.likes_artists],
+            'likes_tracks': [track for track in await self.likes_tracks.all()],
+            'played_tracks': [track for track in await self.played_tracks.all()],
+            'likes_artists': [artist for artist in await self.likes_artists.all()],
+        }
+
+    async def serialize(self):
+        likes_tracks = await self.likes_tracks.all()
+        played_tracks = await self.played_tracks.all()
+        likes_artists = await self.likes_artists.all()
+
+        return {
+            'uid': self.uid,
+            'account_name': self.account_name,
+            'channel_handle': self.channel_handle,
+            'likes_tracks': [await track.serialize() for track in likes_tracks],
+            'played_tracks': [await track.serialize() for track in played_tracks],
+            'likes_artists': [ await artist.serialize() for artist in likes_artists],
         }

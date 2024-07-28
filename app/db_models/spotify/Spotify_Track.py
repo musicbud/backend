@@ -19,7 +19,7 @@ class SpotifyTrack(Track):
     spotify_url = StringProperty()
     
     
-    def serialize(self):
+    async def serialize(self):
         return {
             'uid': self.uid,
             'name': self.name,

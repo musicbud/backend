@@ -1,16 +1,15 @@
 from django.http import JsonResponse
-from rest_framework.views import APIView
+from adrf.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from django.http import JsonResponse
 
 from ..db_models.User import User
 from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
 from ..pagination import StandardResultsSetPagination
-
 import logging
-logger = logging.getLogger(__name__)
+
+logger = logging.getLogger('app')
 
 class get_buds_by_played_tracks(APIView):
     authentication_classes = [CustomTokenAuthentication]
@@ -20,43 +19,63 @@ class get_buds_by_played_tracks(APIView):
     def dispatch(self, *args, **kwargs):
         return super(get_buds_by_played_tracks, self).dispatch(*args, **kwargs)
 
-    
-    def post(self, request):
+    async def post(self, request):
         try:
-            user = request.user
-            user_node = User.nodes.get_or_none(uid=user.uid)
+            user_node = request.user
 
             if not user_node:
+                logger.warning('User not found')
                 return JsonResponse({'error': 'User not found'}, status=404)
 
-            buds = []
-            for track in user_node.likes_tracks.all():
-                buds.extend(track.users.exclude(uid=user.uid))
+            buds = {}
+            account_ids = [account.uid for account in user_node.associated_accounts.values() if account is not None]
 
-            # Filter out duplicates
-            buds = list({bud.uid: bud for bud in buds}.values())
+            # Fetch played tracks from associated accounts and gather users who played those tracks
+            for account in user_node.associated_accounts.values():
+                if account and hasattr(account, 'played_tracks'):
+                    played_tracks = await account.played_tracks.all()
+                    logger.debug(f"User account {account.uid} played tracks: {[track.uid for track in played_tracks]}")
+                    for track in played_tracks:
+                        track_users = await track.users.exclude(uid__in=account_ids).all()
+                        for user in track_users:
+                            if user.uid not in account_ids:
+                                buds[user.uid] = user
 
+            # Convert buds dictionary values to a list
+            buds_list = list(buds.values())
             buds_data = []
-            total_common_tracks_count = 0
 
-            for bud in buds:
-                bud_played_track_uids = [track.uid for track in bud.likes_tracks.all()]
+            # Fetch common played tracks for each bud
+            for bud in buds_list:
+                if hasattr(bud, 'played_tracks'):
+                    bud_played_tracks = await bud.played_tracks.all()
+                    logger.debug(f"Bud {bud.uid} played tracks: {[track.uid for track in bud_played_tracks]}")
+                    if not bud_played_tracks:
+                        logger.warning(f'Bud {bud.uid} has no played tracks, skipping.')
+                        continue  # Skip this bud if they have no played tracks
+                    bud_played_track_uids = [track.uid for track in bud_played_tracks]
 
-                common_tracks = user_node.likes_tracks.filter(uid__in=bud_played_track_uids)
-                common_tracks_count = len(common_tracks)
-                total_common_tracks_count += common_tracks_count
+                    # Find common played tracks between user and bud
+                    common_tracks_count = 0
+                    common_tracks = []
+                    
+                    # Iterate through associated accounts to find common tracks
+                    for account in user_node.associated_accounts.values():
+                        if account and hasattr(account, 'played_tracks'):
+                            account_common_tracks = await account.played_tracks.filter(uid__in=bud_played_track_uids).all()
+                            common_tracks_count += len(account_common_tracks)
+                            common_tracks.extend(account_common_tracks)
 
-                buds_data.append({
-                    'uid': bud.uid,
-                    'email': bud.email,
-                    'country': bud.country,
-                    'display_name': bud.display_name,
-                    'bio': bud.bio,
-                    'is_active': bud.is_active,
-                    'is_authenticated': bud.is_authenticated,
-                    'commonTracksCount': common_tracks_count,
-                    'commonTracks': [track.serialize() for track in common_tracks]
-                })
+                    bud_parent = await bud.parent.all()
+                    bud_parent_serialized = [await b.without_relations_serialize() for b in bud_parent]
+
+                    buds_data.append({
+                        'bud': bud_parent_serialized,
+                        'commonTracksCount': common_tracks_count,
+                        'commonTracks': [track.serialize() for track in common_tracks]
+                    })
+                else:
+                    logger.warning(f'Bud {bud.uid} does not have played_tracks attribute.')
 
             paginator = StandardResultsSetPagination()
             paginated_buds = paginator.paginate_queryset(buds_data, request)
@@ -67,8 +86,10 @@ class get_buds_by_played_tracks(APIView):
                 'code': 200,
                 'successful': True,
             })
+
+            logger.info(f'Successfully fetched buds by played tracks for user: uid={user_node.uid}')
             return JsonResponse(paginated_response)
 
         except Exception as e:
-            logger.error(e)
+            logger.error(f'Error in GetBudsByPlayedTracks: {e}', exc_info=True)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)

@@ -1,17 +1,18 @@
-from neomodel import StringProperty,RelationshipFrom,RelationshipTo
-
 from .Liked_Item import LikedItem
-from .Top_Item_Rel import TopItemRel
-from .Library_Item_Rel import LibraryItemRel
+
+from neomodel import (AsyncStructuredNode, StringProperty, IntegerProperty,
+    UniqueIdProperty, AsyncRelationshipTo, AsyncRelationshipFrom)
 
 
-class Artist(LikedItem):    
-    top_items = RelationshipFrom('.User.User', 'TOP_ARTIST', model=TopItemRel)
-    library_items = RelationshipFrom('.User.User', 'LIBRARY_ITEM', model=LibraryItemRel)
+class Artist(LikedItem):
+    name = StringProperty( max_length=255)
+    
+    top_items = AsyncRelationshipFrom('.User', 'TOP_ARTIST')
+    library_items = AsyncRelationshipFrom('.User', 'LIBRARY_ITEM')
 
-    users = RelationshipFrom('.User.User', 'LIKES_ARTIST')
-    tracks = RelationshipFrom('.Track.Track', 'PERFORMED_BY')
-    albums = RelationshipFrom('.Album.Album', 'CONTRIBUTED_TO')
+    users = AsyncRelationshipFrom('.User.User', 'LIKES_ARTIST')
+    tracks = AsyncRelationshipFrom('.Track.Track', 'PERFORMED_BY')
+    albums = AsyncRelationshipFrom('.Album.Album', 'CONTRIBUTED_TO')
 
     def serialize(self):
         return {

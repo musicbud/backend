@@ -1,7 +1,10 @@
+import time
+import logging
 from .ServiceStrategy import ServiceStrategy
-from google_auth_oauthlib.flow import InstalledAppFlow
-import ytmusicapi 
-from typing import List, Tuple
+from typing import List, Dict
+from concurrent.futures import ThreadPoolExecutor
+import asyncio
+import ytmusicapi
 
 from app.db_models.ytmusic.Ytmusic_Artist import YtmusicArtist
 from app.db_models.ytmusic.Ytmusic_Track import YtmusicTrack
@@ -9,24 +12,29 @@ from app.db_models.ytmusic.Ytmusic_Album import YtmusicAlbum
 
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
-import time
+from google_auth_oauthlib.flow import InstalledAppFlow
+
+logger = logging.getLogger(__name__)
+
 class YTmusicService(ServiceStrategy):
     """
     A class to interact with YouTube Music's API and integrate data into a Neo4j database.
     """
-
-    def __init__(self,client_id, client_secret,redirect_uri):
+    
+    def __init__(self, client_id: str, client_secret: str, redirect_uri: str):
         """
         Initializes the YouTube Music API client.
         """
         self.client_id = client_id
         self.client_secret = client_secret
         self.redirect_uri = redirect_uri
-        self.ytmusic = ytmusicapi.YTMusic()
+        self.executor = ThreadPoolExecutor()
+        logger.info("YTmusicService initialized")
 
-    def create_authorize_url(self) -> str:
+    async def create_authorize_url(self) -> str:
+        logger.info("Creating authorize URL")
         client_config = {
-        "installed": {
+            "installed": {
                 "client_id": self.client_id,
                 "client_secret": self.client_secret,
                 "redirect_uris": [self.redirect_uri],
@@ -34,19 +42,28 @@ class YTmusicService(ServiceStrategy):
                 "token_uri": "https://oauth2.googleapis.com/token"
             }
         }
-    
-        SCOPES = ["openid",'https://www.googleapis.com/auth/userinfo.profile',
-                  'https://www.googleapis.com/auth/userinfo.email',
-                  'https://www.googleapis.com/auth/youtube.readonly',
-                  'https://www.googleapis.com/auth/youtube'
-                  ]
-        flow = InstalledAppFlow.from_client_config(client_config, scopes=SCOPES,redirect_uri=self.redirect_uri)
+        
+        SCOPES = [
+            "openid", 'https://www.googleapis.com/auth/userinfo.profile',
+            'https://www.googleapis.com/auth/userinfo.email',
+            'https://www.googleapis.com/auth/youtube.readonly',
+            'https://www.googleapis.com/auth/youtube'
+        ]
+
+        loop = asyncio.get_event_loop()
+        auth_url = await loop.run_in_executor(self.executor, self._create_authorize_url, client_config, SCOPES)
+        logger.info(f"Authorize URL created: {auth_url}")
+        return auth_url
+
+    def _create_authorize_url(self, client_config: Dict, SCOPES: List[str]) -> str:
+        flow = InstalledAppFlow.from_client_config(client_config, scopes=SCOPES, redirect_uri=self.redirect_uri)
         auth_url, _ = flow.authorization_url(prompt='consent')
         return auth_url
-        
-    def get_tokens(self, code):
+
+    async def get_tokens(self, code: str) -> Dict:
+        logger.info("Getting tokens")
         client_config = {
-        "installed": {
+            "installed": {
                 "client_id": self.client_id,
                 "client_secret": self.client_secret,
                 "redirect_uris": [self.redirect_uri],
@@ -54,195 +71,212 @@ class YTmusicService(ServiceStrategy):
                 "token_uri": "https://oauth2.googleapis.com/token"
             }
         }
-    
-        SCOPES = ["openid",'https://www.googleapis.com/auth/userinfo.profile',
-                  'https://www.googleapis.com/auth/userinfo.email',
-                  'https://www.googleapis.com/auth/youtube.readonly',
-                  'https://www.googleapis.com/auth/youtube'
-                  ]
-        flow = InstalledAppFlow.from_client_config(client_config, scopes=SCOPES,redirect_uri=self.redirect_uri)
-        return flow.fetch_token(code=code)
-    def get_user_profile(self,tokens) -> str:
 
-        token_filtered = {'access_token':tokens['access_token'],
-                          'expires_in':tokens['expires_in'],
-                          'refresh_token':tokens['refresh_token'],
-                          'token_type':tokens['token_type'],
-                          'expires_at':tokens['expires_at'],
-                          'scope':tokens['scope']
-                          }
-        return ytmusicapi.YTMusic(auth=token_filtered).get_account_info()  
-    
-    def fetch_library_artists(self, user: str) -> List[str]:
-        """
-        Fetches and maps the library artists for a user.
-        """
+        SCOPES = [
+            "openid", 'https://www.googleapis.com/auth/userinfo.profile',
+            'https://www.googleapis.com/auth/userinfo.email',
+            'https://www.googleapis.com/auth/youtube.readonly',
+            'https://www.googleapis.com/auth/youtube'
+        ]
+
+        loop = asyncio.get_event_loop()
+        tokens = await loop.run_in_executor(self.executor, self._get_tokens, client_config, SCOPES, code)
+        logger.info("Tokens retrieved successfully")
+        return tokens
+
+    def _get_tokens(self, client_config: Dict, SCOPES: List[str], code: str) -> Dict:
+        flow = InstalledAppFlow.from_client_config(client_config, scopes=SCOPES, redirect_uri=self.redirect_uri)
+        tokens = flow.fetch_token(code=code)
+        return tokens
+
+    async def get_user_profile(self, tokens: Dict) -> Dict:
+        logger.info("Getting user profile")
+        token_filtered = {
+            'access_token': tokens['access_token'],
+            'expires_in': tokens['expires_in'],
+            'refresh_token': tokens['refresh_token'],
+            'token_type': tokens['token_type'],
+            'expires_at': tokens['expires_at'],
+            'scope': tokens['scope']
+        }
+
+        loop = asyncio.get_event_loop()
+        user_profile = await loop.run_in_executor(self.executor, self._get_user_profile, token_filtered)
+        logger.info("User profile retrieved successfully")
+        return user_profile
+
+    def _get_user_profile(self, token_filtered: Dict) -> Dict:
+        ytmusic = ytmusicapi.YTMusic(auth=token_filtered)
+        return ytmusic.get_account_info()
+
+    async def fetch_library_artists(self, user: str) -> List[Dict]:
+        logger.info(f"Fetching library artists for user: {user}")
         ytmusic = ytmusicapi.YTMusic(
             auth={
-                    'access_token':user.access_token,
-                    'expires_in':user.expires_in,
-                    'refresh_token':user.refresh_token,
-                    'token_type': user.token_type,
-                    'expires_at':user.expires_at,
-                    'scope':user.scope
-                })
-        return ytmusic.get_library_artists()
-            
-           
-
-    def fetch_library_tracks(self, user: str) -> List[str]:
-        """
-        Fetches and maps the library tracks for a user.
-        """
-        ytmusic = ytmusicapi.YTMusic(
-            auth={
-                    'access_token':user.access_token,
-                    'expires_in':user.expires_in,
-                    'refresh_token':user.refresh_token,
-                    'token_type': user.token_type,
-                    'expires_at':user.expires_at,
-                    'scope':user.scope
-                })
-        return ytmusic.get_library_songs()
-
-    def fetch_library_albums(self, user: str) -> List[str]:
-        """
-        Fetches and maps the library albums for a user.
-        """
-        ytmusic = ytmusicapi.YTMusic(
-            auth={
-                    'access_token':user.access_token,
-                    'expires_in':user.expires_in,
-                    'refresh_token':user.refresh_token,
-                    'token_type': user.token_type,
-                    'expires_at':user.expires_at,
-                    'scope':user.scope
-                })
-        return ytmusic.get_library_albums()
-    
-    def fetch_liked_tracks(self, user: str) -> List[str]:
-        """
-        Fetches and maps the liked songs for a user.
-        """
-        ytmusic = ytmusicapi.YTMusic(
-            auth={
-                    'access_token':user.access_token,
-                    'expires_in':user.expires_in,
-                    'refresh_token':user.refresh_token,
-                    'token_type': user.token_type,
-                    'expires_at':user.expires_at,
-                    'scope':user.scope
-                })
-        return ytmusic.get_liked_songs()['tracks']
-    
-    def fetch_library_subscriptions(self, user: str) -> List[str]:
-        """
-        Fetches and maps the liked songs for a user.
-        """
-        ytmusic = ytmusicapi.YTMusic(
-            auth={
-                    'access_token':user.access_token,
-                    'expires_in':user.expires_in,
-                    'refresh_token':user.refresh_token,
-                    'token_type': user.token_type,
-                    'expires_at':user.expires_at,
-                    'scope':user.scope
-                })
-        return ytmusic.get_library_subscriptions()
-    
-    def fetch_history(self, user):
-        """
-        Fetches and maps the liked songs for a user.
-        """
-        ytmusic = ytmusicapi.YTMusic(
-            auth={
-                    'access_token':user.access_token,
-                    'expires_in':user.expires_in,
-                    'refresh_token':user.refresh_token,
-                    'token_type': user.token_type,
-                    'expires_at':user.expires_at,
-                    'scope':user.scope
-                })
-        return ytmusic.get_history()
-
-
-    def map_to_neo4j(self, user, label, items, relation_type):
-        
-        for item in items:
-            node = None
-            if label == 'Artist':
-                # Check if the artist already exists
-                node = YtmusicArtist.nodes.get_or_none(name=item['artist'])
-                if not node:
-                    node = YtmusicArtist(name=item['artist'],browseId =item['browseId'] ,subscribers=item['subscribers'],
-                                         thumbnails=[image['url'] for image in item['thumbnails']],
-                                         thumbnail_heights=[image['height'] for image in item['thumbnails']],
-                                         thumbnail_widthes=[image['width'] for image in item['thumbnails']]).save()
-                
-                user.likes_artists.connect(node)
-                
-            elif label == 'Track':
-                # Check if the track already exists
-                node = YtmusicTrack.nodes.get_or_none(name=item['title'])
-                if not node:
-                    node = YtmusicTrack(name=item['title'],videoId =item['videoId'] ,
-                                        
-                                        thumbnails=[image['url'] for image in item['thumbnails']],
-                                        thumbnail_heights=[image['height'] for image in item['thumbnails']],
-                                        thumbnail_widthes=[image['width'] for image in item['thumbnails']]).save()
-                
-                # Link track to artists
-                if item['artists'] :
-                    for artist in item['artists']:
-                        artist_node = YtmusicArtist.nodes.get_or_none(name=artist['name'],ytmusic_id= artist['id'])
-                        if artist_node:
-                            node.artists.connect(artist_node)
-                    # Link track to album
-                if item['album']:
-                    
-                    album = item['album']
-                    album_node = YtmusicAlbum.nodes.get_or_none(name=album['name'],ytmusic_id= album['id'])
-                    if album_node:
-                        node.album.connect(album_node)                
-                    elif relation_type == "liked":
-                        user.likes_tracks.connect(node)
-                    elif relation_type == "played":
-                        user.played_tracks.connect(node)
-                
-
-    def save_user_likes(self, user):
-
-        user_liked_tracks = self.fetch_liked_tracks(user)
-        user_library_subscriptions = self.fetch_library_subscriptions(user)
-        user_history = self.fetch_history(user)
-    
-
-        # # Map data to Neo4j
-        self.map_to_neo4j(user, 'Track', user_liked_tracks,'liked') 
-        self.map_to_neo4j(user, 'Artist', user_library_subscriptions,'subscribed')
-        self.map_to_neo4j(user, 'Track', user_history,'played')
-
-
-
-    def refresh_token(self,user):
-            credentials = Credentials(
-                token_uri= "https://oauth2.googleapis.com/token",
-                client_id= self.client_id,
-                client_secret= self.client_secret,
-                token = user.access_token,
-                refresh_token = user.refresh_token,
-                scopes = user.scope,
-                expiry= user.expires_at)
-            credentials.refresh(Request())
-            tokens = {
-                'access_token': credentials.token,
-                'refresh_token': credentials.refresh_token,
-                'token_uri': credentials.token_uri,
-                'client_id': credentials.client_id,
-                'client_secret': credentials.client_secret,
-                'expires_at':time.mktime(credentials.expiry.timetuple()) if credentials.expiry else None,
-                'expires_in':None,
-                'token_type':'Bearer',
-                'scope': credentials.scopes
+                'access_token': user.access_token,
+                'expires_in': user.expires_in,
+                'refresh_token': user.refresh_token,
+                'token_type': user.token_type,
+                'expires_at': user.expires_at,
+                'scope': user.scope
             }
-            return tokens        
+        )
+        loop = asyncio.get_event_loop()
+        artists = await loop.run_in_executor(self.executor, ytmusic.get_library_artists)
+        logger.info(f"Library artists fetched for user: {user}")
+        return artists
+
+    async def fetch_library_tracks(self, user: str) -> List[Dict]:
+        logger.info(f"Fetching library tracks for user: {user}")
+        ytmusic = ytmusicapi.YTMusic(
+            auth={
+                'access_token': user.access_token,
+                'expires_in': user.expires_in,
+                'refresh_token': user.refresh_token,
+                'token_type': user.token_type,
+                'expires_at': user.expires_at,
+                'scope': user.scope
+            }
+        )
+        loop = asyncio.get_event_loop()
+        tracks = await loop.run_in_executor(self.executor, ytmusic.get_library_songs)
+        logger.info(f"Library tracks fetched for user: {user}")
+        return tracks
+
+    async def fetch_library_albums(self, user: str) -> List[Dict]:
+        logger.info(f"Fetching library albums for user: {user}")
+        ytmusic = ytmusicapi.YTMusic(
+            auth={
+                'access_token': user.access_token,
+                'expires_in': user.expires_in,
+                'refresh_token': user.refresh_token,
+                'token_type': user.token_type,
+                'expires_at': user.expires_at,
+                'scope': user.scope
+            }
+        )
+        loop = asyncio.get_event_loop()
+        albums = await loop.run_in_executor(self.executor, ytmusic.get_library_albums)
+        logger.info(f"Library albums fetched for user: {user}")
+        return albums
+
+    async def fetch_liked_tracks(self, user: str) -> List[Dict]:
+        logger.info(f"Fetching liked tracks for user: {user}")
+        ytmusic = ytmusicapi.YTMusic(
+            auth={
+                'access_token': user.access_token,
+                'expires_in': user.expires_in,
+                'refresh_token': user.refresh_token,
+                'token_type': user.token_type,
+                'expires_at': user.expires_at,
+                'scope': user.scope
+            }
+        )
+        loop = asyncio.get_event_loop()
+        liked_tracks = await loop.run_in_executor(self.executor, lambda: ytmusic.get_liked_songs()['tracks'])
+        logger.info(f"Liked tracks fetched for user: {user}")
+        return liked_tracks
+
+    async def fetch_library_subscriptions(self, user: str) -> List[Dict]:
+        logger.info(f"Fetching library subscriptions for user: {user}")
+        ytmusic = ytmusicapi.YTMusic(
+            auth={
+                'access_token': user.access_token,
+                'expires_in': user.expires_in,
+                'refresh_token': user.refresh_token,
+                'token_type': user.token_type,
+                'expires_at': user.expires_at,
+                'scope': user.scope
+            }
+        )
+        loop = asyncio.get_event_loop()
+        subscriptions = await loop.run_in_executor(self.executor, ytmusic.get_library_subscriptions)
+        logger.info(f"Library subscriptions fetched for user: {user}")
+        return subscriptions
+
+    async def fetch_history(self, user: str) -> List[Dict]:
+        logger.info(f"Fetching history for user: {user}")
+        ytmusic = ytmusicapi.YTMusic(
+            auth={
+                'access_token': user.access_token,
+                'expires_in': user.expires_in,
+                'refresh_token': user.refresh_token,
+                'token_type': user.token_type,
+                'expires_at': user.expires_at,
+                'scope': user.scope
+            }
+        )
+        loop = asyncio.get_event_loop()
+        history = await loop.run_in_executor(self.executor, ytmusic.get_history)
+        logger.info(f"History fetched for user: {user}")
+        return history
+
+    async def save_user_likes(self, user: str) -> None:
+        logger.info(f"Saving user likes for user: {user}")
+        # Fetch user data asynchronously
+        user_liked_tracks = await self.fetch_liked_tracks(user)
+        user_library_subscriptions = await self.fetch_library_subscriptions(user)
+        user_history = await self.fetch_history(user)
+
+        # Map data to Neo4j asynchronously
+        await asyncio.gather(
+            self.map_to_neo4j(user, 'Track', user_liked_tracks, 'likes'),
+            self.map_to_neo4j(user, 'Artist', user_library_subscriptions, 'likes'),
+            self.map_to_neo4j(user, 'Track', user_history, 'played')
+        )
+        logger.info(f"User likes saved for user: {user}")
+
+    async def map_to_neo4j(self, user: str, label: str, items: List[Dict], relation_type: str) -> None:
+        logger.info(f"Mapping {label} to Neo4j for user: {user} with relation: {relation_type}")
+        loop = asyncio.get_event_loop()
+        tasks = []
+
+        for item in items:
+            if label == 'Artist':
+                tasks.append(self._process_artist(user, item))
+            elif label == 'Track':
+                tasks.append(self._process_track(user, item, relation_type))
+
+        # Execute all tasks concurrently
+        await asyncio.gather(*tasks)
+        logger.info(f"Mapped {label} to Neo4j for user: {user} with relation: {relation_type}")
+
+    async def _process_artist(self, user: str, item: Dict) -> None:
+        logger.info(f"Processing artist: {item['artist']} for user: {user}")
+        # Check if the artist already exists
+        node = await YtmusicArtist.nodes.get_or_none(name=item['artist'])
+        if not node:
+            logger.info(f"Creating new artist node: {item['artist']} for user: {user}")
+            node = await YtmusicArtist(
+                name=item['artist'],
+                browseId=item['browseId'],
+                subscribers=item['subscribers'],
+                thumbnails=[image['url'] for image in item['thumbnails']],
+                thumbnail_heights=[image['height'] for image in item['thumbnails']],
+                thumbnail_widthes=[image['width'] for image in item['thumbnails']]
+            ).save()
+
+        # Connect user with artist
+        await user.likes_artists.connect(node)
+        logger.info(f"Connected user: {user} with artist: {item['artist']}")
+
+    async def _process_track(self, user: str, item: Dict, relation_type: str) -> None:
+        logger.info(f"Processing track: {item['title']} for user: {user} with relation: {relation_type}")
+        # Check if the track already exists
+        node = await YtmusicTrack.nodes.get_or_none(name=item['title'])
+        if not node:
+            logger.info(f"Creating new track node: {item['title']} for user: {user}")
+            node = await YtmusicTrack(
+                name=item['title'],
+                videoId=item['videoId'],
+                playlistId=item.get('playlistId', None),
+                thumbnails=[image['url'] for image in item['thumbnails']],
+                thumbnail_heights=[image['height'] for image in item['thumbnails']],
+                thumbnail_widthes=[image['width'] for image in item['thumbnails']],
+                duration=item.get('duration', None),
+                album=item.get('album', None)
+            ).save()
+
+        # Connect user with track
+        await getattr(user, f'{relation_type}_tracks').connect(node)
+        logger.info(f"Connected user: {user} with track: {item['title']} with relation: {relation_type}")

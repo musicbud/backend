@@ -1,7 +1,5 @@
-from neomodel import StructuredNode, UniqueIdProperty,StringProperty
+from neomodel import (AsyncStructuredNode, StringProperty, IntegerProperty,
+    UniqueIdProperty, AsyncRelationshipTo)
 
-
-class LikedItem(StructuredNode):
+class LikedItem(AsyncStructuredNode):
     uid = UniqueIdProperty()
-    name = StringProperty( min_length=1, max_length=255)
-

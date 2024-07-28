@@ -1,76 +1,83 @@
 from django.http import JsonResponse
-from rest_framework.views import APIView
+from adrf.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
 from ..db_models.User import User
-from ..db_models.Track import Track
-from ..db_models.Genre import Genre  # Ensure you import the Genre model
+from ..db_models.Genre import Genre
 from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
 from ..pagination import StandardResultsSetPagination
 
 import logging
-logger = logging.getLogger(__name__)
+
+logger = logging.getLogger('app')
 
 class get_buds_by_genre(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     @method_decorator(csrf_exempt)
-    def dispatch(self, *args, **kwargs):
-        return super(get_buds_by_genre, self).dispatch(*args, **kwargs)
+    async def dispatch(self, *args, **kwargs):
+        return await super(get_buds_by_genre, self).dispatch(*args, **kwargs)
 
-    def post(self, request):
+    async def post(self, request):
         try:
             user = request.user
             genre_id = request.data.get('genre_id')
-            
+
             if not genre_id:
                 return JsonResponse({'error': 'Genre ID not provided'}, status=400)
-                
-            user_node = User.nodes.get_or_none(uid=user.uid)
-            genre_node = Genre.nodes.get_or_none(uid=genre_id)
 
-            if not user_node:
-                return JsonResponse({'error': 'User not found'}, status=404)
-                
+            account_ids = [account.uid for account in user.associated_accounts.values() if account]  # Use a list for account UIDs
+
+            # Await the call to get the genre node
+            genre_node = await Genre.nodes.get_or_none(uid=genre_id)
+
             if not genre_node:
                 return JsonResponse({'error': 'Genre not found'}, status=404)
 
-            # Find tracks by the specified genre
-            genre_tracks = genre_node.tracks.all()
-            if not genre_tracks:
-                return JsonResponse({'error': 'No tracks found for this genre'}, status=404)
+            # Get users who liked the specified genre, excluding the current user's accounts
+            genre_users = await genre_node.users.exclude(uid__in=account_ids).all()
 
-            # Find users who liked tracks by this genre
-            buds = set()
-            for track in genre_tracks:
-                buds.update(track.users.exclude(uid=user.uid))
+            buds_data = {}
+            unique_bud_uids = set()  # Set to track unique bud UIDs
 
-            buds_data = []
-            total_common_tracks_count = 0
+            for bud in genre_users:
+                bud_uid = bud.uid
+                if bud_uid in unique_bud_uids:
+                    continue  # Skip already processed bud
 
-            for bud in buds:
-                bud_liked_track_uids = [track.uid for track in bud.likes_tracks.all()]
-                common_tracks = user_node.likes_tracks.filter(uid__in=bud_liked_track_uids)
-                common_tracks_count = len(common_tracks)
-                total_common_tracks_count += common_tracks_count
+                unique_bud_uids.add(bud_uid)  # Mark this bud as processed
 
-                buds_data.append({
-                    'uid': bud.uid,
-                    'email': bud.email,
-                    'country': bud.country,
-                    'display_name': bud.display_name,
-                    'bio': bud.bio,
-                    'is_active': bud.is_active,
-                    'is_authenticated': bud.is_authenticated,
-                    'commonTracksCount': common_tracks_count,
-                    'commonTracks': [track.serialize() for track in common_tracks]
-                })
+                bud_liked_genre_uids = [genre.uid for genre in await bud.likes_genres.all()]  # Use list for UIDs
+                for account in user.associated_accounts.values():
+                    if account:
+                        common_genres = await account.likes_genres.filter(uid__in=bud_liked_genre_uids).all()
+                        common_genres_count = len(common_genres)
+
+                        # Get the parent and serialize it
+                        bud_parent = await bud.parent.all()
+                        for parent in bud_parent:
+                            parent_uid = parent.uid
+                            parent_serialized = await parent.without_relations_serialize()
+
+                            if parent_uid not in buds_data:
+                                buds_data[parent_uid] = {
+                                    'bud': parent_serialized,
+                                    'common_genres_count': 0,
+                                    'common_genres': []
+                                }
+
+                            # Update the aggregated data
+                            buds_data[parent_uid]['common_genres_count'] += common_genres_count
+                            buds_data[parent_uid]['common_genres'].extend([await genre.serialize() for genre in common_genres])
+
+            # Convert the aggregated data to a list
+            aggregated_buds_data = list(buds_data.values())
 
             paginator = StandardResultsSetPagination()
-            paginated_buds = paginator.paginate_queryset(buds_data, request)
+            paginated_buds = paginator.paginate_queryset(aggregated_buds_data, request)
 
             paginated_response = paginator.get_paginated_response(paginated_buds)
             paginated_response.update({
@@ -78,8 +85,10 @@ class get_buds_by_genre(APIView):
                 'code': 200,
                 'successful': True,
             })
+
+            logger.info(f'Successfully fetched buds by genre for user: uid={user.uid}, genre_id={genre_id}')
             return JsonResponse(paginated_response)
 
         except Exception as e:
-            logger.error(e)
+            logger.error(f'Error in GetBudsByGenre: {e}', exc_info=True)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)

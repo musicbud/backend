@@ -6,7 +6,7 @@ class LastfmAlbum(Album):
     name = StringProperty()
   
 
-    def serialize(self):
+    async def serialize(self):
         return {
             'uid': self.uid,
             'lastfm_id': self.lastfm_id,

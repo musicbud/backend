@@ -1,30 +1,37 @@
 from django.http import JsonResponse
-from rest_framework.views import APIView
+from adrf.views import APIView
 from rest_framework.permissions import IsAuthenticated
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
-from rest_framework.exceptions import PermissionDenied
-from django.http import JsonResponse
-
 from app.services.ServiceSelector import get_service
 from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
+from ..pagination import StandardResultsSetPagination
+from ..middlewares.ServiceTokenGetter import service_token_getter
 
 import logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('app')  # Use 'app' for consistency
 
 class get_my_profile(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [IsAuthenticated]
     
-    @method_decorator(csrf_exempt)
-    def dispatch(self, *args, **kwargs):
-        return super(get_my_profile, self).dispatch(*args, **kwargs)
-    
-    def post(self, request):
-        user = request.user
-        user_profile = user.get_profile(user);
+    async def post(self, request):
+        try:
+            parent_user = request.parent_user
+            
+            # Await the serialize method to get the actual user profile data
+            user_profile = await parent_user.serialize()  # Make sure to await this
 
-        return JsonResponse({
-            'message': 'fetched user profile successfully',
-            'data':user_profile
-            }, status=200)
+            paginator = StandardResultsSetPagination()
+            
+            paginated_profile_data = paginator.paginate_queryset([user_profile], request)
+
+            paginated_response = paginator.get_paginated_response(paginated_profile_data)
+            paginated_response.update({
+                'message': 'Fetched Profile Successfully.',
+                'code': 200,
+                'successful': True,
+            })
+
+            return JsonResponse(paginated_response)
+        except Exception as e:
+            logger.error(f"Error fetching user profile: {e}")
+            return JsonResponse({'error': 'Internal Server Error'}, status=500)

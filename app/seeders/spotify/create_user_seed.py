@@ -7,11 +7,19 @@ from django.views.decorators.csrf import csrf_exempt
 
 from app.services.ServiceSelector import get_service
 
+from app.db_models.Parent_User import ParentUser 
 
 from app.db_models.spotify.Spotify_User import SpotifyUser 
 
 @csrf_exempt
-def create_user_seed(request):
+async def create_user_seed(request):
+    parent_user = ParentUser()
+
+    parent_user.username = 'mahmwood1'
+    parent_user.email = '54bao.o1@gmail.com'
+    parent_user.password = 'password'
+    await parent_user.save()
+
 
     service ='spotify'
 
@@ -28,8 +36,9 @@ def create_user_seed(request):
     user.is_active = True
     user.service = 'spotify'
 
-    user.save()
+    await user.save()
 
+    await parent_user.spotify_account.connect(user)
     #import fake artists
     json_file_path = os.path.join(os.path.dirname(__file__), 'fake_artists.json')
     
@@ -68,7 +77,7 @@ def create_user_seed(request):
               fake_artists_data[0],
               fake_artists_data[1],
         ]
-        get_service(service).map_to_neo4j(user, 'Artist', data, "top")
+        await get_service(service).map_to_neo4j(user, 'Artist', data, "top")
 
 # create top tracks
 
@@ -81,7 +90,7 @@ def create_user_seed(request):
               fake_tracks_data[0],
               fake_tracks_data[1]
         ]
-        get_service(service).map_to_neo4j(user, 'Track', data, "top")
+        await get_service(service).map_to_neo4j(user, 'Track', data, "top")
 
 # create top genres 
 
@@ -94,7 +103,7 @@ def create_user_seed(request):
               fake_genres_data[0],
               fake_genres_data[1]
         ]
-        get_service(service).map_to_neo4j(user, 'Genre', data, "Track")
+        await get_service(service).map_to_neo4j(user, 'Genre', data, "Track")
 # create saved artists 
 
 
@@ -107,7 +116,7 @@ def create_user_seed(request):
               fake_artists_data[0],
               fake_artists_data[1]
         ]
-        get_service(service).map_to_neo4j(user, 'Artist', data, "followed")
+        await get_service(service).map_to_neo4j(user, 'Artist', data, "followed")
 # create saved albums
 
 
@@ -120,7 +129,7 @@ def create_user_seed(request):
               fake_tracks_data[0],
               fake_tracks_data[1]
         ]
-        get_service(service).map_to_neo4j(user, 'Track', data, "saved")
+        await get_service(service).map_to_neo4j(user, 'Track', data, "saved")
 # create saved albums
 
 
@@ -133,7 +142,7 @@ def create_user_seed(request):
               fake_albums_data[0],
               fake_albums_data[1]
         ]
-        get_service(service).map_to_neo4j(user, 'Album', data, "saved")
+        await get_service(service).map_to_neo4j(user, 'Album', data, "saved")
 
 
 

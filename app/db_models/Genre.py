@@ -1,12 +1,17 @@
 
-from neomodel import StringProperty,IntegerProperty,RelationshipFrom,RelationshipTo,ZeroOrMore,UniqueIdProperty
 from .Liked_Item import LikedItem
 from .Artist import Artist
+from .Track import Track
+
+
+from neomodel import (AsyncStructuredNode, StringProperty, IntegerProperty,
+    UniqueIdProperty, AsyncRelationshipTo, AsyncRelationshipFrom)
 
 class Genre(LikedItem):
-
-    artists = RelationshipTo(Artist, 'HAS_ARTIST')
-    users = RelationshipFrom('.User.User', 'LIKES')
+    name = StringProperty()
+    artists = AsyncRelationshipTo(Artist, 'HAS_ARTIST')
+    users = AsyncRelationshipFrom('.User.User', 'LIKES')
+    tracks = AsyncRelationshipTo(Track, 'HAS_TRACK')
 
 
     
