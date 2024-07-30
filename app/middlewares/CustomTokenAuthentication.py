@@ -63,7 +63,8 @@ class CustomTokenAuthentication(TokenAuthentication):
             associated_accounts = {
             'spotify_account': (await parent_user.spotify_account.all())[0] if await parent_user.spotify_account.all() else None,
             'ytmusic_account': (await parent_user.ytmusic_account.all())[0] if await parent_user.ytmusic_account.all() else None,
-            'lastfm_account': (await parent_user.lastfm_account.all())[0] if await parent_user.lastfm_account.all() else None
+            'lastfm_account': (await parent_user.lastfm_account.all())[0] if await parent_user.lastfm_account.all() else None,
+            'mal_account': (await parent_user.mal_account.all())[0] if await parent_user.mal_account.all() else None
             }
             logger.debug(f'Associated accounts: {associated_accounts}')
         parent_user.associated_accounts = associated_accounts

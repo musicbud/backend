@@ -80,3 +80,10 @@ class get_liked_albums(GetItemsMixin):
 class get_played_tracks(GetItemsMixin):
     item_type = 'played_tracks'
     item_attribute = 'played_tracks'
+
+class get_top_anime(GetItemsMixin):
+    item_type = 'top_anime'
+    item_attribute = 'top_anime'
+class get_top_manga(GetItemsMixin):
+    item_type = 'top_manga'
+    item_attribute = 'top_manga'

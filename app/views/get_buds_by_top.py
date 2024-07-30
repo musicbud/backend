@@ -12,15 +12,21 @@ import logging
 
 logger = logging.getLogger('app')
 
-class get_buds_by_top_tracks(APIView):
+
+class GetBudsBaseView(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [IsAuthenticated]
 
+    attribute_name = None
+
     @method_decorator(csrf_exempt)
     async def dispatch(self, *args, **kwargs):
-        return await super(get_buds_by_top_tracks, self).dispatch(*args, **kwargs)
+        return await super(GetBudsBaseView, self).dispatch(*args, **kwargs)
 
     async def post(self, request):
+        if not self.attribute_name:
+            return JsonResponse({'error': 'Attribute name not specified'}, status=500)
+
         try:
             user_node = request.user
 
@@ -29,31 +35,20 @@ class get_buds_by_top_tracks(APIView):
                 return JsonResponse({'error': 'User not found'}, status=404)
 
             account_ids = [account.uid for account in user_node.associated_accounts.values() if account]
-            unique_buds = set()  # Use a set to ensure uniqueness
+            unique_buds = set()
 
-            # Fetch top tracks from associated accounts
-            top_tracks = []
-            for account in user_node.associated_accounts.values():
-                if account:
-                    if hasattr(account, 'top_tracks'):  # Check if account has the top_artists attribute
-                        tracks = await account.top_tracks.all()
-                        top_tracks.extend(tracks)
-                    else:
-                        logger.warning(f'Account {account.uid} does not have top_tracks attribute.')
-            logger.debug(f'Fetched top tracks: {top_tracks}')
+            items = await self._fetch_items(user_node)
+            logger.debug(f'Fetched items: {items}')
 
-            # Fetch users who liked each track, excluding the current user's accounts
-            for track in top_tracks:
-                if hasattr(track, 'users'):
-                    track_users = await track.users.exclude(uid__in=account_ids).all()
-                    unique_buds.update(user.uid for user in track_users if hasattr(user, 'uid'))
+            for item in items:
+                if hasattr(item, 'users'):
+                    item_users = await item.users.exclude(uid__in=account_ids).all()
+                    unique_buds.update(user.uid for user in item_users if hasattr(user, 'uid'))
 
-            logger.debug(f'Found {len(unique_buds)} unique buds for top tracks.')
+            logger.debug(f'Found {len(unique_buds)} unique buds for {self.attribute_name}.')
 
-            # Fetch buds data
             buds_data = await self._fetch_buds_data(unique_buds)
 
-            # Pagination
             paginator = StandardResultsSetPagination()
             paginated_buds = paginator.paginate_queryset(buds_data, request)
 
@@ -64,12 +59,23 @@ class get_buds_by_top_tracks(APIView):
                 'successful': True,
             })
 
-            logger.info(f'Successfully fetched buds by top tracks for user: uid={user_node.uid}, total buds fetched: {len(unique_buds)}')
+            logger.info(f'Successfully fetched buds by {self.attribute_name} for user: uid={user_node.uid}, total buds fetched: {len(unique_buds)}')
             return JsonResponse(paginated_response)
 
         except Exception as e:
-            logger.error(f'Error in GetBudsByTopTracks: {e}', exc_info=True)
+            logger.error(f'Error in GetBudsBaseView: {e}', exc_info=True)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)
+
+    async def _fetch_items(self, user_node):
+        items = []
+        for account in user_node.associated_accounts.values():
+            if account:
+                if hasattr(account, self.attribute_name):
+                    account_items = await getattr(account, self.attribute_name).all()
+                    items.extend(account_items)
+                else:
+                    logger.warning(f'Account {account.uid} does not have {self.attribute_name} attribute.')
+        return items
 
     async def _fetch_buds_data(self, unique_buds):
         buds_data = []
@@ -84,9 +90,7 @@ class get_buds_by_top_tracks(APIView):
                 bud_parent = await bud.parent.all()
                 parent_serialized = await self._serialize_parent(bud_parent)
 
-                buds_data.append({
-                    'bud': parent_serialized,
-                })
+                buds_data.append({'bud': parent_serialized})
 
         except Exception as e:
             logger.error(f'Error in _fetch_buds_data: {e}', exc_info=True)
@@ -99,3 +103,21 @@ class get_buds_by_top_tracks(APIView):
         for parent in bud_parent:
             serialized_data.append(await parent.without_relations_serialize())
         return serialized_data
+
+
+class get_buds_by_top_artists(GetBudsBaseView):
+    attribute_name = 'top_artists'
+
+
+class get_buds_by_top_tracks(GetBudsBaseView):
+    attribute_name = 'top_tracks'
+
+
+class get_buds_by_top_genres(GetBudsBaseView):
+    attribute_name = 'top_genres'
+
+class get_buds_by_top_anime(GetBudsBaseView):
+    attribute_name = 'top_anime'
+
+class get_buds_by_top_manga(GetBudsBaseView):
+    attribute_name = 'top_manga'

@@ -28,12 +28,11 @@ def service_token_getter(view_func):
         expires_at = service_account.expires_at
         if not expires_at:
             logger.warning('Token expiration time not provided.')
-            return JsonResponse({'error': 'Token expiration time not provided.'}, status=401)
-
-        current_time = time.time()
-        if current_time >= float(expires_at):
-            logger.error(f'{service} Access token expired.')
-            return JsonResponse({'error': f'{service} Access token expired.'}, status=401)
+        else:
+            current_time = time.time()
+            if current_time >= float(expires_at):
+                logger.error(f'{service} Access token expired.')
+                return JsonResponse({'error': f'{service} Access token expired.'}, status=401)
 
         request.service= service
         request.service_account = service_account

@@ -126,3 +126,13 @@ class get_common_top_genres(CommonItemsView):
     item_type = 'top_genres'
     async def post(self, request):
         return await super().get_common_items(request)
+    
+class get_common_top_anime(CommonItemsView):
+    item_type = 'top_anime'
+    async def post(self, request):
+        return await super().get_common_items(request)
+class get_common_top_manga(CommonItemsView):
+    item_type = 'top_manga'
+    async def post(self, request):
+        return await super().get_common_items(request)
+

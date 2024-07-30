@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 from django.http import JsonResponse
 from neomodel.exceptions import MultipleNodesReturned, DoesNotExist
 from adrf.views import APIView
@@ -235,6 +235,13 @@ class lastfm_connect(APIView):
             if not user:
                 logger.warning("No Last.fm user found with provided token")
                 return JsonResponse({'error': 'No Last.fm user found with provided token'}, status=404)
+            if hasattr(request, 'parent_user') and request.parent_user:
+                logger.info("Attaching Lastfm to ParentUser")
+                await request.parent_user.lastfm_account.connect(user)
+                response_data = {'message': 'Lastfm user connected to ParentUser successfully.'}
+            else:
+                response_data = {'message': 'No ParentUser to connect Lastfm user to.'}
+            return JsonResponse(response_data, status=200)
 
         except Exception as e:
             logger.error(f"Error in connect_lastfm: {e}")
@@ -256,8 +263,8 @@ class mal_callback(APIView):
             service_instance = get_service(service)
 
             tokens = await service_instance.get_tokens(code)
-            print(tokens)
-            user_profile = await service_instance.get_user_info(tokens['access_token'])
+
+            user_profile = await service_instance.get_user_info(tokens)
 
             try:
                 user = await MalUser.nodes.get(user_id=user_profile['id'])
@@ -266,29 +273,8 @@ class mal_callback(APIView):
                 return JsonResponse({'error': 'Multiple users found with this MyAnimeList ID'}, status=500)
             except DoesNotExist:
                 logger.info("Creating new MalUser from profile")
-                user_data = {
-                    "user_id": user_profile['id'],
-                    "name": user_profile['name'],
-                    "location": user_profile.get('location', ''),
-                    "joined_at": datetime.strptime(user_profile['joined_at'], "%Y-%m-%dT%H:%M:%S%z"),
-                    "num_items_watching": user_profile['anime_statistics'].get('num_items_watching', 0),
-                    "num_items_completed": user_profile['anime_statistics'].get('num_items_completed', 0),
-                    "num_items_on_hold": user_profile['anime_statistics'].get('num_items_on_hold', 0),
-                    "num_items_dropped": user_profile['anime_statistics'].get('num_items_dropped', 0),
-                    "num_items_plan_to_watch": user_profile['anime_statistics'].get('num_items_plan_to_watch', 0),
-                    "num_items": user_profile['anime_statistics'].get('num_items', 0),
-                    "num_days_watched": user_profile['anime_statistics'].get('num_days_watched', 0.0),
-                    "num_days_watching": user_profile['anime_statistics'].get('num_days_watching', 0.0),
-                    "num_days_completed": user_profile['anime_statistics'].get('num_days_completed', 0.0),
-                    "num_days_on_hold": user_profile['anime_statistics'].get('num_days_on_hold', 0.0),
-                    "num_days_dropped": user_profile['anime_statistics'].get('num_days_dropped', 0.0),
-                    "num_days": user_profile['anime_statistics'].get('num_days', 0.0),
-                    "num_episodes": user_profile['anime_statistics'].get('num_episodes', 0),
-                    "num_times_rewatched": user_profile['anime_statistics'].get('num_times_rewatched', 0),
-                    "mean_score": user_profile['anime_statistics'].get('mean_score', 0.0)
-                }
-                user = await MalUser(**user_data).save()
-
+                user = await MalUser.create_from_mal_profile(user_profile, tokens)
+                
             logger.info("Logged in successfully to MyAnimeList")        
 
             return JsonResponse({

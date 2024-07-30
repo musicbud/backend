@@ -21,7 +21,8 @@ class update_my_likes(APIView):
             service = request.service
             user = request.service_account
             logger.info(f"User: {user.id} is updating likes for service: {user}")
-            service = user.service
+            # service = user.service
+            service = 'mal'
             
             service_instance = get_service(service)
             await service_instance.save_user_likes(user)

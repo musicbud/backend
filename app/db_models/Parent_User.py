@@ -22,12 +22,14 @@ class ParentUser(AsyncStructuredNode):
     spotify_account = AsyncRelationshipTo('.User.User', 'CONNECTED_TO_SPOTIFY')
     ytmusic_account = AsyncRelationshipTo('.User.User', 'CONNECTED_TO_YTMUSIC')
     lastfm_account = AsyncRelationshipTo('.User.User', 'CONNECTED_TO_LASTFM')
-    
+    mal_account = AsyncRelationshipTo('.User.User', 'CONNECTED_TO_MAL')
+
     async def associated_accounts(self):
         return {
             'spotify_account': await self.spotify_account.get_or_none(),
             'ytmusic_account': await self.ytmusic_account.get_or_none(),
-            'lastfm_account': await self.lastfm_account.get_or_none() 
+            'lastfm_account': await self.lastfm_account.get_or_none(),
+            'mal_account': await self.mal_account.get_or_none() 
         }
     
     @staticmethod
