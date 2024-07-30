@@ -3,7 +3,8 @@
 from .LastfmService import LastFmService
 from .SpotifyService import SpotifyService
 from .YTmusicService import YTmusicService 
- 
+from .MalService import MalService 
+
 from django.http import JsonResponse  
 from django.conf import settings
 import logging
@@ -17,6 +18,8 @@ def get_service(service):
             service_instance = SpotifyService(settings.SPOTIFY_CLIENT_ID, settings.SPOTIFY_CLIENT_SECRET, settings.SPOTIFY_REDIRECT_URI,settings.SPOTIFY_SCOPE)
         elif service == 'ytmusic':
             service_instance = YTmusicService(settings.YTMUSIC_CLIENT_ID, settings.YTMUSIC_CLIENT_SECRET, settings.YTMUSIC_REDIRECT_URI)
+        elif service == 'mal':
+            service_instance = MalService(settings.MAL_CLIENT_ID, settings.MAL_CLIENT_SECRET, settings.MAL_REDIRECT_URI,settings.MAL_SCOPE)
         else:
             return JsonResponse({'error': 'Unsupported service'}, status=400)
         return service_instance

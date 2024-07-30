@@ -32,7 +32,7 @@ class get_buds_by_liked_genres(APIView):
 
             buds = await self._get_buds_by_liked_genres(liked_genres, account_ids)
 
-            buds_data, total_common_genres_count = await self._fetch_buds_data(user_node, buds, account_ids)
+            buds_data = await self._fetch_buds_data(buds)
 
             paginator = StandardResultsSetPagination()
             paginated_buds = paginator.paginate_queryset(buds_data, request)
@@ -82,45 +82,25 @@ class get_buds_by_liked_genres(APIView):
 
         return buds
 
-    async def _fetch_buds_data(self, user_node, buds, account_ids):
-        buds_data = {}
-        total_common_genres_count = 0
+    async def _fetch_buds_data(self, buds):
+        buds_data = []
 
         try:
             for bud in buds:
-                try:
-                    bud_liked_genres = await bud.likes_genres.all()
-                    bud_liked_genre_uids = [genre.uid for genre in bud_liked_genres]
+                bud_parent = await bud.parent.all()
+                parent_serialized = await self._serialize_parent(bud_parent)
 
-                    common_genres = await user_node.likes_genres.filter(uid__in=bud_liked_genre_uids).all()
-                    common_genres_count = len(common_genres)
-                    total_common_genres_count += common_genres_count
+                buds_data.append({
+                    'bud': parent_serialized,
+                })
 
-                    bud_parent = await bud.parent.all()
-                    for parent in bud_parent:
-                        parent_uid = parent.uid
-                        parent_serialized = await parent.without_relations_serialize()
-                        if parent_uid not in buds_data:
-                            buds_data[parent_uid] = {
-                                'parent': parent_serialized,
-                                'commonGenresCount': 0,
-                                'commonGenres': []
-                            }
-                        buds_data[parent_uid]['commonGenresCount'] += common_genres_count
-                        buds_data[parent_uid]['commonGenres'].extend([await genre.serialize() for genre in common_genres])
-
-                except Exception as e:
-                    logger.error(f'Error processing bud: uid={bud.uid} - {e}', exc_info=True)
         except Exception as e:
             logger.error(f'Error in _fetch_buds_data: {e}', exc_info=True)
 
-        buds_data_list = [
-            {
-                'bud': data['parent'],
-                'commonGenresCount': data['commonGenresCount'],
-                'commonGenres': data['commonGenres']
-            }
-            for data in buds_data.values()
-        ]
+        return buds_data
 
-        return buds_data_list, total_common_genres_count
+    async def _serialize_parent(self, bud_parent):
+        serialized_data = []
+        for parent in bud_parent:
+            serialized_data.append(await parent.without_relations_serialize())
+        return serialized_data

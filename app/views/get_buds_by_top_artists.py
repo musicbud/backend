@@ -28,11 +28,18 @@ class get_buds_by_top_artists(APIView):
                 logger.warning('User not found')
                 return JsonResponse({'error': 'User not found'}, status=404)
 
-            account_ids = {account.uid for account in user_node.associated_accounts.values() if account}
+            account_ids = [account.uid for account in user_node.associated_accounts.values() if account]
             unique_buds = set()
 
-            # Fetch top artists (placeholder logic)
-            top_artists = []  # TODO: Replace with actual logic to get top artists
+            # Fetch top artists from associated accounts
+            top_artists = []
+            for account in user_node.associated_accounts.values():
+                if account:
+                    if hasattr(account, 'top_artists'):  # Check if account has the top_artists attribute
+                        artists = await account.top_artists.all()
+                        top_artists.extend(artists)
+                    else:
+                        logger.warning(f'Account {account.uid} does not have top_artists attribute.')
             logger.debug(f'Fetched top artists: {top_artists}')
 
             # Fetch users who liked each artist, excluding current user's accounts
@@ -44,7 +51,7 @@ class get_buds_by_top_artists(APIView):
             logger.debug(f'Found {len(unique_buds)} unique buds for top artists.')
 
             # Fetch buds data
-            buds_data, total_common_artists_count = await self._fetch_buds_data(user_node, unique_buds)
+            buds_data = await self._fetch_buds_data(unique_buds)
 
             # Pagination
             paginator = StandardResultsSetPagination()
@@ -55,7 +62,6 @@ class get_buds_by_top_artists(APIView):
                 'message': 'Fetched buds successfully.',
                 'code': 200,
                 'successful': True,
-                'total_common_artists_count': total_common_artists_count,
             })
 
             logger.info(f'Successfully fetched buds by top artists for user: uid={user_node.uid}, total buds fetched: {len(unique_buds)}')
@@ -65,9 +71,8 @@ class get_buds_by_top_artists(APIView):
             logger.error(f'Error in GetBudsByTopArtists: {e}', exc_info=True)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)
 
-    async def _fetch_buds_data(self, user_node, unique_buds):
-        buds_data = {}
-        total_common_artists_count = 0
+    async def _fetch_buds_data(self, unique_buds):
+        buds_data = []
 
         try:
             for bud_uid in unique_buds:
@@ -76,45 +81,21 @@ class get_buds_by_top_artists(APIView):
                     logger.warning(f'Bud not found: uid={bud_uid}')
                     continue
 
-                bud_top_artists = await bud.top_artists.all()
-                bud_top_artist_uids = {artist.uid for artist in bud_top_artists if hasattr(artist, 'uid')}
+                bud_parent = await bud.parent.all()
+                parent_serialized = await self._serialize_parent(bud_parent)
 
-                for account in user_node.associated_accounts.values():
-                    if account:
-                        common_artists = await account.top_artists.filter(uid__in=bud_top_artist_uids).all()
-                        common_artists_count = len(common_artists)
-                        total_common_artists_count += common_artists_count
-
-                        logger.debug(f'User {user_node.uid} found {common_artists_count} common artists with bud {bud.uid} through account {account.uid}.')
-
-                        bud_parent = await bud.parent.all()
-                        for parent in bud_parent:
-                            parent_uid = parent.uid
-                            parent_serialized = await parent.without_relations_serialize()
-
-                            # Initialize bud data if not already present
-                            if parent_uid not in buds_data:
-                                buds_data[parent_uid] = {
-                                    'parent': parent_serialized,
-                                    'commonArtistsCount': 0,
-                                    'commonArtists': []
-                                }
-
-                            buds_data[parent_uid]['commonArtistsCount'] += common_artists_count
-                            buds_data[parent_uid]['commonArtists'].extend(await artist.serialize() for artist in common_artists)
+                buds_data.append({
+                    'bud': parent_serialized,
+                })
 
         except Exception as e:
             logger.error(f'Error in _fetch_buds_data: {e}', exc_info=True)
 
-        # Prepare the list from the dictionary for response
-        buds_data_list = [
-            {
-                'bud': data['parent'],
-                'commonArtistsCount': data['commonArtistsCount'],
-                'commonArtists': data['commonArtists']
-            }
-            for data in buds_data.values()
-        ]
+        logger.debug(f'Prepared buds data list with {len(buds_data)} entries.')
+        return buds_data
 
-        logger.debug(f'Prepared buds data list with {len(buds_data_list)} entries.')
-        return buds_data_list, total_common_artists_count
+    async def _serialize_parent(self, bud_parent):
+        serialized_data = []
+        for parent in bud_parent:
+            serialized_data.append(await parent.without_relations_serialize())
+        return serialized_data

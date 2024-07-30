@@ -55,6 +55,8 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'app.middlewares.CustomTokenAuthentication.CustomTokenAuthentication'
     ],
+    'DEFAULT_PAGINATION_CLASS': 'app.pagination.StandardResultsSetPagination',
+    'PAGE_SIZE': 10,  
     
 }
 
@@ -104,6 +106,12 @@ LASTFM_REDIRECT_URI = os.environ.get('LASTFM_REDIRECT_URI')
 YTMUSIC_CLIENT_ID = os.environ.get('YTMUSIC_CLIENT_ID')
 YTMUSIC_CLIENT_SECRET = os.environ.get('YTMUSIC_CLIENT_SECRET')
 YTMUSIC_REDIRECT_URI = os.environ.get('YTMUSIC_REDIRECT_URI')
+
+#YTMUSIC secrets
+MAL_CLIENT_ID = os.environ.get('MAL_CLIENT_ID')
+MAL_CLIENT_SECRET = os.environ.get('MAL_CLIENT_SECRET')
+MAL_REDIRECT_URI = os.environ.get('MAL_REDIRECT_URI')
+MAL_SCOPE = "read"
 
 
 SIMPLE_JWT = {

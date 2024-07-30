@@ -29,7 +29,7 @@ class get_buds_by_track(APIView):
             if not track_id:
                 return JsonResponse({'error': 'Track ID not provided'}, status=400)
 
-            account_ids = [account.uid for account in user.associated_accounts.values() if account]  # Use a list for account UIDs
+            account_ids = [account.uid for account in user.associated_accounts.values() if account]  # Use a set for account UIDs
 
             # Await the call to get the track node
             track_node = await Track.nodes.get_or_none(uid=track_id)
@@ -40,44 +40,12 @@ class get_buds_by_track(APIView):
             # Get users who liked the specified track, excluding the current user's accounts
             track_users = await track_node.users.exclude(uid__in=account_ids).all()
 
-            buds_data = {}
-            unique_bud_uids = set()  # Set to track unique bud UIDs
+            # Fetch buds data
+            buds_data = await self._fetch_buds_data(track_users)
 
-            for bud in track_users:
-                bud_uid = bud.uid
-                if bud_uid in unique_bud_uids:
-                    continue  # Skip already processed bud
-
-                unique_bud_uids.add(bud_uid)  # Mark this bud as processed
-
-                bud_liked_track_uids = [track.uid for track in await bud.likes_tracks.all()]  # Use list for UIDs
-                for account in user.associated_accounts.values():
-                    if account:
-                        common_tracks = await account.likes_tracks.filter(uid__in=bud_liked_track_uids).all()
-                        common_tracks_count = len(common_tracks)
-
-                        # Get the parent and serialize it
-                        bud_parent = await bud.parent.all()
-                        for parent in bud_parent:
-                            parent_uid = parent.uid
-                            parent_serialized = await parent.without_relations_serialize()
-
-                            if parent_uid not in buds_data:
-                                buds_data[parent_uid] = {
-                                    'bud': parent_serialized,
-                                    'common_tracks_count': 0,
-                                    'common_tracks': []
-                                }
-
-                            # Update the aggregated data
-                            buds_data[parent_uid]['common_tracks_count'] += common_tracks_count
-                            buds_data[parent_uid]['common_tracks'].extend([await track.serialize() for track in common_tracks])
-
-            # Convert the aggregated data to a list
-            aggregated_buds_data = list(buds_data.values())
-
+            # Pagination
             paginator = StandardResultsSetPagination()
-            paginated_buds = paginator.paginate_queryset(aggregated_buds_data, request)
+            paginated_buds = paginator.paginate_queryset(buds_data, request)
 
             paginated_response = paginator.get_paginated_response(paginated_buds)
             paginated_response.update({
@@ -92,3 +60,27 @@ class get_buds_by_track(APIView):
         except Exception as e:
             logger.error(f'Error in GetBudsByTrack: {e}', exc_info=True)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)
+
+    async def _fetch_buds_data(self, track_users):
+        buds_data = []
+
+        try:
+            for bud in track_users:
+                bud_parent = await bud.parent.all()
+                parent_serialized = await self._serialize_parent(bud_parent)
+
+                buds_data.append({
+                    'bud': parent_serialized,
+                })
+
+        except Exception as e:
+            logger.error(f'Error in _fetch_buds_data: {e}', exc_info=True)
+
+        logger.debug(f'Prepared buds data list with {len(buds_data)} entries.')
+        return buds_data
+
+    async def _serialize_parent(self, bud_parent):
+        serialized_data = []
+        for parent in bud_parent:
+            serialized_data.append(await parent.without_relations_serialize())
+        return serialized_data

@@ -29,8 +29,7 @@ class get_buds_by_genre(APIView):
             if not genre_id:
                 return JsonResponse({'error': 'Genre ID not provided'}, status=400)
 
-            account_ids = [account.uid for account in user.associated_accounts.values() if account]  # Use a list for account UIDs
-
+            account_ids = [account.uid for account in user.associated_accounts.values() if account]
             # Await the call to get the genre node
             genre_node = await Genre.nodes.get_or_none(uid=genre_id)
 
@@ -40,44 +39,12 @@ class get_buds_by_genre(APIView):
             # Get users who liked the specified genre, excluding the current user's accounts
             genre_users = await genre_node.users.exclude(uid__in=account_ids).all()
 
-            buds_data = {}
-            unique_bud_uids = set()  # Set to track unique bud UIDs
+            # Fetch buds data
+            buds_data = await self._fetch_buds_data(genre_users)
 
-            for bud in genre_users:
-                bud_uid = bud.uid
-                if bud_uid in unique_bud_uids:
-                    continue  # Skip already processed bud
-
-                unique_bud_uids.add(bud_uid)  # Mark this bud as processed
-
-                bud_liked_genre_uids = [genre.uid for genre in await bud.likes_genres.all()]  # Use list for UIDs
-                for account in user.associated_accounts.values():
-                    if account:
-                        common_genres = await account.likes_genres.filter(uid__in=bud_liked_genre_uids).all()
-                        common_genres_count = len(common_genres)
-
-                        # Get the parent and serialize it
-                        bud_parent = await bud.parent.all()
-                        for parent in bud_parent:
-                            parent_uid = parent.uid
-                            parent_serialized = await parent.without_relations_serialize()
-
-                            if parent_uid not in buds_data:
-                                buds_data[parent_uid] = {
-                                    'bud': parent_serialized,
-                                    'common_genres_count': 0,
-                                    'common_genres': []
-                                }
-
-                            # Update the aggregated data
-                            buds_data[parent_uid]['common_genres_count'] += common_genres_count
-                            buds_data[parent_uid]['common_genres'].extend([await genre.serialize() for genre in common_genres])
-
-            # Convert the aggregated data to a list
-            aggregated_buds_data = list(buds_data.values())
-
+            # Pagination
             paginator = StandardResultsSetPagination()
-            paginated_buds = paginator.paginate_queryset(aggregated_buds_data, request)
+            paginated_buds = paginator.paginate_queryset(buds_data, request)
 
             paginated_response = paginator.get_paginated_response(paginated_buds)
             paginated_response.update({
@@ -92,3 +59,27 @@ class get_buds_by_genre(APIView):
         except Exception as e:
             logger.error(f'Error in GetBudsByGenre: {e}', exc_info=True)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)
+
+    async def _fetch_buds_data(self, genre_users):
+        buds_data = []
+
+        try:
+            for bud in genre_users:
+                bud_parent = await bud.parent.all()
+                parent_serialized = await self._serialize_parent(bud_parent)
+
+                buds_data.append({
+                    'bud': parent_serialized,
+                })
+
+        except Exception as e:
+            logger.error(f'Error in _fetch_buds_data: {e}', exc_info=True)
+
+        logger.debug(f'Prepared buds data list with {len(buds_data)} entries.')
+        return buds_data
+
+    async def _serialize_parent(self, bud_parent):
+        serialized_data = []
+        for parent in bud_parent:
+            serialized_data.append(await parent.without_relations_serialize())
+        return serialized_data

@@ -1,3 +1,4 @@
+import datetime
 from django.http import JsonResponse
 from neomodel.exceptions import MultipleNodesReturned, DoesNotExist
 from adrf.views import APIView
@@ -6,6 +7,9 @@ from app.middlewares.CustomTokenAuthentication import CustomTokenAuthentication
 from ..db_models.spotify.Spotify_User import SpotifyUser
 from ..db_models.lastfm.Lastfm_User import LastfmUser
 from ..db_models.ytmusic.Ytmusic_User import YtmusicUser
+from ..db_models.mal.Mal_User import MalUser
+
+
 from ..services.ServiceSelector import get_service
 import logging
 
@@ -234,6 +238,96 @@ class lastfm_connect(APIView):
 
         except Exception as e:
             logger.error(f"Error in connect_lastfm: {e}")
+            return JsonResponse({'error': str(e)}, status=500)
+
+
+class mal_callback(APIView):
+    permission_classes = [AllowAny]
+
+    async def get(self, request):
+        code = request.GET.get('code')
+        if not code:
+            logger.warning("Authorization code not provided in mal_callback")
+            return JsonResponse({'error': 'Authorization code not provided'}, status=400)
+
+        try:
+            service = 'mal'
+            logger.info("Fetching tokens and user profile for MyAnimeList")
+            service_instance = get_service(service)
+
+            tokens = await service_instance.get_tokens(code)
+            print(tokens)
+            user_profile = await service_instance.get_user_info(tokens['access_token'])
+
+            try:
+                user = await MalUser.nodes.get(user_id=user_profile['id'])
+            except MultipleNodesReturned:
+                logger.error("Multiple users found with this MyAnimeList ID")
+                return JsonResponse({'error': 'Multiple users found with this MyAnimeList ID'}, status=500)
+            except DoesNotExist:
+                logger.info("Creating new MalUser from profile")
+                user_data = {
+                    "user_id": user_profile['id'],
+                    "name": user_profile['name'],
+                    "location": user_profile.get('location', ''),
+                    "joined_at": datetime.strptime(user_profile['joined_at'], "%Y-%m-%dT%H:%M:%S%z"),
+                    "num_items_watching": user_profile['anime_statistics'].get('num_items_watching', 0),
+                    "num_items_completed": user_profile['anime_statistics'].get('num_items_completed', 0),
+                    "num_items_on_hold": user_profile['anime_statistics'].get('num_items_on_hold', 0),
+                    "num_items_dropped": user_profile['anime_statistics'].get('num_items_dropped', 0),
+                    "num_items_plan_to_watch": user_profile['anime_statistics'].get('num_items_plan_to_watch', 0),
+                    "num_items": user_profile['anime_statistics'].get('num_items', 0),
+                    "num_days_watched": user_profile['anime_statistics'].get('num_days_watched', 0.0),
+                    "num_days_watching": user_profile['anime_statistics'].get('num_days_watching', 0.0),
+                    "num_days_completed": user_profile['anime_statistics'].get('num_days_completed', 0.0),
+                    "num_days_on_hold": user_profile['anime_statistics'].get('num_days_on_hold', 0.0),
+                    "num_days_dropped": user_profile['anime_statistics'].get('num_days_dropped', 0.0),
+                    "num_days": user_profile['anime_statistics'].get('num_days', 0.0),
+                    "num_episodes": user_profile['anime_statistics'].get('num_episodes', 0),
+                    "num_times_rewatched": user_profile['anime_statistics'].get('num_times_rewatched', 0),
+                    "mean_score": user_profile['anime_statistics'].get('mean_score', 0.0)
+                }
+                user = await MalUser(**user_data).save()
+
+            logger.info("Logged in successfully to MyAnimeList")        
+
+            return JsonResponse({
+                'message': 'Logged in successfully.',
+                'code': 200,
+                'status': 'HTTP OK',
+                'data': tokens
+            })
+        except Exception as e:
+            logger.error(f"Error in mal callback: {e}")
+            return JsonResponse({'error': str(e)}, status=500)
+class mal_connect(APIView):
+    authentication_classes = [CustomTokenAuthentication]
+    permission_classes = [AllowAny]
+            
+    async def post(self, request):
+        token = request.data.get('mal_token')
+        if not token:
+            logger.warning("MyAnimeList token not provided")
+            return JsonResponse({'error': 'MyAnimeList token not provided'}, status=400)
+
+        try:
+            user = await MalUser.nodes.get_or_none(access_token=token)
+            if not user:
+                logger.warning("No MyAnimeList user found with provided token")
+                return JsonResponse({'error': 'No MyAnimeList user found with provided token'}, status=404)
+
+            if hasattr(request, 'parent_user') and request.parent_user:
+                logger.info("Attaching MyAnimeList to ParentUser")
+                await request.parent_user.mal_account.connect(user)
+                response_data = {'message': 'MyAnimeList user connected to ParentUser successfully.'}
+            else:
+                response_data = {'message': 'No ParentUser to connect MyAnimeList user to.'}
+
+            logger.info(f"Response Data: {response_data}")
+            return JsonResponse(response_data, status=200)
+
+        except Exception as e:
+            logger.error(f"Error in mal_connect: {e}")
             return JsonResponse({'error': str(e)}, status=500)
 
 class not_found_view(APIView):
