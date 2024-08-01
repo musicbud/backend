@@ -3,14 +3,15 @@ from adrf.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
+from ..middlewares.custom_token_auth import CustomTokenAuthentication
 from ..pagination import StandardResultsSetPagination
 import logging
-from ..db_models.Genre import Genre
-from ..db_models.Track import Track
-from ..db_models.Artist import Artist
-from ..db_models.Album import Album
+from ..db_models.genre import Genre
+from ..db_models.track import Track
+from ..db_models.artist import Artist
+from ..db_models.album import Album
 
+from app.forms.get_by_id import GetByIdForm
 
 
 
@@ -25,6 +26,12 @@ class GetBudsBase(APIView):
         return await super(GetBudsBase, self).dispatch(*args, **kwargs)
 
     async def post(self, request):
+
+        form = GetByIdForm(request.data)
+
+        if not form.is_valid():
+            return JsonResponse({'error': 'Invalid input', 'details': form.errors}, status=400)
+        
         try:
             user = request.user
             identifier = self.get_identifier(request)
@@ -99,7 +106,7 @@ class GetBudsBase(APIView):
         return serialized_data
 
 
-class get_buds_by_track(GetBudsBase):
+class GetBusdByTrack(GetBudsBase):
     def get_identifier(self, request):
         return request.data.get('track_id')
 
@@ -109,7 +116,7 @@ class get_buds_by_track(GetBudsBase):
     async def get_node(self, identifier):
         return await Track.nodes.get_or_none(uid=identifier)
     
-class get_buds_by_artist(GetBudsBase):
+class GetBudsByArtist(GetBudsBase):
     def get_identifier(self, request):
         return request.data.get('artist_id')
 
@@ -119,7 +126,7 @@ class get_buds_by_artist(GetBudsBase):
     async def get_node(self, identifier):
         return await Artist.nodes.get_or_none(uid=identifier)
     
-class get_buds_by_genre(GetBudsBase):
+class GetBudsByGenre(GetBudsBase):
     def get_identifier(self, request):
         return request.data.get('genre_id')
 
@@ -129,7 +136,7 @@ class get_buds_by_genre(GetBudsBase):
     async def get_node(self, identifier):
         return await Genre.nodes.get_or_none(uid=identifier)
     
-class get_buds_by_album(GetBudsBase):
+class GetBudsByAlbum(GetBudsBase):
     def get_identifier(self, request):
         return request.data.get('album_id')
 

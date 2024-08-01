@@ -5,11 +5,11 @@ import time
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from app.services.ServiceSelector import get_service
+from app.services.service_selector import get_service
 
-from app.db_models.Parent_User import ParentUser 
+from app.db_models.parent_user import ParentUser 
 
-from app.db_models.spotify.Spotify_User import SpotifyUser 
+from app.db_models.spotify.spotify_user import SpotifyUser 
 
 @csrf_exempt
 async def create_user_seed(request):

@@ -3,8 +3,8 @@ from adrf.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from ..db_models.User import User
-from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
+from ..db_models.user import User
+from ..middlewares.custom_token_auth import CustomTokenAuthentication
 from ..pagination import StandardResultsSetPagination
 import logging
 
@@ -83,7 +83,7 @@ class BudsMixin(APIView):
 
 
 
-class get_buds_by_liked_aio(BudsMixin):
+class GetBudsByLikedAio(BudsMixin):
     async def post(self, request):
         try:
             user_node = request.user

@@ -3,19 +3,19 @@ from django.http import JsonResponse
 from neomodel.exceptions import MultipleNodesReturned, DoesNotExist
 from adrf.views import APIView
 from rest_framework.permissions import AllowAny
-from app.middlewares.CustomTokenAuthentication import CustomTokenAuthentication
-from ..db_models.spotify.Spotify_User import SpotifyUser
-from ..db_models.lastfm.Lastfm_User import LastfmUser
-from ..db_models.ytmusic.Ytmusic_User import YtmusicUser
-from ..db_models.mal.Mal_User import MalUser
+from app.middlewares.custom_token_auth import CustomTokenAuthentication
+from ..db_models.spotify.spotify_user import SpotifyUser
+from ..db_models.lastfm.lastfm_user import LastfmUser
+from ..db_models.ytmusic.ytmusic_user import YtmusicUser
+from ..db_models.mal.mal_user import MalUser
 
-
-from ..services.ServiceSelector import get_service
+from ..forms.callback import CodeForm
+from ..services.service_selector import get_service
 import logging
 
 logger = logging.getLogger(__name__)
 
-class login(APIView):
+class Login(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [AllowAny]
 
@@ -35,12 +35,17 @@ class login(APIView):
             logger.error(f"Error generating authorization link: {e}")
             return JsonResponse({'error': str(e)}, status=500)
 
-class ytmusic_callback(APIView):
+class YtmusicCallback(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [AllowAny]
 
     async def get(self, request):
-        code = request.GET.get('code')
+
+        form = CodeForm(request.GET)
+
+        if form.is_valid():
+            code = form.cleaned_data['code']
+        
         if not code:
             logger.warning("Authorization code not provided in ytmusic_callback")
             return JsonResponse({'error': 'Authorization code not provided'}, status=400)
@@ -79,7 +84,7 @@ class ytmusic_callback(APIView):
             logger.error(f"Error in ytmusic_callback: {e}")
             return JsonResponse({'error': str(e)}, status=500)
 
-class ytmusic_connect(APIView):
+class YtmusicConnect(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [AllowAny]
     
@@ -108,10 +113,14 @@ class ytmusic_connect(APIView):
             logger.error(f"Error in connect_ytmusic: {e}")
             return JsonResponse({'error': str(e)}, status=500)
         
-class spotify_callback(APIView):
+class SpotifyCallback(APIView):
     permission_classes = [AllowAny]
 
     async def get(self, request):
+        form = CodeForm(request.GET)
+
+        if form.is_valid():
+            code = form.cleaned_data['code']
         code = request.GET.get('code')
         if not code:
             logger.warning("Authorization code not provided in spotify_callback")
@@ -150,7 +159,7 @@ class spotify_callback(APIView):
         except Exception as e:
             logger.error(f"Error in spotify_callback: {e}")
             return JsonResponse({'error': str(e)}, status=500)
-class spotify_connect(APIView):
+class SpotifyConnect(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [AllowAny]
             
@@ -179,7 +188,7 @@ class spotify_connect(APIView):
             logger.error(f"Error in connect_spotify: {e}")
             return JsonResponse({'error': str(e)}, status=500)
 
-class lastfm_callback(APIView):
+class LastfmCallback(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [AllowAny]
 
@@ -220,7 +229,7 @@ class lastfm_callback(APIView):
         except Exception as e:
             logger.error(f"Error in lastfm_callback: {e}")
             return JsonResponse({'error': str(e)}, status=500)
-class lastfm_connect(APIView):
+class LastfmConnect(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [AllowAny]
             
@@ -248,11 +257,14 @@ class lastfm_connect(APIView):
             return JsonResponse({'error': str(e)}, status=500)
 
 
-class mal_callback(APIView):
+class MalCallback(APIView):
     permission_classes = [AllowAny]
 
     async def get(self, request):
-        code = request.GET.get('code')
+        form = CodeForm(request.GET)
+
+        if form.is_valid():
+            code = form.cleaned_data['code']
         if not code:
             logger.warning("Authorization code not provided in mal_callback")
             return JsonResponse({'error': 'Authorization code not provided'}, status=400)
@@ -286,7 +298,7 @@ class mal_callback(APIView):
         except Exception as e:
             logger.error(f"Error in mal callback: {e}")
             return JsonResponse({'error': str(e)}, status=500)
-class mal_connect(APIView):
+class MalConnect(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [AllowAny]
             
@@ -316,7 +328,7 @@ class mal_connect(APIView):
             logger.error(f"Error in mal_connect: {e}")
             return JsonResponse({'error': str(e)}, status=500)
 
-class not_found_view(APIView):
+class NotFoundView(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [AllowAny]
 
@@ -324,7 +336,7 @@ class not_found_view(APIView):
         logger.warning("Resource not found on this server")
         return JsonResponse({'error': 'Resource not found on this server'}, status=404)
 
-class error_view(APIView):
+class ErrorView(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [AllowAny]
 

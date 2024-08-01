@@ -1,7 +1,7 @@
 from django.http import JsonResponse
 from adrf.views import APIView
 from app.pagination import StandardResultsSetPagination
-from app.db_models.Parent_User import ParentUser
+from app.db_models.parent_user import ParentUser
 import logging
 
 logger = logging.getLogger('app')
@@ -79,59 +79,59 @@ class CommonItemsView(APIView):
             logger.error(f'Error fetching common {self.item_type}: {e}', exc_info=True)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)
 
-class get_common_liked_artists(CommonItemsView):
+class GetCommonLikedArtists(CommonItemsView):
     item_type = 'likes_artists'
 
     async def post(self, request):
         return await super().get_common_items(request)
 
-class get_common_liked_tracks(CommonItemsView):
+class GetCommonLikedTracks(CommonItemsView):
     item_type = 'likes_tracks'
 
     async def post(self, request):
         return await super().get_common_items(request)
     
-class get_common_liked_genres(CommonItemsView):
+class GetCommonLikedGenres(CommonItemsView):
     item_type = 'likes_genres'
 
     async def post(self, request):
         return await super().get_common_items(request)
 
 
-class get_common_liked_albums(CommonItemsView):
+class GetCommonLikedAlbums(CommonItemsView):
     item_type = 'likes_albums'
 
     async def post(self, request):
         return await super().get_common_items(request)
 
-class get_common_played_tracks(CommonItemsView):
+class GetCommonPlayedTracks(CommonItemsView):
     item_type = 'played_tracks'
 
     async def post(self, request):
         return await super().get_common_items(request)
     
-class get_common_top_artists(CommonItemsView):
+class GetCommonTopArtists(CommonItemsView):
     item_type = 'top_artists'
 
     async def post(self, request):
         return await super().get_common_items(request)
 
 
-class get_common_top_tracks(CommonItemsView):
+class GetCommonTopTracks(CommonItemsView):
     item_type = 'top_tracks'
     async def post(self, request):
         return await super().get_common_items(request)
 
-class get_common_top_genres(CommonItemsView):
+class GetCommonTopGenres(CommonItemsView):
     item_type = 'top_genres'
     async def post(self, request):
         return await super().get_common_items(request)
     
-class get_common_top_anime(CommonItemsView):
+class GetCommonTopAnime(CommonItemsView):
     item_type = 'top_anime'
     async def post(self, request):
         return await super().get_common_items(request)
-class get_common_top_manga(CommonItemsView):
+class GetCommonTopManga(CommonItemsView):
     item_type = 'top_manga'
     async def post(self, request):
         return await super().get_common_items(request)

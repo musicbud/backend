@@ -53,7 +53,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'app.middlewares.CustomTokenAuthentication.CustomTokenAuthentication'
+        'app.middlewares.custom_token_auth.CustomTokenAuthentication'
     ],
     'DEFAULT_PAGINATION_CLASS': 'app.pagination.StandardResultsSetPagination',
     'PAGE_SIZE': 10,  

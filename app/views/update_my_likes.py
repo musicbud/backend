@@ -2,16 +2,16 @@ from typing import Any
 from django.http import JsonResponse
 from adrf.views import APIView
 from rest_framework.permissions import IsAuthenticated
-from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
-from ..middlewares.ServiceTokenGetter import service_token_getter
+from ..middlewares.custom_token_auth import CustomTokenAuthentication
+from ..middlewares.service_token_getter import service_token_getter
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from app.services.ServiceSelector import get_service
+from app.services.service_selector import get_service
 import logging
 
 logger = logging.getLogger('app')
 
-class update_my_likes(APIView):
+class UpdateMyLikes(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [IsAuthenticated]
     

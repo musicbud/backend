@@ -6,7 +6,7 @@ from django.core.files.storage import FileSystemStorage
 from django.http import JsonResponse
 from rest_framework.permissions import AllowAny
 from app.forms.registeration import RegistrationForm,LoginForm
-from app.db_models.Parent_User import ParentUser
+from app.db_models.parent_user import ParentUser
 from neomodel.exceptions import UniqueProperty
 import logging
 

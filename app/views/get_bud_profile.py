@@ -3,25 +3,30 @@ from adrf.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from ..db_models.User import User
-from ..db_models.Parent_User import ParentUser
+from ..db_models.user import User
+from ..db_models.parent_user import ParentUser
 
-from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
-from ..pagination import StandardResultsSetPagination
+from ..middlewares.custom_token_auth import CustomTokenAuthentication
+from app.forms.get_bud_profile import GetBudProfileForm
 import logging
 
 logger = logging.getLogger('app')
 
-class get_bud_profile(APIView):
+class GetBudProfile(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [IsAuthenticated]
     
     @method_decorator(csrf_exempt)
     async def dispatch(self, *args, **kwargs):
-        return await super(get_bud_profile, self).dispatch(*args, **kwargs)
+        return await super(GetBudProfile, self).dispatch(*args, **kwargs)
     
     async def post(self, request):
         try:
+            form = GetBudProfileForm(request.POST)
+
+            if form.is_valid():
+                bud_id = form.cleaned_data['bud_id']
+
             user = request.user
             bud_id = request.data.get('bud_id')
 

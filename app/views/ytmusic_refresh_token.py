@@ -3,21 +3,21 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
+from ..middlewares.custom_token_auth import CustomTokenAuthentication
 from django.http import JsonResponse
 
-from app.services.ServiceSelector import get_service
+from app.services.service_selector import get_service
 
 import logging
 logger = logging.getLogger(__name__)
 
-class ytmusic_refresh_token(APIView):
+class YtmusicRefreshToken(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     @method_decorator(csrf_exempt)
     def dispatch(self, *args, **kwargs):
-        return super(ytmusic_refresh_token, self).dispatch(*args, **kwargs)
+        return super(YtmusicRefreshToken, self).dispatch(*args, **kwargs)
     
     def post(self, request):
         try:

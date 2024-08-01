@@ -1,29 +1,29 @@
 from django.http import JsonResponse
-from app.db_models.combined.Combined_Artist import CombinedArtist
-from app.db_models.combined.Combined_Album import CombinedAlbum
-from app.db_models.combined.Combined_Track import CombinedTrack
-from app.db_models.combined.Combined_Genre import CombinedGenre
+from app.db_models.combined.combined_artist import CombinedArtist
+from app.db_models.combined.combined_album import CombinedAlbum
+from app.db_models.combined.combined_track import CombinedTrack
+from app.db_models.combined.combined_genre import CombinedGenre
 
 
-from app.db_models.lastfm.Lastfm_Album import  LastfmAlbum
-from app.db_models.lastfm.Lastfm_Artist import  LastfmArtist
-from app.db_models.lastfm.Lastfm_Genre import  LastfmGenre
-from app.db_models.lastfm.Lastfm_Track import  LastfmTrack
+from app.db_models.lastfm.lastfm_album import  LastfmAlbum
+from app.db_models.lastfm.lastfm_artist import  LastfmArtist
+from app.db_models.lastfm.lastfm_genre import  LastfmGenre
+from app.db_models.lastfm.lastfm_track import  LastfmTrack
 
 
-from app.db_models.spotify.Spotify_Track import  SpotifyTrack
-from app.db_models.spotify.Spotify_Artist import  SpotifyArtist
-from app.db_models.spotify.Spotify_Album import  SpotifyAlbum
-from app.db_models.spotify.Spotify_Genre import  SpotifyGenre
+from app.db_models.spotify.spotify_track import  SpotifyTrack
+from app.db_models.spotify.spotify_artist import  SpotifyArtist
+from app.db_models.spotify.spotify_album import  SpotifyAlbum
+from app.db_models.spotify.spotify_genre import  SpotifyGenre
 
 
 
-from app.db_models.ytmusic.Ytmusic_Album import YtmusicAlbum
-from app.db_models.ytmusic.Ytmusic_Artist import  YtmusicArtist
-from app.db_models.ytmusic.Ytmusic_Track import  YtmusicTrack
+from app.db_models.ytmusic.ytmusic_album import YtmusicAlbum
+from app.db_models.ytmusic.ytmusic_artist import  YtmusicArtist
+from app.db_models.ytmusic.ytmusic_track import  YtmusicTrack
 
 
-from app.db_models.User import User
+from app.db_models.user import User
 from django.db import transaction
 from asgiref.sync import sync_to_async
 from neomodel import StructuredNode, db

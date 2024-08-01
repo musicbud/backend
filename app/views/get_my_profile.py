@@ -1,15 +1,15 @@
 from django.http import JsonResponse
 from adrf.views import APIView
 from rest_framework.permissions import IsAuthenticated
-from app.services.ServiceSelector import get_service
-from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
+from app.services.service_selector import get_service
+from ..middlewares.custom_token_auth import CustomTokenAuthentication
 from ..pagination import StandardResultsSetPagination
-from ..middlewares.ServiceTokenGetter import service_token_getter
+from ..middlewares.service_token_getter import service_token_getter
 
 import logging
 logger = logging.getLogger('app')  # Use 'app' for consistency
 
-class get_my_profile(APIView):
+class GetMyProfile(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [IsAuthenticated]
     

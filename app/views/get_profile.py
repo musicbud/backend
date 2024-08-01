@@ -1,7 +1,7 @@
 from django.http import JsonResponse
 from adrf.views import APIView
 from rest_framework.permissions import IsAuthenticated
-from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
+from ..middlewares.custom_token_auth import CustomTokenAuthentication
 from ..pagination import StandardResultsSetPagination
 
 import logging
@@ -49,41 +49,41 @@ class GetItemsMixin(APIView):
             logger.error(f'Error fetching {self.item_type}: {e}', exc_info=True)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)
 
-class get_top_artists(GetItemsMixin):
+class GetTopArtists(GetItemsMixin):
     item_type = 'top_artists'
     item_attribute = 'top_artists'
 
-class get_top_tracks(GetItemsMixin):
+class GetTopTracks(GetItemsMixin):
     item_type = 'top_tracks'
     item_attribute = 'top_tracks'
 
-class get_top_genres(GetItemsMixin):
+class GetTopGenres(GetItemsMixin):
     item_type = 'top_genres'
     item_attribute = 'top_genres'
 
-class get_liked_tracks(GetItemsMixin):
+class GetLikedTracks(GetItemsMixin):
     item_type = 'liked_tracks'
     item_attribute = 'likes_tracks'
 
-class get_liked_artists(GetItemsMixin):
+class GetLikedArtists(GetItemsMixin):
     item_type = 'liked_artists'
     item_attribute = 'likes_artists'
 
-class get_liked_genres(GetItemsMixin):
+class GetLikedGenres(GetItemsMixin):
     item_type = 'liked_genres'
     item_attribute = 'likes_genres'
 
-class get_liked_albums(GetItemsMixin):
+class GetLikedAlbums(GetItemsMixin):
     item_type = 'liked_albums'
     item_attribute = 'liked_albums'
 
-class get_played_tracks(GetItemsMixin):
+class GetPlayedTracks(GetItemsMixin):
     item_type = 'played_tracks'
     item_attribute = 'played_tracks'
 
-class get_top_anime(GetItemsMixin):
+class GetTopAnime(GetItemsMixin):
     item_type = 'top_anime'
     item_attribute = 'top_anime'
-class get_top_manga(GetItemsMixin):
+class GetTopManga(GetItemsMixin):
     item_type = 'top_manga'
     item_attribute = 'top_manga'

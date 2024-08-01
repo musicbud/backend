@@ -4,8 +4,8 @@ from rest_framework.permissions import IsAuthenticated
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
-from ..db_models.User import User
-from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
+from ..db_models.user import User
+from ..middlewares.custom_token_auth import CustomTokenAuthentication
 from ..pagination import StandardResultsSetPagination
 
 import logging
@@ -105,19 +105,19 @@ class GetBudsBaseView(APIView):
         return serialized_data
 
 
-class get_buds_by_top_artists(GetBudsBaseView):
+class GetBudsByTopArtists(GetBudsBaseView):
     attribute_name = 'top_artists'
 
 
-class get_buds_by_top_tracks(GetBudsBaseView):
+class GetBudsByTopTracks(GetBudsBaseView):
     attribute_name = 'top_tracks'
 
 
-class get_buds_by_top_genres(GetBudsBaseView):
+class GetBudsByTopGenres(GetBudsBaseView):
     attribute_name = 'top_genres'
 
-class get_buds_by_top_anime(GetBudsBaseView):
+class GetBudsByTopAnime(GetBudsBaseView):
     attribute_name = 'top_anime'
 
-class get_buds_by_top_manga(GetBudsBaseView):
+class GetBudsByTopManga(GetBudsBaseView):
     attribute_name = 'top_manga'

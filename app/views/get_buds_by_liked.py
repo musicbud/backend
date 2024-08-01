@@ -4,8 +4,8 @@ from rest_framework.permissions import IsAuthenticated
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
-from ..db_models.User import User
-from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
+from ..db_models.user import User
+from ..middlewares.custom_token_auth import CustomTokenAuthentication
 from ..pagination import StandardResultsSetPagination
 
 import logging
@@ -60,7 +60,7 @@ class BudsMixin:
         })
         return paginated_response
 
-class get_buds_by_liked_albums(BudsMixin, APIView):
+class GetBudsByLikedAlbums(BudsMixin, APIView):
     async def post(self, request):
         try:
             user_node = await self.get_user_node(request)
@@ -93,7 +93,7 @@ class get_buds_by_liked_albums(BudsMixin, APIView):
             logger.error(f'Error in get_buds_by_liked_albums: {e}', exc_info=True)
         return buds
 
-class get_buds_by_liked_artists(BudsMixin, APIView):
+class GetBudsByLikedArtists(BudsMixin, APIView):
     async def post(self, request):
         try:
             user_node = await self.get_user_node(request)
@@ -126,7 +126,7 @@ class get_buds_by_liked_artists(BudsMixin, APIView):
             logger.error(f'Error in get_buds_by_liked_artists: {e}', exc_info=True)
         return buds
 
-class get_buds_by_liked_genres(BudsMixin, APIView):
+class GetBudsByLikedGenres(BudsMixin, APIView):
     async def post(self, request):
         try:
             user_node = await self.get_user_node(request)
@@ -168,7 +168,7 @@ class get_buds_by_liked_genres(BudsMixin, APIView):
             logger.error(f'Error in get_buds_by_liked_genres: {e}', exc_info=True)
         return buds
 
-class get_buds_by_played_tracks(BudsMixin, APIView):
+class GetBudsByPlayedTracks(BudsMixin, APIView):
     async def post(self, request):
         try:
             user_node = await self.get_user_node(request)
@@ -201,7 +201,7 @@ class get_buds_by_played_tracks(BudsMixin, APIView):
             logger.error(f'Error in get_buds_by_played_tracks: {e}', exc_info=True)
         return buds
     
-class get_buds_by_liked_tracks(BudsMixin, APIView):
+class GetBudsByLikedTracks(BudsMixin, APIView):
     async def post(self, request):
         try:
             user_node = await self.get_user_node(request)
