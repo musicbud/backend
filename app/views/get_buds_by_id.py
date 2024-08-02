@@ -27,11 +27,6 @@ class GetBudsBase(APIView):
 
     async def post(self, request):
 
-        form = GetByIdForm(request.data)
-
-        if not form.is_valid():
-            return JsonResponse({'error': 'Invalid input', 'details': form.errors}, status=400)
-        
         try:
             user = request.user
             identifier = self.get_identifier(request)

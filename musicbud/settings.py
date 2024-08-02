@@ -191,6 +191,8 @@ SESSION_COOKIE_NAME = 'musicbud_sessionid'
 SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds
 SESSION_SAVE_EVERY_REQUEST = True  # Save session to the database on every request
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Session expires when the browser is closed
+SESSION_COOKIE_HTTPONLY = True  # Prevents JavaScript access to the cookie
+SESSION_COOKIE_SECURE = False  # Set to True if you're using HTTPS
 
 
 

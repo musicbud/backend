@@ -7,6 +7,7 @@ import logging
 from .service_strategy import ServiceStrategy
 
 import asyncio
+from asgiref.sync import sync_to_async
 
 from ..db_models.mal.list_status import ListStatus
 from ..db_models.mal.main_picture import MainPicture
@@ -17,12 +18,14 @@ from ..db_models.mal.mal_manga import Manga
 logger = logging.getLogger('app')
 
 class MalService(ServiceStrategy):
-    def __init__(self, client_id, client_secret, redirect_uri, scope):
+    def __init__(self, client_id, client_secret, redirect_uri, scope, request=None):
         logger.debug('Initializing MalService with client_id=%s', client_id)
         self.client_id = client_id
         self.client_secret = client_secret
         self.redirect_uri = redirect_uri
         self.scope = scope
+        self.request = request
+
         # Generate a code verifier
         self.code_verifier = self.generate_code_verifier()
         self.code_challenge = self.code_verifier  # For plain method, the code_challenge is the same as the code_verifier
@@ -35,6 +38,9 @@ class MalService(ServiceStrategy):
         return code_verifier
 
     async def create_authorize_url(self):
+        # Store the code verifier in the session
+        await sync_to_async(self.request.session.__setitem__)('code_verifier', self.code_verifier)
+        logger.debug(f"Session data after setting code verifier: {self.request.session.items()}")
         logger.debug('Creating authorize URL')
         authorize_url = (
             f'https://myanimelist.net/v1/oauth2/authorize?client_id={self.client_id}'
@@ -44,7 +50,7 @@ class MalService(ServiceStrategy):
         logger.debug(f"Authorize URL: {authorize_url}")
         return authorize_url
 
-    async def get_tokens(self, code):
+    async def get_tokens(self, code, code_verifier):
         logger.debug(f'Getting tokens for code={code}')
         token_url = 'https://myanimelist.net/v1/oauth2/token'
         data = {
@@ -52,8 +58,8 @@ class MalService(ServiceStrategy):
             'client_secret': self.client_secret,
             'code': code,
             'grant_type': 'authorization_code',
-            'redirect_uri': self.redirect_uri,  # Ensure redirect_uri is not encoded again
-            'code_verifier': self.code_verifier  # Include the code_verifier here
+            'redirect_uri': self.redirect_uri,
+            'code_verifier': code_verifier
         }
 
         # Log the data being sent (sensitive info redacted)
@@ -74,7 +80,6 @@ class MalService(ServiceStrategy):
         access_token = response_data.get('access_token')
         logger.info('Access token obtained successfully.')
         return access_token
-    
     
     async def get_user_info(self, access_token):
         logger.debug('Fetching user info')

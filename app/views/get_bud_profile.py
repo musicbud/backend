@@ -22,11 +22,6 @@ class GetBudProfile(APIView):
     
     async def post(self, request):
         try:
-            form = GetBudProfileForm(request.POST)
-
-            if form.is_valid():
-                bud_id = form.cleaned_data['bud_id']
-
             user = request.user
             bud_id = request.data.get('bud_id')
 

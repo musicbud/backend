@@ -9,6 +9,8 @@ from ..db_models.lastfm.lastfm_user import LastfmUser
 from ..db_models.ytmusic.ytmusic_user import YtmusicUser
 from ..db_models.mal.mal_user import MalUser
 
+from asgiref.sync import sync_to_async
+
 from ..forms.callback import CodeForm
 from ..services.service_selector import get_service
 import logging
@@ -23,7 +25,7 @@ class Login(APIView):
         service = request.GET.get('service', 'spotify')
         try:
             logger.info(f"Generating authorization link for service: {service}")
-            authorization_link = await get_service(service).create_authorize_url()
+            authorization_link = await get_service(service,request).create_authorize_url()
             logger.info("Generated authorization link successfully")
             return JsonResponse({
                 'message': 'Generated authorization link successfully.',
@@ -261,10 +263,9 @@ class MalCallback(APIView):
     permission_classes = [AllowAny]
 
     async def get(self, request):
-        form = CodeForm(request.GET)
+        logger.debug(f"Current session data: {self.request.session.items()}")
 
-        if form.is_valid():
-            code = form.cleaned_data['code']
+        code = request.GET['code']
         if not code:
             logger.warning("Authorization code not provided in mal_callback")
             return JsonResponse({'error': 'Authorization code not provided'}, status=400)
@@ -272,9 +273,17 @@ class MalCallback(APIView):
         try:
             service = 'mal'
             logger.info("Fetching tokens and user profile for MyAnimeList")
-            service_instance = get_service(service)
+            service_instance = get_service(service,request)
 
-            tokens = await service_instance.get_tokens(code)
+
+            code_verifier = await sync_to_async(request.session.get)('code_verifier')
+            logger.debug(f"Retrieved code_verifier from session: {code_verifier}")  # Add this line
+            if not code_verifier:
+                logger.error("Code verifier not found in session")
+                return JsonResponse({'error': 'Code verifier not found in session'}, status=400)
+
+
+            tokens = await service_instance.get_tokens(code,code_verifier)
 
             user_profile = await service_instance.get_user_info(tokens)
 

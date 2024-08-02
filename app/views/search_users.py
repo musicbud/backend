@@ -22,12 +22,7 @@ class SearchUsers(APIView):
     
     def post(self, request):
         try:
-            query = ""
-            form = SearchUsersForm(request.data)
-
-            if form.is_valid():
-                query = form.cleaned_data['query']
-            
+            query = request.data.query
             users = User.nodes.filter(display_name__icontains=query)
             return JsonResponse({
                 'message': 'Fetched search result successfully.',
