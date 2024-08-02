@@ -18,6 +18,7 @@ ALLOWED_HOSTS = ['127.0.0.1','localhost','152.70.49.208']
 
 # Application definition
 INSTALLED_APPS = [
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -185,6 +186,11 @@ load_dotenv(dotenv_path)
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Default: sessions stored in the database
+SESSION_COOKIE_NAME = 'musicbud_sessionid'
+SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds
+SESSION_SAVE_EVERY_REQUEST = True  # Save session to the database on every request
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Session expires when the browser is closed
 
 
 

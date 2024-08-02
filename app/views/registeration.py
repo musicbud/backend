@@ -73,6 +73,9 @@ class Register(APIView):
 
                 await user.save()  # Ensure tokens are saved
 
+                # Store user ID in the session
+                request.session['user_id'] = user.id
+
 
                 logger.debug(f"User registered successfully: {username}")
                 return JsonResponse({
@@ -121,6 +124,9 @@ class Login(APIView):
                     user.is_active = True
                     await user.save()  # Ensure tokens are saved
 
+                    # Store user ID in the session
+                    request.session['user_id'] = user.id
+
                     logger.debug(f"User logged in successfully: {username}")
                     return JsonResponse({
                         'message':'Logged in successfully.',
@@ -149,6 +155,7 @@ class Logout(APIView):
 
     def post(self, request):
         try:
+            request.session.flush()
             request.user.auth_token.delete()
             logger.debug(f"User logged out successfully: {request.user}")
             return JsonResponse({'message': 'Logged out successfully.'}, status=200)
