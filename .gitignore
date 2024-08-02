@@ -1,3 +1,7 @@
 __pycache__/
+*/__pycache__/*
+musicbud/__pycache__/
+chat/__pycache__/
+*.log
 # venv/
 # env/

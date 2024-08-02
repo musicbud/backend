@@ -1,108 +1,102 @@
 from django.http import JsonResponse
-from rest_framework.views import APIView
+from adrf.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from django.http import JsonResponse
-
-from ..db_models.User import User
-from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
+from ..db_models.user import User
+from ..middlewares.custom_token_auth import CustomTokenAuthentication
 from ..pagination import StandardResultsSetPagination
-
 import logging
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger('app')
 
-class get_buds_by_liked_aio(APIView):
+class BudsMixin(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     @method_decorator(csrf_exempt)
-    def dispatch(self, *args, **kwargs):
-        return super(get_buds_by_liked_aio, self).dispatch(*args, **kwargs)
+    async def dispatch(self, *args, **kwargs):
+        return await super(BudsMixin, self).dispatch(*args, **kwargs)
 
-    def post(self, request):
+    async def _fetch_buds_data(self, buds):
+        """Prepares the data for each bud."""
+        buds_data = []
+        for bud in buds:
+            bud_parent = await bud.parent.all()
+            bud_parent_serialized = await self._serialize_parent(bud_parent)
+            if not bud_parent_serialized:
+                continue  # Skip empty bud data
+            buds_data.append({
+                'bud': bud_parent_serialized,
+            })
+        logger.info(f'Data preparation complete. Total buds data prepared: {len(buds_data)}')
+        return buds_data
+
+    async def _serialize_parent(self, bud_parent):
+        """Serializes the parent data of a bud."""
+        serialized_data = []
+        for parent in bud_parent:
+            serialized_data.append(await parent.without_relations_serialize())
+        return serialized_data
+
+    async def get_common_buds(self, user_node):
+        """Fetches unique buds based on associated accounts."""
+        buds = set()  # Initialize buds as a set to avoid duplicates
+        try:
+            associated_account_uids = [account.uid for account in user_node.associated_accounts.values() if account]
+            for account in user_node.associated_accounts.values():
+                if account and hasattr(account, 'get_likes'):
+                    user_likes = await account.get_likes()
+                    logger.debug(f'User likes for account uid={account.uid}: {len(user_likes)}')
+                    if user_likes:
+                        await self.find_common_buds(user_likes, user_node.uid, buds)
+            # Remove self and associated accounts from buds and ensure uniqueness
+            unique_bud_ids = [bud_uid for bud_uid in buds if bud_uid != user_node.uid and bud_uid not in associated_account_uids]
+            user_objects = await User.nodes.filter(uid__in=unique_bud_ids).all()
+            return user_objects
+        except Exception as e:
+            logger.error(f'Error in get_common_buds for user uid={user_node.uid}: {e}', exc_info=True)
+            return []
+
+    async def find_common_buds(self, user_likes, user_uid, buds):
+        """Finds and adds users who liked the same items."""
+        liked_artists = user_likes.get('likes_artists', [])
+        liked_tracks = user_likes.get('likes_tracks', [])
+        liked_genres = user_likes.get('likes_genres', [])
+        liked_albums = user_likes.get('likes_albums', [])
+        logger.debug(f'Finding common buds for user uid={user_uid}...')
+        # Process liked items
+        await self._process_liked_items(liked_artists, user_uid, buds, 'artist')
+        await self._process_liked_items(liked_tracks, user_uid, buds, 'track')
+        await self._process_liked_items(liked_genres, user_uid, buds, 'genre')
+        await self._process_liked_items(liked_albums, user_uid, buds, 'album')
+        logger.info(f'Total common buds found for user uid={user_uid}: {len(buds)}')
+
+    async def _process_liked_items(self, items, user_uid, buds, item_type):
+        """Helper method to process liked items (artists, tracks, genres, albums)."""
+        for item in items:
+            item_uid = item.uid
+            logger.debug(f'Processing {item_type} uid={item_uid}')
+            new_buds = await item.users.exclude(uid=user_uid).all()
+            buds.update(new_bud.uid for new_bud in new_buds if hasattr(new_bud, 'uid'))
+            logger.debug(f'Found {len(new_buds)} new buds from {item_type} uid={item_uid}')
+
+
+
+class GetBudsByLikedAio(BudsMixin):
+    async def post(self, request):
         try:
             user_node = request.user
-            user_id = request.user.uid
-
             if not user_node:
+                logger.warning('User not found in request')
                 return JsonResponse({'error': 'User not found'}, status=404)
 
-            liked_artists = user_node.likes_artists.all()
-            liked_tracks = user_node.likes_tracks.all()
-            liked_genres = user_node.likes_genres.all()
-            liked_albums = user_node.likes_albums.all()
-
-            buds = []
-            for artist in liked_artists:
-                buds.extend(artist.users.all())
-            for track in liked_tracks:
-                buds.extend(track.users.all())
-            for genre in liked_genres:
-                buds.extend(genre.users.all())
-            for album in liked_albums:
-                buds.extend(album.users.all())
-
-            # Filter out the user and duplicates
-            buds = list({bud.uid: bud for bud in buds if bud.uid != user_id}.values())
-
-            buds_data = []
-            artist_ids = []
-            track_ids = []
-            genre_ids = []
-            album_ids = []
-
-            for bud in buds:
-                bud_liked_artist_uids = [artist.uid for artist in bud.likes_artists.all()]
-                bud_liked_track_uids = [track.uid for track in bud.likes_tracks.all()]
-                bud_liked_genre_uids = [genre.uid for genre in bud.likes_genres.all()]
-                bud_liked_album_uids = [album.uid for album in bud.likes_albums.all()]
-
-                common_artists = user_node.likes_artists.filter(uid__in=bud_liked_artist_uids)
-                common_tracks = user_node.likes_tracks.filter(uid__in=bud_liked_track_uids)
-                common_genres = user_node.likes_genres.filter(uid__in=bud_liked_genre_uids)
-                common_albums = user_node.likes_albums.filter(uid__in=bud_liked_album_uids)
-
-                common_artists_count = len(common_artists)
-                common_tracks_count = len(common_tracks)
-                common_genres_count = len(common_genres)
-                common_albums_count = len(common_albums)
-
-                artist_ids.extend([artist.uid for artist in common_artists])
-                track_ids.extend([track.uid for track in common_tracks])
-                genre_ids.extend([genre.uid for genre in common_genres])
-                album_ids.extend([album.uid for album in common_albums])
-
-
-
-                bud_data = {
-                    'uid': bud.uid,
-                    'email': bud.email,
-                    'country': bud.country,
-                    'display_name': bud.display_name,
-                    'bio': bud.bio,
-                    'is_active': bud.is_active,
-                    'is_authenticated': bud.is_authenticated,
-                    'commonArtistsCount': common_artists_count,
-                    'commonTracksCount': common_tracks_count,
-                    'commonGenresCount': common_genres_count,
-                    'commonAlbumsCount': common_albums_count
-                }
-                buds_data.append(bud_data)
-
-
-            # Map common data to buds_data based on uid
-            for bud in buds_data:
-                bud_uid = bud['uid']
-                bud['commonArtists'] = [artist.serialize() for artist in common_artists if artist['uid'] in artist_ids and artist['uid'] != bud_uid]
-                bud['commonTracks'] = [track.serialize() for track in common_tracks if track['uid'] in track_ids and track['uid'] != bud_uid]
-                bud['commonGenres'] = [genre.serialize() for genre in common_genres if genre['uid'] in genre_ids and genre['uid'] != bud_uid]
-                bud['commonAlbums'] = [album.serialize() for album in common_albums if album.uid in album_ids and album.uid != bud_uid]
+            logger.info(f'Received request from user: uid={user_node.uid}')
+            buds = await self.get_common_buds(user_node)
+            buds_data = await self._fetch_buds_data(buds)
 
             paginator = StandardResultsSetPagination()
             paginated_buds = paginator.paginate_queryset(buds_data, request)
-
             paginated_response = paginator.get_paginated_response(paginated_buds)
             paginated_response.update({
                 'message': 'Fetched buds successfully.',
@@ -110,9 +104,9 @@ class get_buds_by_liked_aio(APIView):
                 'successful': True,
             })
 
+            logger.info(f'Successfully fetched buds for user: uid={user_node.uid}, buds_count={len(buds)}')
             return JsonResponse(paginated_response)
 
         except Exception as e:
-            logger.error(e)
+            logger.error(f'Error in GetBudsByLikedAio: {e}', exc_info=True)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)
-         

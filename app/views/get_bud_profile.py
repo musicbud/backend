@@ -1,114 +1,54 @@
 from django.http import JsonResponse
-from rest_framework.views import APIView
+from adrf.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from django.http import JsonResponse
-from ..db_models.User import User
-from ..middlewares.CustomTokenAuthentication import CustomTokenAuthentication
-from ..pagination import StandardResultsSetPagination
+from ..db_models.user import User
+from ..db_models.parent_user import ParentUser
 
+from ..middlewares.custom_token_auth import CustomTokenAuthentication
+from app.forms.get_bud_profile import GetBudProfileForm
 import logging
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger('app')
 
-class get_bud_profile(APIView):
+class GetBudProfile(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [IsAuthenticated]
     
     @method_decorator(csrf_exempt)
-    def dispatch(self, *args, **kwargs):
-        return super(get_bud_profile, self).dispatch(*args, **kwargs)
+    async def dispatch(self, *args, **kwargs):
+        return await super(GetBudProfile, self).dispatch(*args, **kwargs)
     
-   
-    def post(self, request):
+    async def post(self, request):
         try:
-            # Extract user id and bud id from request
+            form = GetBudProfileForm(request.POST)
+
+            if form.is_valid():
+                bud_id = form.cleaned_data['bud_id']
+
             user = request.user
             bud_id = request.data.get('bud_id')
 
-            bud_node = User.nodes.get_or_none(uid=bud_id)
+            if not bud_id:
+                return JsonResponse({'error': 'Bud ID not provided'}, status=400)
+
+            bud_node = await ParentUser.nodes.get_or_none(uid=bud_id)
 
             if user is None or bud_node is None:
+                logger.warning(f'User or bud not found: user={user}, bud_id={bud_id}')
                 return JsonResponse({'error': 'User or bud not found'}, status=404)
 
-            # Get all artists and tracks liked by the user and the bud
-            user_top_artists = list(user.top_artists.all())
-            bud_top_artists = list(bud_node.top_artists.all())
-            user_top_tracks = list(user.top_tracks.all())
-            bud_top_tracks = list(bud_node.top_tracks.all())
-            user_top_genres = list(user.top_genres.all())
-            bud_top_genres = list(bud_node.top_genres.all())
+            # Prepare response structure for the bud profile
+            response_data = {
+                'data': {
+                    'bud': await bud_node.without_relations_serialize(),  # Serialize the bud's profile without relations
+                }
+            }
 
-            user_likes_artists = list(user.likes_artists.all())
-            bud_likes_artists = list(bud_node.likes_artists.all())
-
-            user_likes_tracks = list(user.likes_tracks.all())
-            bud_likes_tracks = list(bud_node.likes_tracks.all())
-
-            user_likes_albums = list(user.likes_albums.all())
-            bud_likes_albums = list(bud_node.likes_albums.all())
-
-            # Convert to sets of unique identifiers
-            user_top_artist_ids = set(artist.id for artist in user_top_artists)
-            bud_top_artist_ids = set(artist.id for artist in bud_top_artists)
-            user_top_track_ids = set(track.id for track in user_top_tracks)
-            bud_top_track_ids = set(track.id for track in bud_top_tracks)
-            user_top_genre_ids = set(genre.id for genre in user_top_genres)
-            bud_top_genre_ids = set(genre.id for genre in bud_top_genres)
-
-            user_likes_artist_ids = set(artist.id for artist in user_likes_artists)
-            bud_likes_artist_ids = set(artist.id for artist in bud_likes_artists)
-            user_likes_track_ids = set(track.id for track in user_likes_tracks)
-            bud_likes_track_ids = set(track.id for track in bud_likes_tracks)
-            user_likes_album_ids = set(album.id for album in user_likes_albums)
-            bud_likes_album_ids = set(album.id for album in bud_likes_albums)
-
-            # Find common artists, tracks, and genres by unique identifiers
-            common_top_artist_ids = user_top_artist_ids.intersection(bud_top_artist_ids)
-            common_top_track_ids = user_top_track_ids.intersection(bud_top_track_ids)
-            common_top_genre_ids = user_top_genre_ids.intersection(bud_top_genre_ids)
-
-            common_likes_artist_ids = user_likes_artist_ids.intersection(bud_likes_artist_ids)
-            common_likes_track_ids = user_likes_track_ids.intersection(bud_likes_track_ids)
-            common_likes_album_ids = user_likes_album_ids.intersection(bud_likes_album_ids)
-
-            # Convert back to original objects
-            common_top_artists = [artist.serialize() for artist in user_top_artists if artist.id in common_top_artist_ids]
-            common_top_tracks = [track.serialize() for track in user_top_tracks if track.id in common_top_track_ids]
-            common_top_genres = [genre.serialize() for genre in user_top_genres if genre.id in common_top_genre_ids]
-
-            common_likes_artists = [artist.serialize() for artist in user_likes_artists if artist.id in common_likes_artist_ids]
-            common_likes_tracks = [track.serialize() for track in user_likes_tracks if track.id in common_likes_track_ids]
-            common_likes_albums = [album.serialize() for album in user_likes_albums if album.id in common_likes_album_ids]
-
-            paginator = StandardResultsSetPagination()
-            
-            paginated_top_artists = paginator.paginate_queryset(common_top_artists, request, view=self)
-            paginated_top_tracks = paginator.paginate_queryset(common_top_tracks, request, view=self)
-            paginated_top_genres = paginator.paginate_queryset(common_top_genres, request, view=self)
-            paginated_likes_artists = paginator.paginate_queryset(common_likes_artists, request, view=self)
-            paginated_likes_tracks = paginator.paginate_queryset(common_likes_tracks, request, view=self)
-            paginated_likes_albums = paginator.paginate_queryset(common_likes_albums, request, view=self)
-
-            paginated_response = paginator.get_paginated_response({
-                'common_top_artists_data': paginated_top_artists,
-                'common_top_tracks_data': paginated_top_tracks,
-                'common_top_genres_data': paginated_top_genres,
-                'common_likes_artists_data': paginated_likes_artists,
-                'common_likes_tracks_data': paginated_likes_tracks,
-                'common_likes_albums_data': paginated_likes_albums,
-            })
-
-            paginated_response.update({
-                'message': 'Fetched buds successfully.',
-                'code': 200,
-                'successful': True,
-            })
-
-            return JsonResponse(paginated_response)
+            logger.info('Successfully fetched bud profile data for user=%s, bud_id=%s', user.uid, bud_id)
+            return JsonResponse(response_data)
 
         except Exception as e:
-            # Handle exceptions
-            logger.error(e)
+            logger.error(f'Error fetching bud profile: {e}', exc_info=True)
             return JsonResponse({'error': 'Internal Server Error'}, status=500)
