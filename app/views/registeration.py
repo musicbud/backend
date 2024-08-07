@@ -1,5 +1,6 @@
 from datetime import datetime
 from adrf.views import APIView
+from asgiref.sync import sync_to_async
 from django.contrib.auth.hashers import make_password, check_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.files.storage import FileSystemStorage
@@ -74,8 +75,7 @@ class Register(APIView):
                 await user.save()  # Ensure tokens are saved
 
                 # Store user ID in the session
-                request.session['user_id'] = user.id
-
+                await sync_to_async(request.session.__setitem__)('user_id', user.id)
 
                 logger.debug(f"User registered successfully: {username}")
                 return JsonResponse({
@@ -125,8 +125,7 @@ class Login(APIView):
                     await user.save()  # Ensure tokens are saved
 
                     # Store user ID in the session
-                    request.session['user_id'] = user.id
-
+                    await sync_to_async(request.session.__setitem__)('user_id', user.id)
                     logger.debug(f"User logged in successfully: {username}")
                     return JsonResponse({
                         'message':'Logged in successfully.',

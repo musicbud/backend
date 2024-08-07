@@ -263,8 +263,6 @@ class MalCallback(APIView):
     permission_classes = [AllowAny]
 
     async def get(self, request):
-        logger.debug(f"Current session data: {self.request.session.items()}")
-
         code = request.GET['code']
         if not code:
             logger.warning("Authorization code not provided in mal_callback")
