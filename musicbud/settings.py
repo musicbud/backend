@@ -14,7 +14,7 @@ SECRET_KEY = 'your-secret-key'
 DEBUG = True
 
 HOST = os.environ.get('HOST')
-ALLOWED_HOSTS = ['127.0.0.1','localhost','152.70.49.208']
+ALLOWED_HOSTS = ['127.0.0.1','localhost','84.235.170.234']
 
 # Application definition
 INSTALLED_APPS = [

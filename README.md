@@ -9,7 +9,7 @@ MusicBud </h1>
 
 ### Demo link
 
-http://152.70.49.208/musicbud/docs/
+http://84.235.170.234/
 
 
 ### Functions
