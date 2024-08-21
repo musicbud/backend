@@ -6,3 +6,4 @@ chat/__pycache__/
 # venv/
 # env/
 ai/spotify_dataset.csv
+ai/.bash_profile

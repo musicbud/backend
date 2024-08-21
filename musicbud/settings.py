@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'app',
     'chat',
+    'ai',
     'corsheaders',  # Add CORS headers
     'rest_framework',  # Add Django REST framework
     'rest_framework.authtoken',
