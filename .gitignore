@@ -5,3 +5,4 @@ chat/__pycache__/
 *.log
 # venv/
 # env/
+ai/spotify_dataset.csv
