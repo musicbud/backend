@@ -5,6 +5,7 @@ from lightfm.evaluation import precision_at_k, auc_score
 from scipy.sparse import coo_matrix
 import joblib
 import warnings
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # Function to create sparse interaction matrix
@@ -33,10 +34,7 @@ def create_user_dict(user_ids):
 
 # Function to create item dictionary
 def create_item_dict(df, id_col, name_col):
-    item_dict = {}
-    for i in range(df.shape[0]):
-        item_dict[df[id_col][i]] = df[name_col][i]
-    return item_dict
+    return {df[id_col][i]: df[name_col][i] for i in range(df.shape[0])}
 
 # Function to process data in chunks
 def process_data_in_chunks(file_path, chunk_size):
@@ -46,7 +44,7 @@ def process_data_in_chunks(file_path, chunk_size):
     for chunk in chunks:
         chunk.columns = chunk.columns.str.strip().str.replace('"', '')
         chunk.fillna('Not Specified', inplace=True)
-        full_data = pd.concat([full_data, chunk])
+        full_data = pd.concat([full_data, chunk], ignore_index=True)
     
     return full_data
 
@@ -74,13 +72,11 @@ print("Initial data shape:", sampled_data.shape)
 
 # Filtering based on groups of artists who have a track record of more than 50 songs
 filtered_data = sampled_data.groupby('artistname').filter(lambda x: len(x) >= 50)
-print(filtered_data.shape)
-print('After filtering based on the number of songs, there are ', '{0:,}'.format(filtered_data.shape[0]), ' data obtained from ', filtered_data.shape[1], ' variables.')
+print(f'After filtering based on the number of songs, there are {filtered_data.shape[0]:,} records with {filtered_data.shape[1]} variables.')
 
 # Filtering based on users who have played songs by more than 10 artists
 filtered_data = filtered_data[filtered_data.groupby('user_id').artistname.transform('nunique') >= 10]
-print(filtered_data.shape)
-print('After filtering based on the song played by the user, there are ', '{0:,}'.format(filtered_data.shape[0]), ' data obtained from ', filtered_data.shape[1], ' variables.')
+print(f'After filtering based on the number of artists a user has played, there are {filtered_data.shape[0]:,} records with {filtered_data.shape[1]} variables.')
 
 # Create frequency dataframe for artists and tracks
 spotify_freq_artist = filtered_data.groupby(['user_id', 'artistname']).size().reset_index(name='freq')
@@ -88,22 +84,30 @@ spotify_freq_track = filtered_data.groupby(['user_id', 'trackname']).size().rese
 
 # Create sparse interaction matrices for artist and track
 interactions_artist, user_dict_artist, item_dict_artist = create_interaction_matrix_sparse(
-    spotify=spotify_freq_artist, user_col="user_id", item_col='artistname', rating_col='freq', norm=False, threshold=None
+    spotify=spotify_freq_artist, user_col="user_id", item_col='artistname', rating_col='freq'
 )
 interactions_track, user_dict_track, item_dict_track = create_interaction_matrix_sparse(
-    spotify=spotify_freq_track, user_col="user_id", item_col='trackname', rating_col='freq', norm=False, threshold=None
+    spotify=spotify_freq_track, user_col="user_id", item_col='trackname', rating_col='freq'
 )
 
-def runMF(interactions, n_components=30, loss='warp', k=15, epoch=30, n_jobs=4):
+# Create user ID to index and index to user ID mappings
+user_id_to_index = {user_id: idx for idx, user_id in enumerate(user_dict_artist.keys())}
+index_to_user_id = {idx: user_id for user_id, idx in user_id_to_index.items()}
+
+# Save mappings
+joblib.dump(user_id_to_index, 'user_id_to_index.pkl')
+joblib.dump(index_to_user_id, 'index_to_user_id.pkl')
+
+def runMF(interactions, n_components=30, loss='warp', epoch=30, n_jobs=4):
     model = LightFM(no_components=n_components, loss=loss)
     model.fit(interactions, epochs=epoch, num_threads=n_jobs)
     return model
 
 # Running Model for Artists
-model_artist = runMF(interactions=interactions_artist, n_components=30, loss='warp', k=15, epoch=30, n_jobs=4)
+model_artist = runMF(interactions=interactions_artist)
 
 # Running Model for Tracks
-model_track = runMF(interactions=interactions_track, n_components=30, loss='warp', k=15, epoch=30, n_jobs=4)
+model_track = runMF(interactions=interactions_track)
 
 # Train-test split
 train_artist, test_artist = cross_validation.random_train_test_split(interactions_artist, test_percentage=0.01, random_state=123)
@@ -115,8 +119,7 @@ test_auc_artist = auc_score(model_artist, test_artist, num_threads=4).mean()
 train_precision_artist = precision_at_k(model_artist, train_artist, k=10).mean()
 test_precision_artist = precision_at_k(model_artist, test_artist, k=10).mean()
 
-print('Artist Model - Train AUC: {:.2f}, Test AUC: {:.2f}, Train Precision: {:.2f}, Test Precision: {:.2f}'.format(
-    train_auc_artist, test_auc_artist, train_precision_artist, test_precision_artist))
+print(f'Artist Model - Train AUC: {train_auc_artist:.2f}, Test AUC: {test_auc_artist:.2f}, Train Precision: {train_precision_artist:.2f}, Test Precision: {test_precision_artist:.2f}')
 
 # Evaluate Track Model
 train_auc_track = auc_score(model_track, train_track, num_threads=4).mean()
@@ -124,8 +127,7 @@ test_auc_track = auc_score(model_track, test_track, num_threads=4).mean()
 train_precision_track = precision_at_k(model_track, train_track, k=10).mean()
 test_precision_track = precision_at_k(model_track, test_track, k=10).mean()
 
-print('Track Model - Train AUC: {:.2f}, Test AUC: {:.2f}, Train Precision: {:.2f}, Test Precision: {:.2f}'.format(
-    train_auc_track, test_auc_track, train_precision_track, test_precision_track))
+print(f'Track Model - Train AUC: {train_auc_track:.2f}, Test AUC: {test_auc_track:.2f}, Train Precision: {train_precision_track:.2f}, Test Precision: {test_precision_track:.2f}')
 
 # Save the artist model
 joblib.dump(model_artist, 'model_artist.pkl')
