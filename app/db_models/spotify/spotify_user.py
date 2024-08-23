@@ -21,7 +21,7 @@ class SpotifyUser(User):
     top_tracks = AsyncRelationshipTo('..track.Track', 'TOP_TRACK')
     top_genres = AsyncRelationshipTo('..genre.Genre', 'TOP_GENRE')
 
-    followed_artists = AsyncRelationshipTo(Artist, 'LIKES_ARTIST')
+    likes_artists = AsyncRelationshipTo(Artist, 'LIKES_ARTIST')
     likes_tracks = AsyncRelationshipTo('..track.Track', 'LIKES_TRACK')
     likes_genres = AsyncRelationshipTo('..genre.Genre', 'LIKES_GENRE')
     likes_albums = AsyncRelationshipTo('..album.Album', 'LIKES_ALBUM')
