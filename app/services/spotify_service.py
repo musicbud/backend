@@ -165,7 +165,7 @@ class SpotifyService(ServiceStrategy):
         """
         for attempt in range(max_retries):
             try:
-                return await sync_to_async(func)(*args)
+                return await func(*args)
             except Exception as e:
                 if hasattr(e, 'http_status') and e.http_status == 429:  # Rate limit error
                     wait_time = backoff_factor * (2 ** attempt)
