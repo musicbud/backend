@@ -210,11 +210,11 @@ async def get_recommendations(user_id, item_features_matrix_sparse, user_feature
         user_features_vector_sparse = sp.csr_matrix(user_features_vector)
 
         # Ensure the number of features in the user and item matrices match
-        if user_features_vector_sparse.shape[1] != item_features_matrix_sparse.shape[1]:
+        if user_features_vector_sparse.shape[1]!= item_features_matrix_sparse.shape[1]:
             logger.error("User features and item features dimensions do not match.")
             return [], [], []
 
-        # Get all item IDs
+        # Get all item IDs for artists and tracks
         all_artist_ids = np.array(range(len(item_dict_artist)))
         all_track_ids = np.array(range(len(item_dict_track)))
         all_user_ids = np.array(range(len(user_dict)))
@@ -241,20 +241,28 @@ async def get_recommendations(user_id, item_features_matrix_sparse, user_feature
         # Sort users by similarity
         top_user_indices = np.argsort(-user_similarities)[:top_n]
 
+        # Exclude the current user from the top matches
+        top_user_indices_filtered = [idx for idx in top_user_indices if user_dict_reversed[idx]!= user_id]
+        if len(top_user_indices_filtered) < top_n:
+            # If filtering results in fewer items than desired, pad with some placeholder values or handle appropriately
+            top_user_indices_filtered = top_user_indices_filtered[:top_n]
+
+        logger.debug(f"Top User Indices (filtered): {top_user_indices_filtered}")
+        logger.debug(f"Match Percentages: {match_percentages}")
+
         # Convert indices back to item names
         top_artist_names = [item_dict_artist_reversed[idx] for idx in top_artists]
         top_track_names = [item_dict_track_reversed[idx] for idx in top_tracks]
-        top_user_ids = [user_dict_reversed[idx] for idx in top_user_indices]
+        top_user_ids = [user_dict_reversed[idx] for idx in top_user_indices_filtered]
 
         # Return recommendations and similarities
-        return top_artist_names, top_track_names, list(zip(top_user_ids, match_percentages[top_user_indices]))
+        return top_artist_names, top_track_names, list(zip(top_user_ids, match_percentages[top_user_indices_filtered]))
 
     except Exception as e:
         logger.error(f"Error in getting recommendations: {e}")
         return [], [], []
-
-
-
+    
+    
 async def main():
     await setup_dictionaries()
     interactions_matrix, dataset, item_features_matrix_sparse, user_features_matrix_sparse = await build_interaction_matrix()
