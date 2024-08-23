@@ -1,3 +1,4 @@
+import time 
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from asgiref.sync import sync_to_async
@@ -150,6 +151,30 @@ class SpotifyService(ServiceStrategy):
         
         logger.info('Items of type=%s fetched successfully for user=%s', item_type, user)
         return items
+    
+
+    async def fetch_with_retries(func, *args, max_retries=5, backoff_factor=1):
+        """
+        Fetch data with retry logic and exponential backoff.
+        
+        :param func: The function to call.
+        :param args: Arguments to pass to the function.
+        :param max_retries: Maximum number of retry attempts.
+        :param backoff_factor: Factor by which to increase the wait time between retries.
+        :return: Result of the function call.
+        """
+        for attempt in range(max_retries):
+            try:
+                return await sync_to_async(func)(*args)
+            except Exception as e:
+                if hasattr(e, 'http_status') and e.http_status == 429:  # Rate limit error
+                    wait_time = backoff_factor * (2 ** attempt)
+                    logger.warning(f"Rate limit exceeded. Retrying in {wait_time} seconds...")
+                    time.sleep(wait_time)
+                else:
+                    logger.error(f"An error occurred: {e}")
+                    raise
+        raise Exception("Max retries exceeded.")
 
     async def map_to_neo4j(self, user, label, items, relation_type="top"):
         logger.debug('Mapping items to Neo4j for user=%s, label=%s, relation_type=%s', user, label, relation_type)
@@ -314,14 +339,14 @@ class SpotifyService(ServiceStrategy):
         # Clear existing likes
         await self.clear_user_likes(user)
         
-        user_top_artists = await self.fetch_top_artists(user)
-        user_top_tracks = await self.fetch_top_tracks(user)
-        user_top_genres = await self.fetch_top_genres(user)
-        user_followed_artists = await self.fetch_followed_artists(user)
-        user_followed_genres = await self.fetch_followed_genres(user)  
-        user_saved_tracks = await self.fetch_saved_tracks(user)
-        user_saved_albums = await self.fetch_saved_albums(user)  
-        user_played_tracks = await self.fetch_recently_played(user)  
+        user_top_artists = await self.fetch_with_retries(self.fetch_top_artists(user))
+        user_top_tracks = await self.fetch_with_retries(self.fetch_top_tracks(user))
+        user_top_genres = await self.fetch_with_retries(self.fetch_top_genres(user))
+        user_followed_artists = await self.fetch_with_retries(self.fetch_followed_artists(user))
+        user_followed_genres = await self.fetch_with_retries(self.fetch_followed_genres(user))  
+        user_saved_tracks = await self.fetch_with_retries(self.fetch_saved_tracks(user))
+        user_saved_albums = await self.fetch_with_retries(self.fetch_saved_albums(user))
+        user_played_tracks = await self.fetch_with_retries(self.fetch_recently_played(user))  
         
         # Map data to Neo4j
         await asyncio.gather(
