@@ -21,11 +21,13 @@ class SpotifyUser(User):
     top_tracks = AsyncRelationshipTo('..track.Track', 'TOP_TRACK')
     top_genres = AsyncRelationshipTo('..genre.Genre', 'TOP_GENRE')
 
-    likes_artists = AsyncRelationshipTo(Artist, 'LIKES_ARTIST')
+    followed_artists = AsyncRelationshipTo(Artist, 'LIKES_ARTIST')
     likes_tracks = AsyncRelationshipTo('..track.Track', 'LIKES_TRACK')
     likes_genres = AsyncRelationshipTo('..genre.Genre', 'LIKES_GENRE')
     likes_albums = AsyncRelationshipTo('..album.Album', 'LIKES_ALBUM')
     played_tracks = AsyncRelationshipTo('..track.Track', 'PLAYED_TRACK')
+    saved_tracks = AsyncRelationshipTo('..track.Track', 'SAVED_TRACK')
+    saved_albums = AsyncRelationshipTo('..album.Album', 'SAVED_ALBUM')
 
 
     parent = AsyncRelationshipFrom('..parent_user.ParentUser', 'CONNECTED_TO_SPOTIFY')
@@ -72,6 +74,8 @@ class SpotifyUser(User):
         likes_tracks = await self.likes_tracks.all()
         likes_genres = await self.likes_genres.all()
         likes_albums = await self.likes_albums.all()
+        saved_tracks = await self.saved_tracks.all()
+        saved_albums = await self.saved_albums.all()
         
         return {
             'top_artists': top_artists,
@@ -81,6 +85,9 @@ class SpotifyUser(User):
             'likes_tracks': likes_tracks,
             'likes_genres':  likes_genres,
             'likes_albums':  likes_albums,
+            'saved_tracks':  saved_tracks,
+            'saved_albums':  saved_albums,
+
         }
     
     
@@ -94,6 +101,7 @@ class SpotifyUser(User):
             likes_tracks = await self.likes_tracks.all()
             likes_genres = await self.likes_genres.all()
             likes_albums = await self.likes_albums.all()
+            saved_albums = await self.saved_albums.all()
 
             return {
                 'uid': self.uid,
@@ -106,6 +114,7 @@ class SpotifyUser(User):
                 'likes_tracks': [await track.serialize() for track in likes_tracks] if likes_tracks else [],
                 'likes_genres': [await genre.serialize() for genre in likes_genres] if likes_genres else [],
                 'likes_albums': [await album.serialize() for album in likes_albums] if likes_albums else [],
+                'saved_albums': [await album.serialize() for album in saved_albums] if saved_albums else [],
             }
         except Exception as e:
             logger.error(f"Error serializing object: {e}")
