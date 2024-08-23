@@ -210,9 +210,24 @@ class YTmusicService(ServiceStrategy):
         history = await loop.run_in_executor(self.executor, ytmusic.get_history)
         logger.info(f"History fetched for user: {user}")
         return history
+    
+    async def delete_user_likes(self, user: str) -> None:
+        logger.info(f"Deleting existing likes and played tracks for user: {user}")
 
+        # Remove all 'likes' relationships
+        await user.likes_tracks.disconnect_all()
+        await user.likes_artists.disconnect_all()
+
+        # Remove all 'played' relationships
+        await user.played_tracks.disconnect_all()
+
+        logger.info(f"Existing likes and played tracks deleted for user: {user}")
+        
     async def save_user_likes(self, user: str) -> None:
         logger.info(f"Saving user likes for user: {user}")
+
+        # Delete existing likes and played relationships
+        await self.delete_user_likes(user)
         # Fetch user data asynchronously
         user_liked_tracks = await self.fetch_liked_tracks(user)
         user_library_subscriptions = await self.fetch_library_subscriptions(user)

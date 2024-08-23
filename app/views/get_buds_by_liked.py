@@ -40,6 +40,7 @@ class BudsMixin:
                     parent_serialized = await self.serialize_parent(bud_parent)
                     buds_data.append({'bud': parent_serialized})
         except Exception as e:
+            error_type = type(e).__name__
             logger.error(f'Error in fetch_buds_data: {e}', exc_info=True)
         return buds_data
 
@@ -77,8 +78,9 @@ class GetBudsByLikedAlbums(BudsMixin, APIView):
         except ValueError as e:
             return JsonResponse({'error': str(e)}, status=404)
         except Exception as e:
+            error_type = type(e).__name__
             logger.error(f'Error in GetBudsByLikedAlbums: {e}', exc_info=True)
-            return JsonResponse({'error': 'Internal Server Error'}, status=500)
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 
     async def get_buds_by_liked_albums(self, user_node, account_ids):
         buds = []
@@ -111,7 +113,7 @@ class GetBudsByLikedArtists(BudsMixin, APIView):
             return JsonResponse({'error': str(e)}, status=404)
         except Exception as e:
             logger.error(f'Error in GetBudsByLikedArtists: {e}', exc_info=True)
-            return JsonResponse({'error': 'Internal Server Error'}, status=500)
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 
     async def get_buds_by_liked_artists(self, user_node, account_ids):
         buds = []
@@ -142,8 +144,9 @@ class GetBudsByLikedGenres(BudsMixin, APIView):
         except ValueError as e:
             return JsonResponse({'error': str(e)}, status=404)
         except Exception as e:
+            error_type = type(e).__name__
             logger.error(f'Error in GetBudsByLikedGenres: {e}', exc_info=True)
-            return JsonResponse({'error': 'Internal Server Error'}, status=500)
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 
     async def get_account_liked_genres(self, user_node):
         account_ids = []
@@ -183,10 +186,12 @@ class GetBudsByPlayedTracks(BudsMixin, APIView):
             return JsonResponse(response)
 
         except ValueError as e:
+            error_type = type(e).__name__
             return JsonResponse({'error': str(e)}, status=404)
         except Exception as e:
+            error_type = type(e).__name__
             logger.error(f'Error in GetBudsByPlayedTracks: {e}', exc_info=True)
-            return JsonResponse({'error': 'Internal Server Error'}, status=500)
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 
     async def get_buds_by_played_tracks(self, user_node, account_ids):
         buds = []
@@ -218,8 +223,9 @@ class GetBudsByLikedTracks(BudsMixin, APIView):
         except ValueError as e:
             return JsonResponse({'error': str(e)}, status=404)
         except Exception as e:
+            error_type = type(e).__name__
             logger.error(f'Error in GetBudsByLikedTracks: {e}', exc_info=True)
-            return JsonResponse({'error': 'Internal Server Error'}, status=500)
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 
     async def get_buds_by_liked_tracks(self, user_node, account_ids):
         buds = []

@@ -31,5 +31,6 @@ class SearchUsers(APIView):
                 'collection': {'users': [user.serialize() for user in users]}
             }, status=200)
         except Exception as e:
+            error_type = type(e).__name__
             logger.error(e)
-            return JsonResponse({'error': 'Internal Server Error'}, status=500)
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)

@@ -39,6 +39,7 @@ class YtmusicRefreshToken(APIView):
                 }
             })
         except Exception as e:
+            error_type = type(e).__name__
             print(e)
             logger.error(e)
-            return JsonResponse({'error': 'Internal Server Error'}, status=500)
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)

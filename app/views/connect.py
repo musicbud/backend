@@ -34,9 +34,9 @@ class Login(APIView):
                 'data': {'authorization_link': authorization_link}
             })
         except Exception as e:
+            error_type = type(e).__name__
             logger.error(f"Error generating authorization link: {e}")
-            return JsonResponse({'error': str(e)}, status=500)
-
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 class YtmusicCallback(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [AllowAny]
@@ -83,8 +83,9 @@ class YtmusicCallback(APIView):
                 'data': tokens,
             })
         except Exception as e:
+            error_type = type(e).__name__
             logger.error(f"Error in ytmusic_callback: {e}")
-            return JsonResponse({'error': str(e)}, status=500)
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 
 class YtmusicConnect(APIView):
     authentication_classes = [CustomTokenAuthentication]
@@ -112,8 +113,9 @@ class YtmusicConnect(APIView):
             logger.info(f"Response Data: {response_data}")
             return JsonResponse(response_data, status=200)
         except Exception as e:
+            error_type = type(e).__name__
             logger.error(f"Error in connect_ytmusic: {e}")
-            return JsonResponse({'error': str(e)}, status=500)
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
         
 class SpotifyCallback(APIView):
     permission_classes = [AllowAny]
@@ -159,8 +161,9 @@ class SpotifyCallback(APIView):
                 'data': tokens
             })
         except Exception as e:
+            error_type = type(e).__name__
             logger.error(f"Error in spotify_callback: {e}")
-            return JsonResponse({'error': str(e)}, status=500)
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 class SpotifyConnect(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [AllowAny]
@@ -187,8 +190,9 @@ class SpotifyConnect(APIView):
             return JsonResponse(response_data, status=200)
             
         except Exception as e:
+            error_type = type(e).__name__
             logger.error(f"Error in connect_spotify: {e}")
-            return JsonResponse({'error': str(e)}, status=500)
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 
 class LastfmCallback(APIView):
     authentication_classes = [CustomTokenAuthentication]
@@ -229,8 +233,9 @@ class LastfmCallback(APIView):
                 'data': {'accessToken': token}
             })
         except Exception as e:
+            error_type = type(e).__name__
             logger.error(f"Error in lastfm_callback: {e}")
-            return JsonResponse({'error': str(e)}, status=500)
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 class LastfmConnect(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [AllowAny]
@@ -255,8 +260,9 @@ class LastfmConnect(APIView):
             return JsonResponse(response_data, status=200)
 
         except Exception as e:
+            error_type = type(e).__name__
             logger.error(f"Error in connect_lastfm: {e}")
-            return JsonResponse({'error': str(e)}, status=500)
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 
 
 class MalCallback(APIView):
@@ -303,8 +309,9 @@ class MalCallback(APIView):
                 'data': tokens
             })
         except Exception as e:
+            error_type = type(e).__name__
             logger.error(f"Error in mal callback: {e}")
-            return JsonResponse({'error': str(e)}, status=500)
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 class MalConnect(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [AllowAny]
@@ -332,8 +339,9 @@ class MalConnect(APIView):
             return JsonResponse(response_data, status=200)
 
         except Exception as e:
+            error_type = type(e).__name__
             logger.error(f"Error in mal_connect: {e}")
-            return JsonResponse({'error': str(e)}, status=500)
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 
 class NotFoundView(APIView):
     authentication_classes = [CustomTokenAuthentication]

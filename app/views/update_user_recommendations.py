@@ -18,4 +18,5 @@ class Login(APIView):
             await save_recommendations(user_id, recommendations)
             return JsonResponse({'status': 'success', 'recommendations': recommendations})
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            error_type = type(e).__name__
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)

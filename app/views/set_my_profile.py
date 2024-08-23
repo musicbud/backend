@@ -53,8 +53,9 @@ class SetMyProfile(APIView):
                     'status': 'HTTP OK',
                 })
             except Exception as e:
+                error_type = type(e).__name__
                 logger.error(e)
-                return JsonResponse({'error': 'Internal Server Error'}, status=500)
+                return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
         else:
             return JsonResponse({
                 'error': 'Invalid data.',

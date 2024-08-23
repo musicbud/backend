@@ -46,8 +46,9 @@ class GetItemsMixin(APIView):
             return JsonResponse(paginated_response, safe=False)
 
         except Exception as e:
+            error_type = type(e).__name__
             logger.error(f'Error fetching {self.item_type}: {e}', exc_info=True)
-            return JsonResponse({'error': 'Internal Server Error'}, status=500)
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 
 class GetTopArtists(GetItemsMixin):
     item_type = 'top_artists'

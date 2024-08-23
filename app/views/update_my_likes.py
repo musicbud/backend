@@ -29,5 +29,6 @@ class UpdateMyLikes(APIView):
 
             return JsonResponse({'message': 'Updated likes successfully'}, status=200)
         except Exception as e:
+            error_type = type(e).__name__
             logger.error(f"Error updating likes for user: {request.user.id} on service: {request.user}: {e}")
-            return JsonResponse({'error': 'Internal Server Error'}, status=500)
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)

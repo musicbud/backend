@@ -90,8 +90,9 @@ class Register(APIView):
                 logger.warning(f"Username or email already exists: {username}, {email}")
                 return JsonResponse({'error': 'Username or email already exists.'}, status=400)
             except Exception as e:
+                error_type = type(e).__name__
                 logger.error(f"Unexpected error during registration: {str(e)}")
-                return JsonResponse({'error': 'Unexpected error occurred.'}, status=500)
+                return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
         else:
             logger.warning(f"Invalid registration data: {form.errors}")
             return JsonResponse({'error': 'Invalid data.', 'details': form.errors}, status=400)
@@ -159,5 +160,6 @@ class Logout(APIView):
             logger.debug(f"User logged out successfully: {request.user}")
             return JsonResponse({'message': 'Logged out successfully.'}, status=200)
         except Exception as e:
+            error_type = type(e).__name__
             logger.error(f"Logout error: {str(e)}")
-            return JsonResponse({'error': 'Logout failed.'}, status=400)
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)

@@ -196,6 +196,9 @@ class MalService(ServiceStrategy):
 
     async def save_user_likes(self,user):
         try:
+            # Clear existing likes
+            await user.top_anime.disconnect_all()
+            await user.top_manga.disconnect_all()
             await asyncio.gather(
                 self.get_top_anime(user),
                 self.get_top_manga(user)

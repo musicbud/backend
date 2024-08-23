@@ -61,8 +61,9 @@ class GetBudsBase(APIView):
             return JsonResponse(paginated_response)
 
         except Exception as e:
+            error_type = type(e).__name__
             logger.error(f'Error in GetBudsBase: {e}', exc_info=True)
-            return JsonResponse({'error': 'Internal Server Error'}, status=500)
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 
     def get_identifier(self, request):
         """Returns the identifier from the request data."""

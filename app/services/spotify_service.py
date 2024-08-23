@@ -294,8 +294,26 @@ class SpotifyService(ServiceStrategy):
 
         logger.info('Items mapped to Neo4j successfully for user=%s, label=%s, relation_type=%s', user, label, relation_type)
 
+    async def clear_user_likes(self, user):
+        logger.debug('Clearing user likes for user=%s', user)
+        
+        # Clear relationships for top artists, tracks, genres, followed artists, saved tracks, albums, and played tracks
+        await asyncio.gather(
+            user.top_artists.disconnect_all(),
+            user.likes_artists.disconnect_all(),
+            user.likes_tracks.disconnect_all(),
+            user.likes_genres.disconnect_all(),
+            user.likes_albums.disconnect_all(),
+            user.played_tracks.disconnect_all()
+        )
+        logger.info('User likes cleared successfully for user=%s', user)
+
     async def save_user_likes(self, user):
         logger.debug('Saving user likes for user=%s', user)
+
+        # Clear existing likes
+        await self.clear_user_likes(user)
+        
         user_top_artists = await self.fetch_top_artists(user)
         user_top_tracks = await self.fetch_top_tracks(user)
         user_top_genres = await self.fetch_top_genres(user)

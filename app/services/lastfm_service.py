@@ -213,6 +213,23 @@ class LastFmService(ServiceStrategy):
                 logger.debug(f"Creating relationship between user and genre: {item_name}")
                 await  user.likes_genres.connect(node)
 
+    async def clear_user_likes(self, user: Any) -> None:
+        """
+        Clears the user's existing likes in Neo4j.
+        """
+        logger.debug(f"Clearing user likes for user: {user.username}")
+
+        # Disconnect existing relationships
+        await asyncio.gather(
+            user.top_artists.disconnect_all(),
+            user.top_tracks.disconnect_all(),
+            user.top_genres.disconnect_all(),
+            user.likes_tracks.disconnect_all(),
+            user.likes_artists.disconnect_all(),
+            user.likes_genres.disconnect_all(),
+            user.played_tracks.disconnect_all()
+        )
+        logger.debug("User likes cleared successfully")
    
 
     async def save_user_likes(self, user: Any) -> None:
@@ -220,6 +237,10 @@ class LastFmService(ServiceStrategy):
         Fetches and saves the user's top artists, tracks, genres, liked tracks, and recent tracks to Neo4j.
         """
         logger.debug(f"Saving user likes for user: {user.username}")
+
+        # Clear existing user likes
+        await self.clear_user_likes(user)
+        
         user_top_artists = await self.fetch_top_artists(user.username)
         user_top_tracks = await self.fetch_top_tracks(user.username)
         user_top_genres = await self.fetch_top_genres(user.username)
