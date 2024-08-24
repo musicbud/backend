@@ -113,7 +113,7 @@ class SpotifyService(ServiceStrategy):
 
     async def fetch_liked_genres(self, user, limit=50):
         logger.debug('Fetching liked genres for user=%s with limit=%d', user, limit)
-        liked_tracks = await self.fetch_saved_tracks(user, limit)
+        liked_tracks = await self.fetch_followed_artists(user, limit)
         genre_count = {}
         for track in liked_tracks:
             for genre in track.get('genres', []):
@@ -282,14 +282,14 @@ class SpotifyService(ServiceStrategy):
                     logger.info('Connected user %s with Saved Album %s', user, album_data['name'])
 
             elif label == 'Genre':
-                genre_data = item
+                genre_data = item[0]
                 logger.debug('Processing Genre: %s', genre_data)
                 node = await SpotifyGenre.nodes.get_or_none(name=genre_data)
                 if not node:
                     logger.debug('Creating new Genre node: %s', genre_data)
                     node = await SpotifyGenre(name=genre_data).save()
                 if relation_type == "top":
-                    await user.likes_genres.connect(node)
+                    await user.top_genres.connect(node)
                     logger.info('Connected user %s with Top Genre %s', user, genre_data)
                 elif relation_type == "liked":
                     await user.likes_genres.connect(node)
