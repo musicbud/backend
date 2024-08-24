@@ -26,9 +26,23 @@ db.set_connection(config.DATABASE_URL)
 # Add the project directory to the sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+# Import models
 from app.db_models.spotify.spotify_user import SpotifyUser
 from app.db_models.spotify.spotify_artist import SpotifyArtist
 from app.db_models.spotify.spotify_track import SpotifyTrack
+from app.db_models.user import User
+from app.db_models.liked_item import LikedItem
+from app.db_models.artist import Artist
+from app.db_models.album import Album
+from app.db_models.track import Track
+from app.db_models.genre import Genre
+from app.db_models.lastfm.lastfm_artist import LastfmArtist
+from app.db_models.lastfm.lastfm_track import LastfmTrack
+from app.db_models.ytmusic.ytmusic_artist import YtmusicArtist
+from app.db_models.ytmusic.ytmusic_track import YtmusicTrack
+from app.db_models.combined.combined_artist import CombinedArtist
+from app.db_models.combined.combined_track import CombinedTrack
+from app.db_models.parent_user import ParentUser
 
 # Load the trained models
 try:
@@ -37,6 +51,14 @@ try:
 except Exception as e:
     logger.error(f"Error loading models: {e}")
     sys.exit(1)
+
+# Initialize global dictionaries
+item_dict_artist = joblib.load('item_dict_artist.pkl')
+item_dict_artist_reversed = joblib.load('item_dict_artist_reversed.pkl')
+item_dict_track = joblib.load('item_dict_track.pkl')
+item_dict_track_reversed = joblib.load('item_dict_track_reversed.pkl')
+user_dict = joblib.load('user_dict.pkl')
+user_dict_reversed = joblib.load('user_dict_reversed.pkl')
 
 async def regenerate_dictionary(item_dict_path, item_dict_reversed_path, item_type):
     async def fetch_items():
@@ -78,6 +100,48 @@ async def setup_dictionaries():
     joblib.dump(user_dict, 'user_dict.pkl')
     joblib.dump(user_dict_reversed, 'user_dict_reversed.pkl')
 
+async def get_liked_artists(user_id):
+    try:
+        user = await SpotifyUser.nodes.get(uid=user_id)
+        liked_artists = await user.likes_artists.all()
+        logger.debug(f"Liked Artists: {liked_artists}")
+        return liked_artists
+    except Exception as e:
+        logger.error(f"Error retrieving liked artists for user ID {user_id}: {e}")
+        return []
+
+async def get_liked_tracks(user_id):
+    try:
+        user = await SpotifyUser.nodes.get(uid=user_id)
+        liked_tracks = await user.likes_tracks.all()
+        logger.debug(f"Liked Tracks: {liked_tracks}")
+        return liked_tracks
+    except Exception as e:
+        logger.error(f"Error retrieving liked tracks for user ID {user_id}: {e}")
+        return []
+
+def map_artist_names_to_indices(artists):
+    """Map a list of artist objects to their corresponding indices."""
+    artist_indices = []
+    for artist in artists:
+        index = item_dict_artist.get(artist.name)
+        if index is not None:
+            artist_indices.append(index)
+        else:
+            logger.warning(f"Artist name '{artist.name}' not found in index mapping.")
+    return artist_indices
+
+def map_track_names_to_indices(tracks):
+    """Map a list of track objects to their corresponding indices."""
+    track_indices = []
+    for track in tracks:
+        index = item_dict_track.get(track.name)
+        if index is not None:
+            track_indices.append(index)
+        else:
+            logger.warning(f"Track name '{track.name}' not found in index mapping.")
+    return track_indices
+
 async def build_interaction_matrix():
     """
     Builds a custom interaction matrix from Neo4j data.
@@ -95,38 +159,8 @@ async def build_interaction_matrix():
     artist_names = [artist.name for artist in artists]
     item_names = track_names + artist_names
 
-    # Create item features as tuples (item_id, features)
-    num_features = len(item_names)
-    feature_names = [f"feature_{i}" for i in range(num_features)]
-    item_features = [(name, {feature_name: np.random.rand() for feature_name in feature_names}) for name in item_names]
-
-    # Create user features as tuples (user_id, features)
-    user_features = [(uid, {feature_name: np.random.rand() for feature_name in feature_names}) for uid in user_ids]
-
-    # Create a mapping of item names to indices
-    item_name_to_index = {name: index for index, name in enumerate(item_names)}
-    logger.debug(f"Item Name to Index Mapping: {item_name_to_index}")
-
     # Fit the dataset with users and items
     dataset.fit(users=user_ids, items=item_names)
-
-    # Create item features matrix manually
-    item_features_matrix = np.zeros((len(item_names), num_features))
-    for i, (name, features) in enumerate(item_features):
-        for j, feature_name in enumerate(feature_names):
-            item_features_matrix[i, j] = features[feature_name]
-
-    # Create user features matrix manually
-    user_features_matrix = np.zeros((len(user_ids), num_features))
-    for i, (uid, features) in enumerate(user_features):
-        for j, feature_name in enumerate(feature_names):
-            user_features_matrix[i, j] = features[feature_name]
-
-    # Convert item features matrix to sparse matrix
-    item_features_matrix_sparse = sp.csr_matrix(item_features_matrix)
-
-    # Convert user features matrix to sparse matrix
-    user_features_matrix_sparse = sp.csr_matrix(user_features_matrix)
 
     # Create interactions list
     interactions = []
@@ -135,18 +169,10 @@ async def build_interaction_matrix():
         user_artists = await user.likes_artists.all()
 
         for track in user_tracks:
-            track_idx = item_name_to_index.get(track.name)
-            if track_idx is not None:
-                interactions.append((user.uid, track.name))
-            else:
-                logger.warning(f"Track '{track.name}' not found in item dictionary.")
+            interactions.append((user.uid, track.name))
 
         for artist in user_artists:
-            artist_idx = item_name_to_index.get(artist.name)
-            if artist_idx is not None:
-                interactions.append((user.uid, artist.name))
-            else:
-                logger.warning(f"Artist '{artist.name}' not found in item dictionary.")
+            interactions.append((user.uid, artist.name))
 
     logger.debug(f"Interactions: {interactions}")
 
@@ -157,7 +183,13 @@ async def build_interaction_matrix():
     try:
         interactions_matrix, _ = dataset.build_interactions(interactions)
         logger.info("Interactions matrix built successfully.")
-        return interactions_matrix, dataset, item_features_matrix_sparse, user_features_matrix_sparse
+
+        # Prepare item features matrix
+        item_features_matrix = sp.identity(len(item_names), format='csr')
+        # Prepare user features matrix
+        user_features_matrix = sp.identity(len(user_ids), format='csr')
+
+        return interactions_matrix, dataset, item_features_matrix, user_features_matrix
     except Exception as e:
         logger.error(f"Error building interactions matrix: {e}")
         return None, None, None, None
@@ -170,11 +202,6 @@ async def get_custom_user_data(user_id):
 
         liked_artist_names = [artist.name.strip() for artist in liked_artists] if liked_artists else []
         liked_track_names = [track.name.strip() for track in liked_tracks] if liked_tracks else []
-
-        if not liked_artist_names:
-            logger.error(f"No liked artist names found for user ID {user_id}.")
-        if not liked_track_names:
-            logger.error(f"No liked track names found for user ID {user_id}.")
 
         return liked_artist_names, liked_track_names
     except Exception as e:
@@ -199,84 +226,78 @@ async def get_recommendations(user_id, item_features_matrix_sparse, user_feature
             logger.warning(f"No valid artist or track indices found for user ID {user_id}.")
             return [], [], []
 
-        # Concatenate artist and track indices for user features
+        # Combine artist and track indices for user features
         user_item_indices = artist_indices + [idx + len(item_dict_artist) for idx in track_indices]
 
-        # Generate a single user feature vector
-        user_features_vector = np.zeros((1, item_features_matrix_sparse.shape[1]))
-        user_features_vector[0, user_item_indices] = 1
+        # Get the number of features (items)
+        num_features = item_features_matrix_sparse.shape[0]  # Number of items in the matrix
 
-        # Convert the user features vector to sparse format (CSR format)
-        user_features_vector_sparse = sp.csr_matrix(user_features_vector)
+        # Generate a single user feature vector with the correct size
+        user_feature_vector = np.zeros(num_features)
+        user_feature_vector[user_item_indices] = 1
 
-        # Ensure the number of features in the user and item matrices match
-        if user_features_vector_sparse.shape[1]!= item_features_matrix_sparse.shape[1]:
-            logger.error("User features and item features dimensions do not match.")
-            return [], [], []
+        logger.debug(f"User Feature Vector Shape: {user_feature_vector.shape}")
 
-        # Get all item IDs for artists and tracks
-        all_artist_ids = np.array(range(len(item_dict_artist)))
-        all_track_ids = np.array(range(len(item_dict_track)))
-        all_user_ids = np.array(range(len(user_dict)))
+        # Predict scores for all items for the given user
+        user_index = user_dict[user_id]  # Map the user_id to the user index in the LightFM model
+        item_ids = np.arange(num_features)  # Generate an array of item IDs (indices)
 
-        # Make predictions for all items using the sparse matrices
-        predictions_artist = model_artist.predict(0, all_artist_ids, item_features=item_features_matrix_sparse, user_features=user_features_vector_sparse)
-        predictions_track = model_track.predict(0, all_track_ids, item_features=item_features_matrix_sparse, user_features=user_features_vector_sparse)
+        # Use LightFM model to predict scores for all items
+        item_scores = model_artist.predict(user_index, item_ids)
 
-        # Select the top-N items with the highest scores
-        top_n = 10  # Number of recommendations to return
-        top_artists = np.argsort(-predictions_artist)[:top_n]
-        top_tracks = np.argsort(-predictions_track)[:top_n]
+        top_items = np.argsort(item_scores)[::-1]
 
-        # Generate user-user similarity scores
-        user_similarities = np.dot(user_features_matrix_sparse, user_features_vector_sparse.T).toarray().flatten()
+        logger.debug(f"Top Items: {top_items}")
 
-        # Normalize similarities to percentage
-        max_similarity = np.max(user_similarities)
-        if max_similarity > 0:
-            match_percentages = 100 * user_similarities / max_similarity
-        else:
-            match_percentages = np.zeros_like(user_similarities)
+        recommended_artists = [item_dict_artist_reversed[idx] for idx in top_items[:10] if idx in item_dict_artist_reversed]
+        recommended_tracks = [item_dict_track_reversed[idx - len(item_dict_artist)] for idx in top_items[:10] if (idx - len(item_dict_artist)) in item_dict_track_reversed]
 
-        # Sort users by similarity
-        top_user_indices = np.argsort(-user_similarities)[:top_n]
+        # Recommend users based on percent match
+        recommended_users = []
+        for other_user_id, other_user_index in user_dict.items():
+            if other_user_id == user_id:
+                continue
 
-        # Exclude the current user from the top matches
-        top_user_indices_filtered = [idx for idx in top_user_indices if user_dict_reversed[idx]!= user_id]
-        if len(top_user_indices_filtered) < top_n:
-            # If filtering results in fewer items than desired, pad with some placeholder values or handle appropriately
-            top_user_indices_filtered = top_user_indices_filtered[:top_n]
+            # Ensure the other user's feature vector is constructed with the same number of features
+            other_user_feature_vector = np.zeros(num_features)
+            other_user_feature_vector[user_features_matrix_sparse[other_user_index].nonzero()[1]] = 1
 
-        logger.debug(f"Top User Indices (filtered): {top_user_indices_filtered}")
-        logger.debug(f"Match Percentages: {match_percentages}")
+            logger.debug(f"Other User Feature Vector Shape: {other_user_feature_vector.shape}")
 
-        # Convert indices back to item names
-        top_artist_names = [item_dict_artist_reversed[idx] for idx in top_artists]
-        top_track_names = [item_dict_track_reversed[idx] for idx in top_tracks]
-        top_user_ids = [user_dict_reversed[idx] for idx in top_user_indices_filtered]
+            # Ensure both vectors have the same shape
+            if user_feature_vector.shape != other_user_feature_vector.shape:
+                logger.error(f"Shape mismatch: user_feature_vector.shape {user_feature_vector.shape} != other_user_feature_vector.shape {other_user_feature_vector.shape}")
+                continue
 
-        # Return recommendations and similarities
-        return top_artist_names, top_track_names, list(zip(top_user_ids, match_percentages[top_user_indices_filtered]))
+            match_score = np.dot(user_feature_vector, other_user_feature_vector)
+            match_percentage = match_score / np.sum(user_feature_vector) * 100
 
+            if match_percentage > 0:
+                recommended_users.append((other_user_id, match_percentage))
+
+        # Sort users by match percentage in descending order
+        recommended_users.sort(key=lambda x: x[1], reverse=True)
+
+        logger.debug(f"Recommended Users: {recommended_users}")
+
+        return recommended_artists, recommended_tracks, recommended_users[:10]
     except Exception as e:
-        logger.error(f"Error in getting recommendations: {e}")
+        logger.error(f"Error generating recommendations for user ID {user_id}: {e}")
         return [], [], []
-    
-    
-async def main():
-    await setup_dictionaries()
-    interactions_matrix, dataset, item_features_matrix_sparse, user_features_matrix_sparse = await build_interaction_matrix()
 
-    if interactions_matrix is None:
-        logger.error("Failed to build interaction matrix.")
-        return
-
-    user_id = "33a55ade4b204e84a6c4c681bd751479"  # Replace with actual user ID
-    top_artists, top_tracks, top_matches = await get_recommendations(user_id, item_features_matrix_sparse, user_features_matrix_sparse)
-
-    logger.info(f"Top Artists: {top_artists}")
-    logger.info(f"Top Tracks: {top_tracks}")
-    logger.info(f"Top Matches: {top_matches}")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+
+    loop.run_until_complete(setup_dictionaries())
+
+    interactions_matrix, dataset, item_features_matrix_sparse, user_features_matrix_sparse = loop.run_until_complete(build_interaction_matrix())
+
+    user_id = 'd8a7d0de794f4bd79f6b82e1889bf12d'  # replace with actual user ID
+
+    recommended_users,recommended_artists, recommended_tracks = loop.run_until_complete(get_recommendations(
+        user_id, item_features_matrix_sparse, user_features_matrix_sparse
+    ))
+
+    logger.info(f"Recommended Artists: {recommended_artists}")
+    logger.info(f"Recommended Tracks: {recommended_tracks}")
