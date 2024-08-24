@@ -194,7 +194,6 @@ class SpotifyService(ServiceStrategy):
                         genres=artist_data['genres'],
                         spotify_url=artist_data['external_urls']['spotify']
                     ).save()
-
                 if relation_type == "top":
                     await user.likes_artists.connect(node)
                     logger.info('Connected user %s with Top Artist %s', user, artist_data['name'])
@@ -215,6 +214,12 @@ class SpotifyService(ServiceStrategy):
                 if relation_type == "top":
                     await user.likes_tracks.connect(node)
                     logger.info('Connected user %s with Top Track %s', user, track_data['name'])
+                elif relation_type == "saved":
+                    await user.saved_tracks.connect(node)
+                    logger.info('Connected user %s with Saved Track %s', user, track_data['name'])
+                elif relation_type == "recently_played":
+                    await user.played_tracks.connect(node)
+                    logger.info('Connected user %s with Recently Played Track %s', user, track_data['name'])
 
             elif label == 'Album':
                 album_data = item
@@ -232,6 +237,9 @@ class SpotifyService(ServiceStrategy):
                 if relation_type == "top":
                     await user.likes_albums.connect(node)
                     logger.info('Connected user %s with Top Album %s', user, album_data['name'])
+                elif relation_type == "saved":
+                    await user.saved_albums.connect(node)
+                    logger.info('Connected user %s with Saved Album %s', user, album_data['name'])
 
             elif label == 'Genre':
                 genre_data = item
@@ -243,8 +251,9 @@ class SpotifyService(ServiceStrategy):
                 if relation_type == "top":
                     await user.likes_genres.connect(node)
                     logger.info('Connected user %s with Top Genre %s', user, genre_data)
-
-            logger.info('Mapping to Neo4j completed')
+                elif relation_type == "liked":
+                    await user.liked_genres.connect(node)
+                    logger.info('Connected user %s with Liked Genre %s', user, genre_data)
 
     async def save_user_likes(self, user):
         logger.debug('Saving user likes for user=%s', user)
