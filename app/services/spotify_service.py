@@ -5,7 +5,7 @@ from asgiref.sync import sync_to_async
 from typing import List, Tuple
 import asyncio
 
-from app.services.service_strategy  import ServiceStrategy
+from app.services.service_strategy import ServiceStrategy
 from app.db_models.spotify.spotify_artist import SpotifyArtist
 from app.db_models.spotify.spotify_track import SpotifyTrack
 from app.db_models.spotify.spotify_genre import SpotifyGenre
@@ -75,6 +75,16 @@ class SpotifyService(ServiceStrategy):
             for genre in artist['genres']:
                 genre_count[genre] = genre_count.get(genre, 0) + 1
         logger.info('Top genres retrieved successfully')
+        return sorted(genre_count.items(), key=lambda x: x[1], reverse=True)[:limit]
+
+    async def fetch_liked_genres(self, user, limit=50):
+        logger.debug('Fetching liked genres for user=%s with limit=%d', user, limit)
+        liked_tracks = await self.fetch_saved_tracks(user, limit)
+        genre_count = {}
+        for track in liked_tracks:
+            for genre in track.get('genres', []):
+                genre_count[genre] = genre_count.get(genre, 0) + 1
+        logger.info('Liked genres retrieved successfully')
         return sorted(genre_count.items(), key=lambda x: x[1], reverse=True)[:limit]
     
     async def fetch_recently_played(self, user, limit=50):
@@ -176,7 +186,7 @@ class SpotifyService(ServiceStrategy):
                 logger.debug('Processing Artist: %s', artist_data['name'])
                 node = await SpotifyArtist.nodes.get_or_none(spotify_id=artist_data['id'])
                 if not node:
-                    logger.debug('Creating new Artist node: %s', artist_data['name'])
+                    logger.debug('Creating new Spotify Artist node: %s', artist_data['name'])
                     node = await SpotifyArtist(
                         spotify_id=artist_data['id'],
                         name=artist_data['name'],
@@ -187,7 +197,7 @@ class SpotifyService(ServiceStrategy):
                 if relation_type == "top":
                     await user.likes_artists.connect(node)
                     logger.info('Connected user %s with Top Artist %s', user, artist_data['name'])
-            
+
             elif label == 'Track':
                 track_data = item
                 logger.debug('Processing Track: %s', track_data['name'])
@@ -198,17 +208,18 @@ class SpotifyService(ServiceStrategy):
                         spotify_id=track_data['id'],
                         name=track_data['name'],
                         uri=track_data['uri'],
-                        spotify_url=track_data['external_urls']['spotify'],
                         duration_ms=track_data['duration_ms'],
-                        disc_number=track_data['disc_number'],
-                        explicit=track_data['explicit'],
-                        isrc=track_data['external_ids']['isrc'],
-                        preview_url=track_data['preview_url'],
-                        track_number=track_data['track_number']
+                        spotify_url=track_data['external_urls']['spotify']
                     ).save()
-                if relation_type == "saved":
+                if relation_type == "top":
+                    await user.likes_tracks.connect(node)
+                    logger.info('Connected user %s with Top Track %s', user, track_data['name'])
+                elif relation_type == "saved":
                     await user.saved_tracks.connect(node)
                     logger.info('Connected user %s with Saved Track %s', user, track_data['name'])
+                elif relation_type == "recently_played":
+                    await user.played_tracks.connect(node)
+                    logger.info('Connected user %s with Recently Played Track %s', user, track_data['name'])
 
             elif label == 'Album':
                 album_data = item
@@ -223,58 +234,97 @@ class SpotifyService(ServiceStrategy):
                         release_date=album_data['release_date'],
                         spotify_url=album_data['external_urls']['spotify']
                     ).save()
-                if relation_type == "saved":
+                if relation_type == "top":
+                    await user.likes_albums.connect(node)
+                    logger.info('Connected user %s with Top Album %s', user, album_data['name'])
+                elif relation_type == "saved":
                     await user.saved_albums.connect(node)
                     logger.info('Connected user %s with Saved Album %s', user, album_data['name'])
 
             elif label == 'Genre':
                 genre_data = item
-                logger.debug('Processing Genre: %s', genre_data['name'])
-                node = await SpotifyGenre.nodes.get_or_none(name=genre_data['name'])
+                logger.debug('Processing Genre: %s', genre_data)
+                node = await SpotifyGenre.nodes.get_or_none(name=genre_data)
                 if not node:
-                    logger.debug('Creating new Genre node: %s', genre_data['name'])
-                    node = await SpotifyGenre(name=genre_data['name']).save()
+                    logger.debug('Creating new Genre node: %s', genre_data)
+                    node = await SpotifyGenre(name=genre_data).save()
                 if relation_type == "top":
                     await user.likes_genres.connect(node)
-                    logger.info('Connected user %s with Top Genre %s', user, genre_data['name'])
+                    logger.info('Connected user %s with Top Genre %s', user, genre_data)
+                elif relation_type == "liked":
+                    await user.liked_genres.connect(node)
+                    logger.info('Connected user %s with Liked Genre %s', user, genre_data)
 
     async def save_user_likes(self, user):
         logger.debug('Saving user likes for user=%s', user)
 
-        top_artists = await self.fetch_top_artists(user)
-        await self.map_to_neo4j(user, 'Artist', top_artists, 'top')
-        
-        top_tracks = await self.fetch_top_tracks(user)
-        await self.map_to_neo4j(user, 'Track', top_tracks, 'top')
+        try:
+            # Fetch and map top artists
+            top_artists = await self.fetch_top_artists(user)
+            await self.map_to_neo4j(user, 'Artist', top_artists, relation_type="top")
+            logger.info('Saved top artists successfully for user=%s', user)
 
-        saved_tracks = await self.fetch_saved_tracks(user)
-        await self.map_to_neo4j(user, 'Track', saved_tracks, 'saved')
+            # Fetch and map top tracks
+            top_tracks = await self.fetch_top_tracks(user)
+            await self.map_to_neo4j(user, 'Track', top_tracks, relation_type="top")
+            logger.info('Saved top tracks successfully for user=%s', user)
 
-        saved_albums = await self.fetch_saved_albums(user)
-        await self.map_to_neo4j(user, 'Album', saved_albums, 'saved')
+            # Fetch and map saved tracks
+            saved_tracks = await self.fetch_saved_tracks(user)
+            await self.map_to_neo4j(user, 'Track', saved_tracks, relation_type="saved")
+            logger.info('Saved tracks successfully for user=%s', user)
 
-        top_genres = await self.fetch_top_genres(user)
-        await self.map_to_neo4j(user, 'Genre', top_genres, 'top')
+            # Fetch and map saved albums
+            saved_albums = await self.fetch_saved_albums(user)
+            await self.map_to_neo4j(user, 'Album', saved_albums, relation_type="saved")
+            logger.info('Saved albums successfully for user=%s', user)
 
-        logger.info('User likes saved successfully for user=%s', user)
-    
+            # Fetch and map top genres
+            top_genres = await self.fetch_top_genres(user)
+            await self.map_to_neo4j(user, 'Genre', top_genres, relation_type="top")
+            logger.info('Saved top genres successfully for user=%s', user)
+
+            # Fetch and map liked genres
+            liked_genres = await self.fetch_liked_genres(user)
+            await self.map_to_neo4j(user, 'Genre', liked_genres, relation_type="liked")
+            logger.info('Saved liked genres successfully for user=%s', user)
+
+            # Fetch and map recently played tracks
+            recently_played = await self.fetch_recently_played(user)
+            await self.map_to_neo4j(user, 'Track', recently_played, relation_type="recently_played")
+            logger.info('Saved recently played tracks successfully for user=%s', user)
+
+        except Exception as e:
+            logger.error(f"Error saving user likes for user: {user.id} - {e}")
+            raise
+
+        logger.info('Saving user likes completed')       
+
     async def clear_user_likes(self, user):
-        logger.debug('Clearing user likes for user=%s', user)
-
-        # Clear relationships for top artists
-        await user.likes_artists.disconnect_all()
-        logger.info('Disconnected all top artists for user=%s', user)
-        
-        # Clear relationships for saved tracks
-        await user.saved_tracks.disconnect_all()
-        logger.info('Disconnected all saved tracks for user=%s', user)
-        
-        # Clear relationships for saved albums
-        await user.saved_albums.disconnect_all()
-        logger.info('Disconnected all saved albums for user=%s', user)
-        
-        # Clear relationships for top genres
-        await user.likes_genres.disconnect_all()
-        logger.info('Disconnected all top genres for user=%s', user)
-
-        logger.info('User likes cleared successfully for user=%s', user)
+            logger.debug('Clearing user likes for user=%s', user)
+            
+            # Clear liked artists
+            liked_artists = await user.likes_artists.all()
+            for artist in liked_artists:
+                await user.likes_artists.disconnect(artist)
+                logger.info('Disconnected user %s from Artist %s', user, artist.name)
+            
+            # Clear liked tracks
+            liked_tracks = await user.likes_tracks.all()
+            for track in liked_tracks:
+                await user.likes_tracks.disconnect(track)
+                logger.info('Disconnected user %s from Track %s', user, track.name)
+            
+            # Clear liked albums
+            liked_albums = await user.likes_albums.all()
+            for album in liked_albums:
+                await user.likes_albums.disconnect(album)
+                logger.info('Disconnected user %s from Album %s', user, album.name)
+            
+            # Clear liked genres
+            liked_genres = await user.likes_genres.all()
+            for genre in liked_genres:
+                await user.likes_genres.disconnect(genre)
+                logger.info('Disconnected user %s from Genre %s', user, genre.name)
+            
+            logger.info('Clearing user likes completed')
