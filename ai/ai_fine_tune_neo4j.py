@@ -293,7 +293,7 @@ if __name__ == "__main__":
 
     interactions_matrix, dataset, item_features_matrix_sparse, user_features_matrix_sparse = loop.run_until_complete(build_interaction_matrix())
 
-    user_id = 'd8a7d0de794f4bd79f6b82e1889bf12d'  # replace with actual user ID
+    user_id = '71599a394df141c387ec6368ac79c9c3'  # replace with actual user ID
 
     recommended_users,recommended_artists, recommended_tracks = loop.run_until_complete(get_recommendations(
         user_id, item_features_matrix_sparse, user_features_matrix_sparse
