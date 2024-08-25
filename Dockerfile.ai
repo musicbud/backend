@@ -1,0 +1,29 @@
+FROM python:3.11.7
+
+WORKDIR /app
+
+# Install JDK and other necessary tools
+RUN apt-get update && apt-get install -y \
+    default-jdk \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set JAVA_HOME environment variable
+ENV JAVA_HOME /usr/lib/jvm/default-java
+
+# Install Cython
+RUN pip install Cython
+
+# Copy requirements file and install dependencies
+
+
+COPY requirements.txt .
+
+RUN pip install -r requirements.txt
+
+
+# Copy the rest of the application code
+COPY . .
+
+# Set the command to run the AI fine-tuning script
+CMD ["python", "ai/ai_fine_tune_neo4j.py"]
