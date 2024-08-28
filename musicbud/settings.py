@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'django_neomodel',
     'adrf',
+    'rest_framework_simplejwt'
 ]
 
 MIDDLEWARE = [
@@ -52,7 +53,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'app.middlewares.custom_token_auth.CustomTokenAuthentication'
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PAGINATION_CLASS': 'app.pagination.StandardResultsSetPagination',
     'PAGE_SIZE': 10,  

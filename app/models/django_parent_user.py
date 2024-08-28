@@ -6,6 +6,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from neomodel import db
 import asyncio
+from rest_framework_simplejwt.tokens import RefreshToken
 
 class DjangoParentUser(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=150, unique=True)
@@ -22,15 +23,14 @@ class DjangoParentUser(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.username
 
-    def sync_to_neo4j(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(self._sync_to_neo4j_async())
-        finally:
-            loop.close()
+    def get_tokens(self):
+        refresh = RefreshToken.for_user(self)
+        return {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }
 
-    async def _sync_to_neo4j_async(self):
+    async def sync_to_neo4j(self):
         try:
             neo4j_user = await ParentUser.nodes.get_or_none(username=self.username)
             if neo4j_user is None:
@@ -46,14 +46,15 @@ class DjangoParentUser(AbstractBaseUser, PermissionsMixin):
         except Exception as e:
             print(f"Error syncing to Neo4j: {e}")
 
+    @classmethod
+    async def create_user(cls, username, email, password, **extra_fields):
+        try:
+            user = await cls.objects.acreate_user(username=username, email=email, password=password, **extra_fields)
+            await user.sync_to_neo4j()
+            return user, None
+        except IntegrityError as e:
+            return None, str(e)
+
 @receiver(post_save, sender=DjangoParentUser)
 def sync_user_to_neo4j(sender, instance, created, **kwargs):
-    instance.sync_to_neo4j()
-
-@classmethod
-def create_user(cls, username, email, password, **extra_fields):
-    try:
-        user = cls.objects.create_user(username=username, email=email, password=password, **extra_fields)
-        return user, None
-    except IntegrityError as e:
-        return None, str(e)
+    asyncio.run(instance.sync_to_neo4j())
