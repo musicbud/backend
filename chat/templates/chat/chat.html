@@ -1,39 +1,5 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div id="chat-container">
-    <div id="messages">
-        {% for message in messages %}
-            <div>{{ message.sender.username }}: {{ message.content }}</div>
-        {% endfor %}
-    </div>
-    <input type="text" id="message-input" placeholder="Type your message...">
-    <button id="send-button">Send</button>
-</div>
-
-<script>
-    const chatSocket = new WebSocket('ws://' + window.location.host + '/ws/chat/');
-    const messageInput = document.getElementById('message-input');
-    const sendButton = document.getElementById('send-button');
-    const messagesContainer = document.getElementById('messages');
-
-    chatSocket.onmessage = function(e) {
-        const data = JSON.parse(e.data);
-        if (data.error) {
-            console.error(data.error);
-        } else {
-            const messageElement = document.createElement('div');
-            messageElement.textContent = `${data.sender}: ${data.message}`;
-            messagesContainer.appendChild(messageElement);
-        }
-    };
-
-    sendButton.onclick = function() {
-        const message = messageInput.value;
-        chatSocket.send(JSON.stringify({
-            'message': message
-        }));
-        messageInput.value = '';
-    };
-</script>
+    <!-- Your chat template content here -->
 {% endblock %}

@@ -5,7 +5,7 @@ from ..managers import CustomUserManager
 class DjangoParentUser(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=150, unique=True)
     email = models.EmailField(unique=True)
-    is_active = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)  # Changed default to True
     is_staff = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'username'

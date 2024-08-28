@@ -1,11 +1,16 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Register</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Registration</title>
 </head>
 <body>
-    <h1>Register</h1>
-    <form method="post" enctype="multipart/form-data" action="{% url 'register' %}">
+    <h1>User Registration</h1>
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+    <form method="post" action="{% url 'register' %}">
         {% csrf_token %}
         <label for="username">Username:</label>
         <input type="text" id="username" name="username" required><br><br>
@@ -19,10 +24,8 @@
         <label for="confirm_password">Confirm Password:</label>
         <input type="password" id="confirm_password" name="confirm_password" required><br><br>
         
-        <label for="photo">Photo:</label>
-        <input type="file" id="photo" name="photo"><br><br>
-        
         <button type="submit">Register</button>
     </form>
+    <p>Already have an account? <a href="{% url 'login' %}">Login here</a></p>
 </body>
 </html>

@@ -8,13 +8,15 @@ from django.http import JsonResponse
 from rest_framework.permissions import AllowAny
 from app.forms.registeration import RegistrationForm, LoginForm
 from app.db_models.parent_user import ParentUser
-from neomodel.exceptions import UniqueProperty
+from neomodel.exceptions import UniqueProperty, DoesNotExist
 import logging
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render, redirect
 from django.views.decorators.http import require_http_methods
 from django.views import View
 import json
+from django.contrib.auth.models import User  # Add this import
+from django.urls import reverse
 
 logger = logging.getLogger('app')
 
@@ -33,107 +35,57 @@ def login_view(request):
                 return render(request, 'login.html', {'error': 'Invalid credentials'})
     return render(request, 'login.html')
 
-class Register(APIView):
-    permission_classes = [AllowAny]
+class Register(View):
+    template_name = 'register.html'
 
-    async def post(self, request):
+    def get(self, request):
+        return render(request, self.template_name)
+
+    def post(self, request):
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        confirm_password = request.POST.get('confirm_password')
+
+        if password != confirm_password:
+            return render(request, self.template_name, {'error': 'Passwords do not match'})
+
         try:
-            data = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+            existing_user = ParentUser.nodes.get(username=username)
+            return render(request, self.template_name, {'error': 'Username already exists'})
+        except DoesNotExist:
+            pass
 
-        form = RegistrationForm(data)
-        if form.is_valid():
-            username = form.cleaned_data['username']
-            email = form.cleaned_data['email']
-            password = form.cleaned_data['password']
-            photo = request.FILES.get('photo')
+        try:
+            existing_email = ParentUser.nodes.get(email=email)
+            return render(request, self.template_name, {'error': 'Email already exists'})
+        except DoesNotExist:
+            pass
 
-            try:
-                # Check if username already exists
-                existing_user = await ParentUser.nodes.filter(username=username).first()
-                if existing_user:
-                    logger.warning(f"Username already exists: {username}")
-                    return JsonResponse({'error': 'Username already exists.'}, status=400)
-
-                # Check if email already exists
-                existing_email = await ParentUser.nodes.filter(email=email).first()
-                if existing_email:
-                    logger.warning(f"Email already exists: {email}")
-                    return JsonResponse({'error': 'Email already exists.'}, status=400)
-
-                hashed_password = make_password(password)
-
-                # Handle photo upload
-                photo_url = None
-                if photo:
-                    fs = FileSystemStorage()
-                    filename = fs.save(photo.name, photo)
-                    photo_url = fs.url(filename)
-
-                # Save user asynchronously
-                user = ParentUser(
-                    username=username,
-                    email=email,
-                    password=hashed_password,
-                    photo_url=photo_url
-                )
-                await user.save()  # Ensure `save` is async if using async ORM methods
-
-                # Generate tokens
-                refresh = RefreshToken.for_user(user)
-                access_token = str(refresh.access_token)
-                refresh_token = str(refresh)
-
-                # Extract token expiration times
-                access_token_expires_at = datetime.fromtimestamp(refresh.access_token.payload['exp'])
-                refresh_token_expires_at = datetime.fromtimestamp(refresh.payload['exp'])
-
-                # Save tokens to the user
-                user.access_token = access_token
-                user.refresh_token = refresh_token
-                user.access_token_expires_at = access_token_expires_at.timestamp()
-                user.refresh_token_expires_at = refresh_token_expires_at.timestamp()
-                user.is_active = True
-
-                await user.save()  # Ensure tokens are saved
-
-                # Store user ID in the session
-                await sync_to_async(request.session.__setitem__)('user_id', user.uid)
-
-                logger.debug(f"User registered successfully: {username}")
-                return JsonResponse({
-                    'message': 'Registration successful. Please log in.',
-                    'data': {
-                        'refresh_token': refresh_token,
-                        'access_token': access_token,
-                    }
-                }, status=201)
-
-            except UniqueProperty:
-                logger.warning(f"Username or email already exists: {username}, {email}")
-                return JsonResponse({'error': 'Username or email already exists.'}, status=400)
-        else:
-            logger.error(f"Form errors: {form.errors}")
-        return JsonResponse({'error': 'Invalid form data'}, status=400)
+        try:
+            hashed_password = make_password(password)
+            user = ParentUser(username=username, email=email, password=hashed_password).save()
+            return redirect(reverse('login'))
+        except Exception as e:
+            return render(request, self.template_name, {'error': str(e)})
 
 class Logout(View):
     def get(self, request):
         logout(request)
         return JsonResponse({'message': 'Logged out successfully'}, status=200)
 
-class Login(APIView):
-    permission_classes = [AllowAny]
+class Login(View):
+    template_name = 'login.html'
 
-    async def post(self, request):
-        form = LoginForm(request.POST)
-        if form.is_valid():
-            username = form.cleaned_data['username']
-            password = form.cleaned_data['password']
-            user = authenticate(request, username=username, password=password)
-            if user is not None:
-                login(request, user)
-                return JsonResponse({'message': 'Login successful'}, status=200)
-            else:
-                return JsonResponse({'error': 'Invalid credentials'}, status=400)
-        return JsonResponse({'error': 'Invalid form data'}, status=400)
+    def get(self, request):
+        return render(request, self.template_name)
+
+    def post(self, request):
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('home')  # Change 'home' to your desired redirect URL
+        else:
+            return render(request, self.template_name, {'error': 'Invalid credentials'})

@@ -40,11 +40,11 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',  # CORS middleware
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    # Comment out the next line to disable CSRF protection
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-
 ]
 
 REST_FRAMEWORK = {
@@ -171,8 +171,11 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
 
 # Change 'project_name' to your actual Django project name
 dotenv_path = os.path.join(BASE_DIR, '.env')
@@ -242,7 +245,13 @@ LOGGING = {
 
 
 
-AUTH_USER_MODEL = 'app.DjangoParentUser'
+AUTH_USER_MODEL = 'app.DjangoParentUser'  # replace 'app' with your app name and 'ParentUser' with your custom user model name
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    # Add any custom authentication backends here
+]
+
 
 
 
