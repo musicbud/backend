@@ -11,7 +11,7 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.security.websocket import AllowedHostsOriginValidator
 
 # Django setup
-sys.path.append('/home/mahmoud/Documents/GitHub/musicbud-revanced')
+sys.path.append('/home/mahmoud/Documents/GitHub/musicbud')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'musicbud.settings')
 django.setup()
 

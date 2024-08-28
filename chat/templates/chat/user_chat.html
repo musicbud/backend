@@ -1,40 +1,43 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div id="chat-container">
-    <h2>Chat with {{ recipient.username }}</h2>
-    <div id="messages">
-        {% for message in messages %}
-            <div>{{ message.sender.username }}: {{ message.content }}</div>
-        {% endfor %}
-    </div>
-    <input type="text" id="message-input" placeholder="Type your message...">
-    <button id="send-button">Send</button>
+<h2>Chat with {{ recipient.username }}</h2>
+<div id="chat-messages">
+    {% for message in messages %}
+        <p><strong>{{ message.sender.username }}:</strong> {{ message.content }}</p>
+    {% endfor %}
 </div>
+<form id="chat-form">
+    {% csrf_token %}
+    <input type="text" id="chat-message-input" required>
+    <button type="submit">Send</button>
+</form>
 
 <script>
+    const currentUser = "{{ request.user.username }}";
+    const recipientUsername = "{{ recipient.username }}";
+    const roomName = [currentUser, recipientUsername].sort().join('_');
     const chatSocket = new WebSocket(
-        'ws://' + window.location.host +
-        '/ws/chat/user_{{ request.user.username }}/'
+        'ws://' + window.location.host + '/ws/chat/user/' + roomName + '/'
     );
 
-    const messageInput = document.getElementById('message-input');
-    const sendButton = document.getElementById('send-button');
-    const messagesContainer = document.getElementById('messages');
+    const messageInput = document.getElementById('chat-message-input');
+    const chatForm = document.getElementById('chat-form');
+    const messagesContainer = document.getElementById('chat-messages');
 
     chatSocket.onmessage = function(e) {
         const data = JSON.parse(e.data);
-        const messageElement = document.createElement('div');
-        messageElement.textContent = `${data.sender}: ${data.message}`;
+        const messageElement = document.createElement('p');
+        messageElement.innerHTML = `<strong>${data.username}:</strong> ${data.message}`;
         messagesContainer.appendChild(messageElement);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
     };
 
-    sendButton.onclick = function() {
+    chatForm.onsubmit = function(e) {
+        e.preventDefault();
         const message = messageInput.value;
         chatSocket.send(JSON.stringify({
-            'message': message,
-            'type': 'user',
-            'recipient': '{{ recipient.username }}'
+            'message': message
         }));
         messageInput.value = '';
     };

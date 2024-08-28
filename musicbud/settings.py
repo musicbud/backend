@@ -64,7 +64,7 @@ ROOT_URLCONF = 'musicbud.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],
+        'DIRS': [os.path.join(BASE_DIR, 'app', 'templates')],  # Update this line
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -261,9 +261,12 @@ AUTHENTICATION_BACKENDS = [
 
 
 CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer'
-    }
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("localhost", 6379)],
+        },
+    },
 }
 
 
@@ -273,3 +276,8 @@ CHANNEL_LAYERS = {
 
 
 
+
+# Add these lines to customize the login template
+LOGIN_REDIRECT_URL = 'home'
+LOGIN_URL = 'login'
+LOGOUT_REDIRECT_URL = 'login'

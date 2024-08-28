@@ -4,8 +4,8 @@ from ..managers import CustomUserManager
 from ..db_models.parent_user import ParentUser
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-import asyncio
 from neomodel import db
+import asyncio
 
 class DjangoParentUser(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=150, unique=True)
@@ -23,19 +23,26 @@ class DjangoParentUser(AbstractBaseUser, PermissionsMixin):
         return self.username
 
     def sync_to_neo4j(self):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         try:
-            db.cypher_query(
-                """
-                MERGE (u:ParentUser {username: $username})
-                ON CREATE SET u.email = $email, u.password = $password
-                ON MATCH SET u.email = $email, u.password = $password
-                """,
-                {
-                    'username': self.username,
-                    'email': self.email,
-                    'password': self.password
-                }
-            )
+            loop.run_until_complete(self._sync_to_neo4j_async())
+        finally:
+            loop.close()
+
+    async def _sync_to_neo4j_async(self):
+        try:
+            neo4j_user = await ParentUser.nodes.get_or_none(username=self.username)
+            if neo4j_user is None:
+                neo4j_user = ParentUser(username=self.username)
+                created = True
+            else:
+                created = False
+            
+            neo4j_user.email = self.email
+            neo4j_user.password = self.password
+            await neo4j_user.save()
+            print(f"User {'created' if created else 'updated'} in Neo4j: {self.username}")
         except Exception as e:
             print(f"Error syncing to Neo4j: {e}")
 
