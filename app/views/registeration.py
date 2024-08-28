@@ -6,34 +6,58 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.files.storage import FileSystemStorage
 from django.http import JsonResponse
 from rest_framework.permissions import AllowAny
-from app.forms.registeration import RegistrationForm,LoginForm
+from app.forms.registeration import RegistrationForm, LoginForm
 from app.db_models.parent_user import ParentUser
 from neomodel.exceptions import UniqueProperty
 import logging
-
+from django.contrib.auth import authenticate, login, logout
+from django.shortcuts import render, redirect
+from django.views.decorators.http import require_http_methods
+from django.views import View
+import json
 
 logger = logging.getLogger('app')
+
+@require_http_methods(["GET", "POST"])
+def login_view(request):
+    if request.method == 'POST':
+        form = LoginForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            password = form.cleaned_data['password']
+            user = authenticate(request, username=username, password=password)
+            if user is not None:
+                login(request, user)
+                return redirect('user_list')  # Redirect to the chat user list after login
+            else:
+                return render(request, 'login.html', {'error': 'Invalid credentials'})
+    return render(request, 'login.html')
 
 class Register(APIView):
     permission_classes = [AllowAny]
 
     async def post(self, request):
-        form = RegistrationForm(request.POST, request.FILES)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        form = RegistrationForm(data)
         if form.is_valid():
             username = form.cleaned_data['username']
             email = form.cleaned_data['email']
             password = form.cleaned_data['password']
-            photo = form.cleaned_data['photo']
+            photo = request.FILES.get('photo')
 
             try:
                 # Check if username already exists
-                existing_user = await ParentUser.nodes.filter(username=username)
+                existing_user = await ParentUser.nodes.filter(username=username).first()
                 if existing_user:
                     logger.warning(f"Username already exists: {username}")
                     return JsonResponse({'error': 'Username already exists.'}, status=400)
 
                 # Check if email already exists
-                existing_email = await ParentUser.nodes.filter(email=email)
+                existing_email = await ParentUser.nodes.filter(email=email).first()
                 if existing_email:
                     logger.warning(f"Email already exists: {email}")
                     return JsonResponse({'error': 'Email already exists.'}, status=400)
@@ -61,7 +85,7 @@ class Register(APIView):
                 access_token = str(refresh.access_token)
                 refresh_token = str(refresh)
 
-                 # Extract token expiration times
+                # Extract token expiration times
                 access_token_expires_at = datetime.fromtimestamp(refresh.access_token.payload['exp'])
                 refresh_token_expires_at = datetime.fromtimestamp(refresh.payload['exp'])
 
@@ -75,7 +99,7 @@ class Register(APIView):
                 await user.save()  # Ensure tokens are saved
 
                 # Store user ID in the session
-                await sync_to_async(request.session.__setitem__)('user_id', user.id)
+                await sync_to_async(request.session.__setitem__)('user_id', user.uid)
 
                 logger.debug(f"User registered successfully: {username}")
                 return JsonResponse({
@@ -89,13 +113,14 @@ class Register(APIView):
             except UniqueProperty:
                 logger.warning(f"Username or email already exists: {username}, {email}")
                 return JsonResponse({'error': 'Username or email already exists.'}, status=400)
-            except Exception as e:
-                error_type = type(e).__name__
-                logger.error(f"Unexpected error during registration: {str(e)}")
-                return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
         else:
-            logger.warning(f"Invalid registration data: {form.errors}")
-            return JsonResponse({'error': 'Invalid data.', 'details': form.errors}, status=400)
+            logger.error(f"Form errors: {form.errors}")
+        return JsonResponse({'error': 'Invalid form data'}, status=400)
+
+class Logout(View):
+    def get(self, request):
+        logout(request)
+        return JsonResponse({'message': 'Logged out successfully'}, status=200)
 
 class Login(APIView):
     permission_classes = [AllowAny]
@@ -105,61 +130,10 @@ class Login(APIView):
         if form.is_valid():
             username = form.cleaned_data['username']
             password = form.cleaned_data['password']
-
-            try:
-                user = await ParentUser.nodes.get(username=username)
-                if check_password(password, user.password):
-                    refresh = RefreshToken.for_user(user)
-                    access_token = str(refresh.access_token)
-                    refresh_token = str(refresh)
-
-                     # Extract token expiration times
-                    access_token_expires_at = datetime.fromtimestamp(refresh.access_token.payload['exp'])
-                    refresh_token_expires_at = datetime.fromtimestamp(refresh.payload['exp'])
-
-                     # Save tokens to the user
-                    user.access_token = access_token
-                    user.refresh_token = refresh_token
-                    user.access_token_expires_at = access_token_expires_at.timestamp()
-                    user.refresh_token_expires_at = refresh_token_expires_at.timestamp()
-                    user.is_active = True
-                    await user.save()  # Ensure tokens are saved
-
-                    # Store user ID in the session
-                    await sync_to_async(request.session.__setitem__)('user_id', user.id)
-                    logger.debug(f"User logged in successfully: {username}")
-                    return JsonResponse({
-                        'message':'Logged in successfully.',
-                        'data':
-                        {
-                            'refresh_token': str(refresh_token),
-                            'access_token': str(access_token),
-                        }
-                    })
-                else:
-                    logger.warning(f"Invalid login attempt for username: {username}")
-                    return JsonResponse({'error': 'Invalid username or password.'}, status=400)
-            except ParentUser.DoesNotExist:
-                logger.warning(f"User does not exist: {username}")
-                return JsonResponse({'error': 'Invalid username or password.'}, status=400)
-        else:
-            logger.warning(f"Invalid login data: {form.errors}")
-            return JsonResponse({'error': 'Invalid data.', 'details': form.errors}, status=400)
-
-        logger.warning("Invalid login request method")
-        return JsonResponse({'error': 'Invalid request method.'}, status=405)
-
-
-class Logout(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        try:
-            request.session.flush()
-            request.user.auth_token.delete()
-            logger.debug(f"User logged out successfully: {request.user}")
-            return JsonResponse({'message': 'Logged out successfully.'}, status=200)
-        except Exception as e:
-            error_type = type(e).__name__
-            logger.error(f"Logout error: {str(e)}")
-            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
+            user = authenticate(request, username=username, password=password)
+            if user is not None:
+                login(request, user)
+                return JsonResponse({'message': 'Login successful'}, status=200)
+            else:
+                return JsonResponse({'error': 'Invalid credentials'}, status=400)
+        return JsonResponse({'error': 'Invalid form data'}, status=400)

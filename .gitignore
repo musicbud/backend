@@ -8,3 +8,5 @@ neo4j
 # env/
 ai/spotify_dataset.csv
 ai/.bash_profile
+myenv/
+

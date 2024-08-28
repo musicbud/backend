@@ -17,6 +17,14 @@
     const sendButton = document.getElementById('send-button');
     const messagesContainer = document.getElementById('messages');
 
+    // Authenticate the user
+    chatSocket.onopen = function(e) {
+        chatSocket.send(JSON.stringify({
+            'username': '{{ request.user.username }}',
+            'password': '{{ request.user.password }}'
+        }));
+    };
+
     chatSocket.onmessage = function(e) {
         const data = JSON.parse(e.data);
         if (data.error) {
@@ -31,6 +39,7 @@
     sendButton.onclick = function() {
         const message = messageInput.value;
         chatSocket.send(JSON.stringify({
+            'recipient': '{{ recipient.username }}',
             'message': message
         }));
         messageInput.value = '';

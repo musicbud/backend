@@ -2,6 +2,7 @@
 
 {% block content %}
 <div id="chat-container">
+    <h2>Chat with {{ recipient.username }}</h2>
     <div id="messages">
         {% for message in messages %}
             <div>{{ message.sender.username }}: {{ message.content }}</div>
@@ -12,26 +13,28 @@
 </div>
 
 <script>
-    const chatSocket = new WebSocket('ws://' + window.location.host + '/ws/chat/');
+    const chatSocket = new WebSocket(
+        'ws://' + window.location.host +
+        '/ws/chat/user_{{ request.user.username }}/'
+    );
+
     const messageInput = document.getElementById('message-input');
     const sendButton = document.getElementById('send-button');
     const messagesContainer = document.getElementById('messages');
 
     chatSocket.onmessage = function(e) {
         const data = JSON.parse(e.data);
-        if (data.error) {
-            console.error(data.error);
-        } else {
-            const messageElement = document.createElement('div');
-            messageElement.textContent = `${data.sender}: ${data.message}`;
-            messagesContainer.appendChild(messageElement);
-        }
+        const messageElement = document.createElement('div');
+        messageElement.textContent = `${data.sender}: ${data.message}`;
+        messagesContainer.appendChild(messageElement);
     };
 
     sendButton.onclick = function() {
         const message = messageInput.value;
         chatSocket.send(JSON.stringify({
-            'message': message
+            'message': message,
+            'type': 'user',
+            'recipient': '{{ recipient.username }}'
         }));
         messageInput.value = '';
     };

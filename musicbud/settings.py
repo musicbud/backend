@@ -18,25 +18,22 @@ ALLOWED_HOSTS = ['127.0.0.1','localhost','84.235.170.234']
 
 # Application definition
 INSTALLED_APPS = [
-    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'app',
+    'app',  # Ensure the App is in `INSTALLED_APPS`
     'chat',
     'ai',
-    'corsheaders',  # Add CORS headers
-    'rest_framework',  # Add Django REST framework
+    'channels',
+    'corsheaders',
+    'rest_framework',
     'rest_framework.authtoken',
     'django_neomodel',
     'adrf',
-    'rest_framework_simplejwt',
-
 ]
-
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -67,7 +64,7 @@ ROOT_URLCONF = 'musicbud.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': ['templates'],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -234,6 +231,29 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
+    }
+}
+
+
+
+
+
+
+
+
+
+AUTH_USER_MODEL = 'app.DjangoParentUser'
+
+
+
+
+
+
+
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer'
     }
 }
 

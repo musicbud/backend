@@ -1,6 +1,4 @@
-from neomodel import (AsyncStructuredNode, StringProperty, IntegerProperty,
-    UniqueIdProperty, AsyncRelationshipTo)
-from neomodel import (StringProperty, IntegerProperty, BooleanProperty, ArrayProperty, UniqueIdProperty)
+from neomodel import (AsyncStructuredNode, StringProperty, IntegerProperty, UniqueIdProperty, AsyncRelationshipTo,BooleanProperty,ArrayProperty)
 
 class User(AsyncStructuredNode):
     uid = UniqueIdProperty()
