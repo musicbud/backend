@@ -152,7 +152,7 @@ urlpatterns = [
     path('bud/artist', GetBudsByArtist.as_view(), name='get_buds_by_artist'),
     path('bud/track', GetBusdByTrack.as_view(), name='get_buds_by_track'),
     path('bud/genre', GetBudsByGenre.as_view(), name='get_buds_by_genre'),
-    path('bud/album', GetBudsByAlbum.as_view(), name='get_buds_by_album'),
+    path('bud/album/', GetBudsByAlbum.as_view(), name='get_buds_by_album'),
 
     path('bud/search', SearchUsers.as_view(), name='search_users'),
 
@@ -164,4 +164,11 @@ urlpatterns = [
 # Add error handling views
 handler404 = NotFoundView.as_view()
 handler500 = ErrorView.as_view()
+
+from django.contrib.auth import views as auth_views
+
+urlpatterns = [
+    # ... other URL patterns ...
+    path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
+]
 

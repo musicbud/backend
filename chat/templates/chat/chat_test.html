@@ -17,27 +17,33 @@
 
     <script>
         console.log("JavaScript is running");
-        const chatSocket = new WebSocket('ws://' + window.location.host + '/ws/chat/');
-        
-        chatSocket.onopen = function(e) {
+        const token = '{{ request.user.token }}';
+        const socket = new WebSocket('ws://127.0.0.1:8000/ws/chat/channel/dsa/');
+
+        socket.onopen = function(e) {
             console.log("WebSocket connection established");
+            // Send authentication message with a valid token
+            socket.send(JSON.stringify({
+                type: "authentication",
+                token: "your-valid-jwt-token-here"
+            }));
         };
 
-        chatSocket.onmessage = function(e) {
+        socket.onmessage = function(e) {
             const data = JSON.parse(e.data);
             console.log("Message received:", data.message);
             const messagesDiv = document.getElementById('messages');
             messagesDiv.innerHTML += '<p>' + data.message + '</p>';
         };
 
-        chatSocket.onclose = function(e) {
+        socket.onclose = function(e) {
             console.error('Chat socket closed unexpectedly');
         };
 
         document.getElementById('send-button').addEventListener('click', function() {
             const messageInput = document.getElementById('message-input');
             const message = messageInput.value;
-            chatSocket.send(JSON.stringify({
+            socket.send(JSON.stringify({
                 'message': message
             }));
             messageInput.value = '';

@@ -23,16 +23,14 @@ logger = logging.getLogger('app')
 @require_http_methods(["GET", "POST"])
 def login_view(request):
     if request.method == 'POST':
-        form = LoginForm(request.POST)
-        if form.is_valid():
-            username = form.cleaned_data['username']
-            password = form.cleaned_data['password']
-            user = authenticate(request, username=username, password=password)
-            if user is not None:
-                login(request, user)
-                return redirect('user_list')  # Redirect to the chat user list after login
-            else:
-                return render(request, 'login.html', {'error': 'Invalid credentials'})
+        username = request.POST['username']
+        password = request.POST['password']
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('home')  # Redirect to home page after successful login
+        else:
+            return render(request, 'login.html', {'error': 'Invalid credentials'})
     return render(request, 'login.html')
 
 class Register(View):

@@ -12,11 +12,10 @@ import django
 from django.core.asgi import get_asgi_application
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'musicbud.settings')
-django.setup()
+django.setup()  # This line ensures Django is fully initialized
 
 application = get_asgi_application()
 
-# Import your routing configuration after Django has been initialized
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 import chat.routing

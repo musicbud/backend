@@ -377,3 +377,12 @@ class SpotifyService(ServiceStrategy):
             logger.info('Disconnected user %s from Genre %s', user, genre.name)
         
         logger.info('Clearing user likes completed')
+
+    async def sync_user_to_neo4j(self, user):
+        logger.info(f"Syncing user {user.username} to Neo4j")
+        try:
+            await self.save_user_likes(user)
+            logger.info(f"Successfully synced user {user.username} to Neo4j")
+        except Exception as e:
+            logger.error(f"Error syncing user {user.username} to Neo4j: {e}")
+            raise

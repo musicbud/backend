@@ -14,6 +14,3 @@ application = ProtocolTypeRouter({
         )
     ),
 })
-
-async def asgi_application(scope, receive, send):
-    await application(scope, receive, send)

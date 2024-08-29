@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>{{ channel.name }} Dashboard</h1>
+
+<h2>Members</h2>
+<ul id="member-list">
+    {% for member in channel.members.all %}
+    <li>
+        {{ member.username }}
+        <button onclick="kickUser({{ channel.id }}, {{ member.id }})">Kick</button>
+        <button onclick="blockUser({{ channel.id }}, {{ member.id }})">Block</button>
+    </li>
+    {% endfor %}
+</ul>
+
+<h2>Pending Invitations</h2>
+<ul id="invitation-list">
+    {% for invitation in channel.invitation_set.filter(status='pending') %}
+    <li>
+        {{ invitation.user.username }}
+        <button onclick="handleInvitation({{ invitation.id }}, 'accept')">Accept</button>
+        <button onclick="handleInvitation({{ invitation.id }}, 'decline')">Decline</button>
+    </li>
+    {% endfor %}
+</ul>
+
+<h2>Moderators</h2>
+<ul id="moderator-list">
+    {% for moderator in channel.moderators.all %}
+    <li>{{ moderator.username }}</li>
+    {% endfor %}
+</ul>
+
+<h2>Add Moderator</h2>
+<select id="user-select">
+    {% for user in channel.members.all %}
+    {% if user not in channel.moderators.all %}
+    <option value="{{ user.id }}">{{ user.username }}</option>
+    {% endif %}
+    {% endfor %}
+</select>
+<button onclick="addModerator({{ channel.id }})">Add as Moderator</button>
+
+<script>
+function kickUser(channelId, userId) {
+    fetch(`/channel_admin/channel/${channelId}/kick_user/${userId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Remove user from the list
+                document.querySelector(`#member-list li:has(button[onclick="kickUser(${channelId}, ${userId})"])`).remove();
+            }
+        });
+}
+
+function blockUser(channelId, userId) {
+    fetch(`/channel_admin/channel/${channelId}/block_user/${userId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Remove user from the list
+                document.querySelector(`#member-list li:has(button[onclick="blockUser(${channelId}, ${userId})"])`).remove();
+            }
+        });
+}
+
+function handleInvitation(invitationId, action) {
+    fetch(`/channel_admin/handle_invitation/${invitationId}/${action}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Remove invitation from the list
+                document.querySelector(`#invitation-list li:has(button[onclick="handleInvitation(${invitationId}, '${action}')"])`).remove();
+            }
+        });
+}
+
+function addModerator(channelId) {
+    const userId = document.getElementById('user-select').value;
+    fetch(`/channel_admin/channel/${channelId}/add_moderator/${userId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Add user to moderator list and remove from select
+                const username = document.querySelector(`#user-select option[value="${userId}"]`).textContent;
+                document.getElementById('moderator-list').innerHTML += `<li>${username}</li>`;
+                document.querySelector(`#user-select option[value="${userId}"]`).remove();
+            }
+        });
+}
+</script>
+{% endblock %}

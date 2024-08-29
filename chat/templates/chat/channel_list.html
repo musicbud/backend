@@ -4,7 +4,8 @@
     <h1>Chat Channels</h1>
     <ul>
         {% for channel in channels %}
-            <li><a href="{% url 'channel_chat' room_name=channel.name %}">{{ channel.name }}</a></li>
+            <li><a href="{% url 'channel_chat' channel_name=channel.name %}">{{ channel.name }}</a></li>
         {% endfor %}
     </ul>
+    <a href="{% url 'create_channel' %}">Create New Channel</a>
 {% endblock %}

@@ -8,10 +8,11 @@ from chat.views import user_list  # Add this import
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('chat/', include('chat.urls')),
-    path('login/', login_view, name='login'),
+    path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('register/', register_view, name='register'),
     path('', home, name='home'),
     path('', include('app.urls')),
     path('users/', user_list, name='user_list'),  # Add this line
+    # Remove the channel_admin path from here
 ]
