@@ -3,122 +3,228 @@ from adrf.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-
-from ..db_models.user import User
 from ..middlewares.custom_token_auth import CustomTokenAuthentication
 from ..pagination import StandardResultsSetPagination
-
 import logging
+from neomodel import db
+from asgiref.sync import sync_to_async
+from app.db_models.parent_user import ParentUser
+import time
 
 logger = logging.getLogger('app')
 
-
-class GetBudsBaseView(APIView):
+class BudsBaseMixin:
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [IsAuthenticated]
 
-    attribute_name = None
-
     @method_decorator(csrf_exempt)
     async def dispatch(self, *args, **kwargs):
-        return await super(GetBudsBaseView, self).dispatch(*args, **kwargs)
+        return await super().dispatch(*args, **kwargs)
 
-    async def post(self, request):
-        if not self.attribute_name:
-            return JsonResponse({'error': 'Attribute name not specified'}, status=500)
+    async def get_user_node(self, request):
+        user_node = request.user
+        if not user_node:
+            logger.warning('User not found')
+            raise ValueError('User not found')
+        return user_node
 
-        try:
-            user_node = request.user
-
-            if not user_node:
-                logger.warning('User not found')
-                return JsonResponse({'error': 'User not found'}, status=404)
-
-            account_ids = [account.uid for account in user_node.associated_accounts.values() if account]
-            unique_buds = set()
-
-            items = await self._fetch_items(user_node)
-            logger.debug(f'Fetched items: {items}')
-
-            for item in items:
-                if hasattr(item, 'users'):
-                    item_users = await item.users.exclude(uid__in=account_ids).all()
-                    unique_buds.update(user.uid for user in item_users if hasattr(user, 'uid'))
-
-            logger.debug(f'Found {len(unique_buds)} unique buds for {self.attribute_name}.')
-
-            buds_data = await self._fetch_buds_data(unique_buds)
-
-            paginator = StandardResultsSetPagination()
-            paginated_buds = paginator.paginate_queryset(buds_data, request)
-
-            paginated_response = paginator.get_paginated_response(paginated_buds)
-            paginated_response.update({
-                'message': 'Fetched buds successfully.',
-                'code': 200,
-                'successful': True,
-            })
-
-            logger.info(f'Successfully fetched buds by {self.attribute_name} for user: uid={user_node.uid}, total buds fetched: {len(unique_buds)}')
-            return JsonResponse(paginated_response)
-
-        except Exception as e:
-            error_type = type(e).__name__
-            logger.error(f'Error in GetBudsBaseView: {e}', exc_info=True)
-            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
-
-    async def _fetch_items(self, user_node):
-        items = []
-        for account in user_node.associated_accounts.values():
-            if account:
-                if hasattr(account, self.attribute_name):
-                    account_items = await getattr(account, self.attribute_name).all()
-                    items.extend(account_items)
-                else:
-                    logger.warning(f'Account {account.uid} does not have {self.attribute_name} attribute.')
-        return items
-
-    async def _fetch_buds_data(self, unique_buds):
+    async def fetch_buds_data(self, buds_results):
         buds_data = []
-
         try:
-            for bud_uid in unique_buds:
-                bud = await User.nodes.get_or_none(uid=bud_uid)
-                if not bud:
-                    logger.warning(f'Bud not found: uid={bud_uid}')
-                    continue
-
-                bud_parent = await bud.parent.all()
-                parent_serialized = await self._serialize_parent(bud_parent)
-
-                buds_data.append({'bud': parent_serialized})
-
+            for bud in buds_results:
+                bud_uid, similarity_score = bud
+                parent_user = await ParentUser.nodes.get_or_none(uid=bud_uid)
+                if not parent_user:
+                    neo4j_user = await self.get_user_from_neo4j(bud_uid)
+                    if neo4j_user:
+                        parent_user = await self.sync_user_to_django(neo4j_user)
+                
+                if parent_user:
+                    serialized_parent = await parent_user.without_relations_serialize()
+                    buds_data.append({
+                        'bud': serialized_parent,
+                        'similarity_score': similarity_score
+                    })
+                else:
+                    logger.warning(f"User with uid {bud_uid} not found in both Django and Neo4j")
+            logger.info(f"Fetched data for {len(buds_data)} out of {len(buds_results)} buds")
         except Exception as e:
-            logger.error(f'Error in _fetch_buds_data: {e}', exc_info=True)
-
-        logger.debug(f'Prepared buds data list with {len(buds_data)} entries.')
+            logger.error(f'Error in fetch_buds_data: {e}', exc_info=True)
         return buds_data
 
-    async def _serialize_parent(self, bud_parent):
-        serialized_data = []
-        for parent in bud_parent:
-            serialized_data.append(await parent.without_relations_serialize())
-        return serialized_data
+    async def get_user_from_neo4j(self, uid):
+        query = """
+        MATCH (u:ParentUser {uid: $uid})
+        RETURN u.uid AS uid, u.username AS username, u.is_active AS is_active
+        """
+        results, _ = await sync_to_async(db.cypher_query)(query, {'uid': uid})
+        if results:
+            user_data = results[0]
+            return {
+                'uid': user_data[0],
+                'username': user_data[1],
+                'is_active': user_data[2]
+            }
+        return None
 
+    async def sync_user_to_django(self, neo4j_user):
+        try:
+            django_user, created = await sync_to_async(ParentUser.nodes.get_or_create)(
+                uid=neo4j_user['uid'],
+                defaults={
+                    'username': neo4j_user['username'],
+                    'is_active': neo4j_user['is_active']
+                }
+            )
+            if created:
+                logger.info(f"Created new ParentUser for uid {neo4j_user['uid']}")
+            return django_user
+        except Exception as e:
+            logger.error(f"Error syncing user to Django: {e}", exc_info=True)
+            return None
 
-class GetBudsByTopArtists(GetBudsBaseView):
-    attribute_name = 'top_artists'
+    async def paginate_response(self, request, buds_data):
+        paginator = StandardResultsSetPagination()
+        paginated_buds = paginator.paginate_queryset(buds_data, request)
+        paginated_response = paginator.get_paginated_response(paginated_buds)
+        paginated_response.update({
+            'message': 'Fetched buds successfully.' if buds_data else 'No buds found.',
+            'code': 200,
+            'successful': True,
+        })
+        logger.info(f"Paginated response: {paginated_response}")  # Add this line
+        return paginated_response
 
+    async def post(self, request):
+        start_time = time.time()
+        try:
+            user_node = await self.get_user_node(request)
+            buds = await self.get_buds_by_top(user_node)
+            
+            logger.info(f"Raw buds data: {buds}")  # Add this line
+            
+            buds_data = await self.fetch_buds_data(buds)
+            
+            logger.info(f"Processed buds data: {buds_data}")  # Add this line
+            
+            response = await self.paginate_response(request, buds_data)
 
-class GetBudsByTopTracks(GetBudsBaseView):
-    attribute_name = 'top_tracks'
+            end_time = time.time()
+            logger.info(f'Successfully fetched {len(buds)} buds for user: uid={user_node.uid} in {end_time - start_time:.2f} seconds')
+            return JsonResponse(response)
+        except ValueError as e:
+            return JsonResponse({'error': str(e)}, status=404)
+        except Exception as e:
+            error_type = type(e).__name__
+            logger.error(f'Error in {self.__class__.__name__}: {e}', exc_info=True)
+            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 
+class GetBudsByTopArtists(BudsBaseMixin, APIView):
+    async def get_buds_by_top(self, user_node):
+        try:
+            buds_query = """
+            MATCH (u:ParentUser {uid: $user_uid})-[:CONNECTED_TO_SPOTIFY|CONNECTED_TO_LASTFM|CONNECTED_TO_YTMUSIC]->(ua)-[:TOP_ARTIST]->(artist)
+            MATCH (other:ParentUser)-[:CONNECTED_TO_SPOTIFY|CONNECTED_TO_LASTFM|CONNECTED_TO_YTMUSIC]->(oa)-[:TOP_ARTIST]->(artist)
+            WHERE other.uid <> u.uid AND other.is_active = true
+            WITH DISTINCT other, count(DISTINCT artist) AS common_count
+            ORDER BY common_count DESC
+            LIMIT 100
+            RETURN other.uid AS bud_uid, common_count AS similarity_score
+            """
+            buds_results, _ = await sync_to_async(db.cypher_query)(buds_query, {'user_uid': user_node.uid})
+            
+            if len(buds_results) < 10:
+                logger.info(f"Found only {len(buds_results)} buds for user {user_node.uid}. Falling back to genre-based matching.")
+                genre_query = """
+                MATCH (u:ParentUser {uid: $user_uid})-[:CONNECTED_TO_SPOTIFY|CONNECTED_TO_LASTFM|CONNECTED_TO_YTMUSIC]->(ua)-[:LIKES_GENRE]->(genre)
+                MATCH (other:ParentUser)-[:CONNECTED_TO_SPOTIFY|CONNECTED_TO_LASTFM|CONNECTED_TO_YTMUSIC]->(oa)-[:LIKES_GENRE]->(genre)
+                WHERE other.uid <> u.uid AND other.is_active = true
+                WITH DISTINCT other, count(DISTINCT genre) AS common_count
+                ORDER BY common_count DESC
+                LIMIT 50
+                RETURN other.uid AS bud_uid, common_count AS similarity_score
+                """
+                genre_results, _ = await sync_to_async(db.cypher_query)(genre_query, {'user_uid': user_node.uid})
+                buds_results.extend(genre_results)
+            
+            logger.info(f"Found {len(buds_results)} potential buds for user {user_node.uid}")
+            
+            # Ensure the results are in the correct format
+            formatted_results = [(str(bud[0]), float(bud[1])) for bud in buds_results]
+            
+            return formatted_results
+        except Exception as e:
+            logger.error(f"Error in get_buds_by_top for user uid={user_node.uid}: {str(e)}", exc_info=True)
+            return []
 
-class GetBudsByTopGenres(GetBudsBaseView):
-    attribute_name = 'top_genres'
+class GetBudsByTopTracks(BudsBaseMixin, APIView):
+    async def get_buds_by_top(self, user_node):
+        try:
+            buds_query = """
+            MATCH (u:ParentUser {uid: $user_uid})-[:CONNECTED_TO_SPOTIFY|CONNECTED_TO_LASTFM|CONNECTED_TO_YTMUSIC]->(ua)-[:TOP_TRACK]->(track)
+            MATCH (other:ParentUser)-[:CONNECTED_TO_SPOTIFY|CONNECTED_TO_LASTFM|CONNECTED_TO_YTMUSIC]->(oa)-[:TOP_TRACK]->(track)
+            WHERE other.uid <> u.uid AND other.is_active = true
+            WITH DISTINCT other, count(DISTINCT track) AS common_count
+            ORDER BY common_count DESC
+            LIMIT 50
+            RETURN other.uid AS bud_uid, common_count AS similarity_score
+            """
+            buds_results, _ = await sync_to_async(db.cypher_query)(buds_query, {'user_uid': user_node.uid})
+            return buds_results
+        except Exception as e:
+            logger.error(f"Error in get_buds_by_top for user uid={user_node.uid}: {str(e)}", exc_info=True)
+            return []
 
-class GetBudsByTopAnime(GetBudsBaseView):
-    attribute_name = 'top_anime'
+class GetBudsByTopGenres(BudsBaseMixin, APIView):
+    async def get_buds_by_top(self, user_node):
+        try:
+            buds_query = """
+            MATCH (u:ParentUser {uid: $user_uid})-[:CONNECTED_TO_SPOTIFY|CONNECTED_TO_LASTFM|CONNECTED_TO_YTMUSIC]->(ua)-[:LIKES_GENRE]->(genre)
+            MATCH (other:ParentUser)-[:CONNECTED_TO_SPOTIFY|CONNECTED_TO_LASTFM|CONNECTED_TO_YTMUSIC]->(oa)-[:LIKES_GENRE]->(genre)
+            WHERE other.uid <> u.uid AND other.is_active = true
+            WITH DISTINCT other, count(DISTINCT genre) AS common_count
+            ORDER BY common_count DESC
+            LIMIT 50
+            RETURN other.uid AS bud_uid, common_count AS similarity_score
+            """
+            buds_results, _ = await sync_to_async(db.cypher_query)(buds_query, {'user_uid': user_node.uid})
+            return buds_results
+        except Exception as e:
+            logger.error(f"Error in get_buds_by_top for user uid={user_node.uid}: {str(e)}", exc_info=True)
+            return []
 
-class GetBudsByTopManga(GetBudsBaseView):
-    attribute_name = 'top_manga'
+class GetBudsByTopManga(BudsBaseMixin, APIView):
+    async def get_buds_by_top(self, user_node):
+        try:
+            buds_query = """
+            MATCH (u:ParentUser {uid: $user_uid})-[:CONNECTED_TO_MAL]->(ma)-[:TOP_MANGA]->(manga)
+            MATCH (other:ParentUser)-[:CONNECTED_TO_MAL]->(oma)-[:TOP_MANGA]->(manga)
+            WHERE other.uid <> u.uid AND other.is_active = true
+            WITH DISTINCT other, count(DISTINCT manga) AS common_count
+            ORDER BY common_count DESC
+            LIMIT 50
+            RETURN other.uid AS bud_uid, common_count AS similarity_score
+            """
+            buds_results, _ = await sync_to_async(db.cypher_query)(buds_query, {'user_uid': user_node.uid})
+            return buds_results
+        except Exception as e:
+            logger.error(f"Error in get_buds_by_top for user uid={user_node.uid}: {str(e)}", exc_info=True)
+            return []
+
+class GetBudsByTopAnime(BudsBaseMixin, APIView):
+    async def get_buds_by_top(self, user_node):
+        try:
+            buds_query = """
+            MATCH (u:ParentUser {uid: $user_uid})-[:CONNECTED_TO_MAL]->(ma)-[:TOP_ANIME]->(anime)
+            MATCH (other:ParentUser)-[:CONNECTED_TO_MAL]->(oma)-[:TOP_ANIME]->(anime)
+            WHERE other.uid <> u.uid AND other.is_active = true
+            WITH DISTINCT other, count(DISTINCT anime) AS common_count
+            ORDER BY common_count DESC
+            LIMIT 50
+            RETURN other.uid AS bud_uid, common_count AS similarity_score
+            """
+            buds_results, _ = await sync_to_async(db.cypher_query)(buds_query, {'user_uid': user_node.uid})
+            return buds_results
+        except Exception as e:
+            logger.error(f"Error in get_buds_by_top for user uid={user_node.uid}: {str(e)}", exc_info=True)
+            return []

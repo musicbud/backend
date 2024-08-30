@@ -75,7 +75,7 @@ from .views.get_buds_by_liked import (
 
 from .views.get_buds_by_id import (
     GetBudsByArtist,
-    GetBusdByTrack,
+    GetBudsByTrack,
     GetBudsByGenre,
     GetBudsByAlbum
 )
@@ -154,7 +154,7 @@ urlpatterns = [
     path('bud/top/manga', GetBudsByTopManga.as_view(), name='get_buds_by_top_manga'),
     path('bud/played/tracks', GetBudsByPlayedTracks.as_view(), name='get_buds_by_played_tracks'),
     path('bud/artist', GetBudsByArtist.as_view(), name='get_buds_by_artist'),
-    path('bud/track', GetBusdByTrack.as_view(), name='get_buds_by_track'),
+    path('bud/track', GetBudsByTrack.as_view(), name='get_buds_by_track'),
     path('bud/genre', GetBudsByGenre.as_view(), name='get_buds_by_genre'),
     path('bud/album', GetBudsByAlbum.as_view(), name='get_buds_by_album'),
   
