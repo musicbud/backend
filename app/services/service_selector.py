@@ -1,9 +1,8 @@
-
-
 from .lastfm_service import LastFmService
 from .spotify_service import SpotifyService
 from .ytmusic_service import YTmusicService 
 from .mal_service import MalService 
+from .imdb_service import ImdbService
 
 from django.http import JsonResponse  
 from django.conf import settings
@@ -20,6 +19,8 @@ def get_service(service, request=None):
             service_instance = YTmusicService(settings.YTMUSIC_CLIENT_ID, settings.YTMUSIC_CLIENT_SECRET, settings.YTMUSIC_REDIRECT_URI)
         elif service == 'mal':
             service_instance = MalService(settings.MAL_CLIENT_ID, settings.MAL_CLIENT_SECRET, settings.MAL_REDIRECT_URI,settings.MAL_SCOPE,request)
+        elif service == 'imdb':
+            service_instance = ImdbService()
         else:
             return JsonResponse({'error': 'Unsupported service'}, status=400)
         return service_instance

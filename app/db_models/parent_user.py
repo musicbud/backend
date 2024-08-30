@@ -11,6 +11,7 @@ class ParentUser(StructuredNode):
     ytmusic_account = RelationshipTo('app.db_models.ytmusic.ytmusic_user.YtmusicUser', 'CONNECTED_TO_YTMUSIC')
     lastfm_account = RelationshipTo('app.db_models.lastfm.lastfm_user.LastfmUser', 'CONNECTED_TO_LASTFM')
     mal_account = RelationshipTo('app.db_models.mal.mal_user.MalUser', 'CONNECTED_TO_MAL')
+    imdb_account = RelationshipTo('app.db_models.imdb.imdb_user.ImdbUser', 'CONNECTED_TO_IMDB')
 
     @classmethod
     async def create_user(cls, username, email, access_token):
