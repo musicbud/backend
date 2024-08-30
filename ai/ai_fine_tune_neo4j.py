@@ -219,6 +219,7 @@ def map_data_to_indices(liked_artist_names, liked_track_names):
 
 async def get_recommendations(user_id, item_features_matrix_sparse, user_features_matrix_sparse):
     try:
+        # Fetch the liked artists and tracks for the user
         liked_artist_names, liked_track_names = await get_custom_user_data(user_id)
         artist_indices, track_indices = map_data_to_indices(liked_artist_names, liked_track_names)
 
@@ -237,6 +238,7 @@ async def get_recommendations(user_id, item_features_matrix_sparse, user_feature
         user_feature_vector[user_item_indices] = 1
 
         logger.debug(f"User Feature Vector Shape: {user_feature_vector.shape}")
+        logger.debug(f"User Feature Vector: {user_feature_vector}")
 
         # Predict scores for all items for the given user
         user_index = user_dict[user_id]  # Map the user_id to the user index in the LightFM model
@@ -245,12 +247,16 @@ async def get_recommendations(user_id, item_features_matrix_sparse, user_feature
         # Use LightFM model to predict scores for all items
         item_scores = model_artist.predict(user_index, item_ids)
 
+        # Sort items by predicted scores
         top_items = np.argsort(item_scores)[::-1]
-
         logger.debug(f"Top Items: {top_items}")
 
-        recommended_artists = [item_dict_artist_reversed[idx] for idx in top_items[:10] if idx in item_dict_artist_reversed]
-        recommended_tracks = [item_dict_track_reversed[idx - len(item_dict_artist)] for idx in top_items[:10] if (idx - len(item_dict_artist)) in item_dict_track_reversed]
+        # Extract top recommended artists and tracks
+        recommended_artists = [item_dict_artist_reversed.get(idx) for idx in top_items[:10] if idx in item_dict_artist_reversed]
+        recommended_tracks = [item_dict_track_reversed.get(idx - len(item_dict_artist)) for idx in top_items[:10] if (idx - len(item_dict_artist)) in item_dict_track_reversed]
+
+        logger.debug(f"Recommended Artists: {recommended_artists}")
+        logger.debug(f"Recommended Tracks: {recommended_tracks}")
 
         # Recommend users based on percent match
         recommended_users = []
@@ -258,19 +264,25 @@ async def get_recommendations(user_id, item_features_matrix_sparse, user_feature
             if other_user_id == user_id:
                 continue
 
-            # Ensure the other user's feature vector is constructed with the same number of features
-            other_user_feature_vector = np.zeros(num_features)
-            other_user_feature_vector[user_features_matrix_sparse[other_user_index].nonzero()[1]] = 1
+            # Get the other user's liked items
+            other_liked_artist_names, other_liked_track_names = await get_custom_user_data(other_user_id)
+            other_artist_indices, other_track_indices = map_data_to_indices(other_liked_artist_names, other_liked_track_names)
+            other_user_item_indices = other_artist_indices + [idx + len(item_dict_artist) for idx in other_track_indices]
 
-            logger.debug(f"Other User Feature Vector Shape: {other_user_feature_vector.shape}")
+            # Create feature vectors for both users
+            current_user_vector = np.zeros(num_features)
+            current_user_vector[user_item_indices] = 1
+            other_user_vector = np.zeros(num_features)
+            other_user_vector[other_user_item_indices] = 1
 
-            # Ensure both vectors have the same shape
-            if user_feature_vector.shape != other_user_feature_vector.shape:
-                logger.error(f"Shape mismatch: user_feature_vector.shape {user_feature_vector.shape} != other_user_feature_vector.shape {other_user_feature_vector.shape}")
-                continue
+            # Calculate Jaccard similarity
+            intersection = np.logical_and(current_user_vector, other_user_vector)
+            union = np.logical_or(current_user_vector, other_user_vector)
+            jaccard_sim = np.sum(intersection) / np.sum(union) if np.sum(union) > 0 else 0
 
-            match_score = np.dot(user_feature_vector, other_user_feature_vector)
-            match_percentage = match_score / np.sum(user_feature_vector) * 100
+            match_percentage = jaccard_sim * 100
+
+            logger.debug(f"Match Percentage for {other_user_id}: {match_percentage}")
 
             if match_percentage > 0:
                 recommended_users.append((other_user_id, match_percentage))
@@ -295,9 +307,10 @@ if __name__ == "__main__":
 
     user_id = '71599a394df141c387ec6368ac79c9c3'  # replace with actual user ID
 
-    recommended_users,recommended_artists, recommended_tracks = loop.run_until_complete(get_recommendations(
+    recommended_artists, recommended_tracks, recommended_users = loop.run_until_complete(get_recommendations(
         user_id, item_features_matrix_sparse, user_features_matrix_sparse
     ))
 
     logger.info(f"Recommended Artists: {recommended_artists}")
     logger.info(f"Recommended Tracks: {recommended_tracks}")
+    logger.info(f"Recommended Users: {recommended_users}")

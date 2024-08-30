@@ -3,6 +3,7 @@ __pycache__/
 musicbud/__pycache__/
 chat/__pycache__/
 *.log
+neo4j
 # venv/
 # env/
 ai/spotify_dataset.csv
