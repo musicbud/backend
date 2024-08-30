@@ -244,3 +244,38 @@ LOGGING = {
 
 
 
+# For development (allows all origins):
+CORS_ALLOW_ALL_ORIGINS = True
+
+# For production (specify allowed origins):
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:8000",
+#     "http://127.0.0.1:9000",
+#     "https://yourdomain.com",
+# ]
+
+# If you need to allow credentials (cookies, authorization headers)
+CORS_ALLOW_CREDENTIALS = True
+
+# If you need to allow specific HTTP methods
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# If you need to allow specific headers
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
