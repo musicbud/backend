@@ -10,6 +10,7 @@ from app.db_models.spotify.spotify_artist import SpotifyArtist
 from app.db_models.spotify.spotify_track import SpotifyTrack
 from app.db_models.spotify.spotify_genre import SpotifyGenre
 from app.db_models.spotify.spotify_album import SpotifyAlbum
+from app.db_models.spotify.spotify_image import SpotifyImage
 
 logger = logging.getLogger('app')
 
@@ -229,6 +230,8 @@ class SpotifyService(ServiceStrategy):
                         genres=artist_data['genres'],
                         spotify_url=artist_data['external_urls']['spotify']
                     ).save()
+                    # Add images for the artist
+                    await self.add_images(node, artist_data.get('images', []))
                 if relation_type == "top":
                     await user.top_artists.connect(node)
                     await user.likes_artists.connect(node)
@@ -250,6 +253,8 @@ class SpotifyService(ServiceStrategy):
                         duration_ms=track_data['duration_ms'],
                         spotify_url=track_data['external_urls']['spotify']
                     ).save()
+                    # Add images for the track's album
+                    await self.add_images(node, track_data['album'].get('images', []))
                 if relation_type == "top":
                     await user.top_tracks.connect(node)
                     await user.likes_tracks.connect(node)
@@ -274,6 +279,8 @@ class SpotifyService(ServiceStrategy):
                         release_date=album_data['release_date'],
                         spotify_url=album_data['external_urls']['spotify']
                     ).save()
+                    # Add images for the album
+                    await self.add_images(node, album_data.get('images', []))
                 if relation_type == "top":
                     await user.likes_albums.connect(node)
                     logger.info('Connected user %s with Top Album %s', user, album_data['name'])
@@ -294,6 +301,17 @@ class SpotifyService(ServiceStrategy):
                 elif relation_type == "liked":
                     await user.likes_genres.connect(node)
                     logger.info('Connected user %s with Liked Genre %s', user, genre_data)
+
+    async def add_images(self, node, images):
+        logger.debug('Adding images for node: %s', node)
+        for image_data in images:
+            image_node = await SpotifyImage(
+                url=image_data['url'],
+                height=image_data.get('height'),
+                width=image_data.get('width')
+            ).save()
+            await node.images.connect(image_node)
+        logger.info('Added %d images for node: %s', len(images), node)
 
     async def save_user_likes(self, user):
         logger.debug('Saving user likes for user=%s', user)
