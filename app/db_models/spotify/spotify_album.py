@@ -1,20 +1,24 @@
-from neomodel import  StringProperty,IntegerProperty,ArrayProperty
+from neomodel import StructuredNode, StringProperty, IntegerProperty, AsyncRelationshipTo, ArrayProperty, AsyncRelationshipFrom
 from ..album import Album
 
 class SpotifyAlbum(Album):
-    spotify_id = StringProperty()
+    spotify_id = StringProperty(unique_index=True)
+    name = StringProperty(required=True)
     href = StringProperty()
     label = StringProperty()
     album_type = StringProperty()
     release_date = StringProperty()
+    release_date_precision = StringProperty()
     total_tracks = IntegerProperty()
     uri = StringProperty()
     spotify_url = StringProperty()
-    images = ArrayProperty()
     upc= StringProperty()
     total_tracks=IntegerProperty()
-    image_heights = ArrayProperty()
-    image_widthes = ArrayProperty()
+
+    artists = AsyncRelationshipTo('app.db_models.spotify.spotify_artist.SpotifyArtist', 'CREATED_BY')
+    tracks = AsyncRelationshipFrom('app.db_models.spotify.spotify_track.SpotifyTrack', 'BELONGS_TO')
+    images = AsyncRelationshipTo('app.db_models.spotify.spotify_image.SpotifyImage', 'HAS_IMAGE')
+
     
     async def serialize(self):
         return {
@@ -33,4 +37,5 @@ class SpotifyAlbum(Album):
             'image_widthes' : self.image_widthes,
             'artists': [await artist.serialize() for artist in await self.artists.all()],
             'tracks': [await track.serialize() for track in await self.tracks.all()],
+            'images': [await image.serialize() for image in await self.images.all()],
         }

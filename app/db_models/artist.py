@@ -1,11 +1,9 @@
 from .liked_item import LikedItem
-
-from neomodel import (AsyncStructuredNode, StringProperty, IntegerProperty,
-    UniqueIdProperty, AsyncRelationshipTo, AsyncRelationshipFrom)
+from neomodel import (StringProperty, IntegerProperty, AsyncRelationshipTo, AsyncRelationshipFrom)
 
 
 class Artist(LikedItem):
-    name = StringProperty( max_length=255)
+    name = StringProperty(max_length=255)
     
     top_items = AsyncRelationshipFrom('.user', 'TOP_ARTIST')
     library_items = AsyncRelationshipFrom('.user', 'LIBRARY_ITEM')
@@ -14,9 +12,10 @@ class Artist(LikedItem):
     tracks = AsyncRelationshipFrom('.track.Track', 'PERFORMED_BY')
     albums = AsyncRelationshipFrom('.album.Album', 'CONTRIBUTED_TO')
 
-    def serialize(self):
-        return {
-            'uid': self.uid,
+    async def serialize(self):
+        base_data = await super().serialize()
+        artist_data = {
             'name': self.name,
-            }
-    
+        }
+        return {**base_data, **artist_data}
+

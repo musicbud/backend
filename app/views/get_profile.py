@@ -5,6 +5,8 @@ from ..middlewares.custom_token_auth import CustomTokenAuthentication
 from ..pagination import StandardResultsSetPagination
 
 import logging
+import traceback
+from pprint import pformat
 
 logger = logging.getLogger('app')
 
@@ -30,7 +32,20 @@ class GetItemsMixin(APIView):
                         account_items = await items_method.all()
                         items.extend(account_items)
 
-            serialized_items = [await item.serialize() for item in items if hasattr(item, 'serialize')]
+            logger.debug(f"Fetched items: {pformat(items)}")
+
+            serialized_items = []
+            for item in items:
+                logger.debug(f"Processing item: {pformat(item)}")
+                logger.debug(f"Item type: {type(item)}")
+                logger.debug(f"Item attributes: {dir(item)}")
+                if isinstance(item, dict):
+                    serialized_items.append(item)
+                elif hasattr(item, 'serialize'):
+                    serialized_item = await item.serialize()  # Remove await here
+                    serialized_items.append(serialized_item)
+                else:
+                    logger.warning(f"Item {item} is not a dict and does not have a serialize method")
 
             paginator = StandardResultsSetPagination()
             paginated_items = paginator.paginate_queryset(serialized_items, request)
@@ -47,7 +62,8 @@ class GetItemsMixin(APIView):
 
         except Exception as e:
             error_type = type(e).__name__
-            logger.error(f'Error fetching {self.item_type}: {e}', exc_info=True)
+            logger.error(f'Error fetching {self.item_type}: {e}')
+            logger.error(traceback.format_exc())
             return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 
 class GetTopArtists(GetItemsMixin):

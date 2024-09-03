@@ -35,7 +35,7 @@ class CommonItemsMixin:
                 ELSE false
             END
         )
-        RETURN DISTINCT item
+        RETURN DISTINCT item, item.image as image
         """
         params = {
             'user_uid': user.uid,
@@ -48,14 +48,17 @@ class CommonItemsMixin:
         if not results:
             return None
         
-        common_items = [item[0] for item in results]
-        
         serialized_items = []
-        for item in common_items:
+        for item, image in results:
             if hasattr(item, 'serialize'):
                 serialized_item = await sync_to_async(item.serialize)()
             else:
                 serialized_item = dict(item)
+            
+            # Add image to the serialized item if available
+            if image:
+                serialized_item['image'] = image
+            
             serialized_items.append(serialized_item)
 
         return serialized_items

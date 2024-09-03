@@ -2,10 +2,14 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
+from neomodel import config as neomodel_config
 
 load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Neo4j database settings
+NEOMODEL_NEO4J_BOLT_URL = os.environ.get('NEOMODEL_NEO4J_BOLT_URL', 'bolt://neo4j:password@localhost:7687')
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'your-secret-key'
@@ -25,7 +29,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'app',
+    'app.apps.AppConfig',  # Use this instead of 'app'
     'chat',
     'ai',
     'corsheaders',  # Add CORS headers
@@ -34,9 +38,7 @@ INSTALLED_APPS = [
     'django_neomodel',
     'adrf',
     'rest_framework_simplejwt',
-
 ]
-
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -51,11 +53,9 @@ MIDDLEWARE = [
 ]
 
 REST_FRAMEWORK = {
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
-    ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'app.middlewares.custom_token_auth.CustomTokenAuthentication'
+        'app.middlewares.custom_token_auth.CustomTokenAuthentication',
+        # ... other authentication classes ...
     ],
     'DEFAULT_PAGINATION_CLASS': 'app.pagination.StandardResultsSetPagination',
     'PAGE_SIZE': 10,  
@@ -131,9 +131,11 @@ SIMPLE_JWT = {
 }
 # Neo4j database settings
 
-NEOMODEL_NEO4J_BOLT_URL = os.environ.get('NEOMODEL_NEO4J_BOLT_URL')
-DATABASE_MAX_CONNECTION_POOL_SIZE = 1000
-
+NEOMODEL_NEO4J_BOLT_URL = os.environ.get('NEOMODEL_NEO4J_BOLT_URL', 'bolt://neo4j:12345678@193.123.61.167:7687')
+NEOMODEL_SIGNALS = True
+NEOMODEL_FORCE_TIMEZONE = False
+NEOMODEL_ENCRYPTED_CONNECTION = True
+NEOMODEL_MAX_CONNECTION_POOL_SIZE = 1000
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
@@ -279,3 +281,7 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ]
+
+from neomodel import config
+from app.db_models.node_resolver import resolve_node_class
+config.NODE_CLASS_REGISTRY = resolve_node_class

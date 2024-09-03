@@ -1,5 +1,5 @@
 from neomodel import ( StringProperty)
-from ..track import Track
+from app.db_models.track import Track
 
 
 class LastfmTrack(Track):

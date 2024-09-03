@@ -102,20 +102,34 @@ class SpotifyUser(User):
             likes_genres = await self.likes_genres.all()
             likes_albums = await self.likes_albums.all()
             saved_albums = await self.saved_albums.all()
+            played_tracks = await self.played_tracks.all()
+
+            logger.debug(f"Serialized data for user {self.username}:")
+            logger.debug(f"Top artists: {len(top_artists)}")
+            logger.debug(f"Top tracks: {len(top_tracks)}")
+            logger.debug(f"Top genres: {len(top_genres)}")
+            logger.debug(f"Likes artists: {len(likes_artists)}")
+            logger.debug(f"Likes tracks: {len(likes_tracks)}")
+            logger.debug(f"Likes genres: {len(likes_genres)}")
+            logger.debug(f"Likes albums: {len(likes_albums)}")
+            logger.debug(f"Saved albums: {len(saved_albums)}")
+            logger.debug(f"Played tracks: {len(played_tracks)}")
 
             return {
                 'uid': self.uid,
                 'spotify_id': self.spotify_id,
                 'username': self.username,
-                'top_artists': [await artist.serialize() for artist in top_artists] if top_artists else [],
-                'top_tracks': [await track.serialize() for track in top_tracks] if top_tracks else [],
-                'top_genres': [await genre.serialize() for genre in top_genres] if top_genres else [],
-                'likes_artists': [await artist.serialize() for artist in likes_artists] if likes_artists else [],
-                'likes_tracks': [await track.serialize() for track in likes_tracks] if likes_tracks else [],
-                'likes_genres': [await genre.serialize() for genre in likes_genres] if likes_genres else [],
-                'likes_albums': [await album.serialize() for album in likes_albums] if likes_albums else [],
-                'saved_albums': [await album.serialize() for album in saved_albums] if saved_albums else [],
+                'top_artists': [await artist.serialize() for artist in top_artists],
+                'top_tracks': [await track.serialize() for track in top_tracks],
+                'top_genres': [await genre.serialize() for genre in top_genres],
+                'likes_artists': [await artist.serialize() for artist in likes_artists],
+                'likes_tracks': [await track.serialize() for track in likes_tracks],
+                'likes_genres': [await genre.serialize() for genre in likes_genres],
+                'likes_albums': [await album.serialize() for album in likes_albums],
+                'saved_albums': [await album.serialize() for album in saved_albums],
+                'played_tracks': [await track.serialize() for track in played_tracks],
             }
         except Exception as e:
             logger.error(f"Error serializing object: {e}")
+            logger.error(traceback.format_exc())
             return {}

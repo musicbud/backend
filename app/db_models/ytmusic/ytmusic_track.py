@@ -1,6 +1,6 @@
 from neomodel import StringProperty,ArrayProperty
 
-from ..track import Track
+from app.db_models.track import Track
 
 
 class YtmusicTrack(Track):

@@ -1,4 +1,3 @@
-print("Debug: Loading get_buds_by_liked_aio.py")
 from django.http import JsonResponse
 from adrf.views import APIView
 from rest_framework.permissions import IsAuthenticated

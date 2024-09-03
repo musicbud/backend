@@ -1,9 +1,9 @@
-
-from neomodel import StringProperty
+from neomodel import StructuredNode, StringProperty
 from ..genre import Genre
 
-class LastfmGenre(Genre):
-    name = StringProperty( min_length=1, max_length=255)
+class LastfmGenre(StructuredNode):
+    __label__ = 'LastfmGenre'
+    name = StringProperty(unique_index=True)
     
     async def serialize(self):
         return {

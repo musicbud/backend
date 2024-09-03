@@ -12,7 +12,7 @@ from ..db_models.mal.mal_user import MalUser
 from asgiref.sync import sync_to_async
 
 from ..forms.callback import CodeForm
-from ..services.service_selector import get_service
+from app.services.service_selector import get_service_instance
 import logging
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,8 @@ class Login(APIView):
         service = request.GET.get('service', 'spotify')
         try:
             logger.info(f"Generating authorization link for service: {service}")
-            authorization_link = await get_service(service,request).create_authorize_url()
+            service_instance = get_service_instance(service)
+            authorization_link = await service_instance.create_authorize_url()
             logger.info("Generated authorization link successfully")
             return JsonResponse({
                 'message': 'Generated authorization link successfully.',
@@ -37,12 +38,12 @@ class Login(APIView):
             error_type = type(e).__name__
             logger.error(f"Error generating authorization link: {e}")
             return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
+
 class YtmusicCallback(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [AllowAny]
 
     async def get(self, request):
-
         form = CodeForm(request.GET)
 
         if form.is_valid():
@@ -55,7 +56,7 @@ class YtmusicCallback(APIView):
         try:
             service = 'ytmusic'
             logger.info("Fetching tokens and user profile for YouTube Music")
-            service_instance = get_service(service)
+            service_instance = get_service_instance(service)
 
             tokens = await service_instance.get_tokens(code=code)
             user_profile = await service_instance.get_user_profile(tokens)
@@ -133,7 +134,7 @@ class SpotifyCallback(APIView):
         try:
             service = 'spotify'
             logger.info("Fetching tokens and user profile for Spotify")
-            service_instance = get_service(service)
+            service_instance = get_service_instance(service)
 
             tokens = await service_instance.get_tokens(code)
             user_profile = await service_instance.get_user_profile(tokens)
@@ -164,6 +165,7 @@ class SpotifyCallback(APIView):
             error_type = type(e).__name__
             logger.error(f"Error in spotify_callback: {e}")
             return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
+
 class SpotifyConnect(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [AllowAny]
@@ -207,7 +209,7 @@ class LastfmCallback(APIView):
         try:
             service = 'lastfm'
             logger.info("Fetching user profile for Last.fm")
-            service_instance = get_service(service)
+            service_instance = get_service_instance(service)
             user_profile = await service_instance.get_user_profile(token)
 
             try:
@@ -236,6 +238,7 @@ class LastfmCallback(APIView):
             error_type = type(e).__name__
             logger.error(f"Error in lastfm_callback: {e}")
             return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
+
 class LastfmConnect(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [AllowAny]
@@ -277,8 +280,7 @@ class MalCallback(APIView):
         try:
             service = 'mal'
             logger.info("Fetching tokens and user profile for MyAnimeList")
-            service_instance = get_service(service,request)
-
+            service_instance = get_service_instance(service)
 
             code_verifier = await sync_to_async(request.session.get)('code_verifier')
             logger.debug(f"Retrieved code_verifier from session: {code_verifier}")  # Add this line
@@ -286,9 +288,7 @@ class MalCallback(APIView):
                 logger.error("Code verifier not found in session")
                 return JsonResponse({'error': 'Code verifier not found in session'}, status=400)
 
-
-            tokens = await service_instance.get_tokens(code,code_verifier)
-
+            tokens = await service_instance.get_tokens(code, code_verifier)
             user_profile = await service_instance.get_user_info(tokens)
 
             try:
@@ -312,6 +312,7 @@ class MalCallback(APIView):
             error_type = type(e).__name__
             logger.error(f"Error in mal callback: {e}")
             return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
+
 class MalConnect(APIView):
     authentication_classes = [CustomTokenAuthentication]
     permission_classes = [AllowAny]

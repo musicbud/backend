@@ -1,41 +1,36 @@
-from typing import Any
-from django.http import JsonResponse
 from adrf.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from ..middlewares.custom_token_auth import CustomTokenAuthentication
-from ..middlewares.service_token_getter import service_token_getter
-from ..services.spotify_service import SpotifyService  # Ensure correct import path
-from app.services.service_selector import get_service
+from rest_framework.response import Response
+from rest_framework import status
+from app.services.service_selector import get_service_instance
+from app.middlewares.custom_token_auth import CustomTokenAuthentication
 import logging
+from django.http import JsonResponse
 
-logger = logging.getLogger('app')
+logger = logging.getLogger(__name__)
 
 class UpdateMyLikes(APIView):
     authentication_classes = [CustomTokenAuthentication]
-    permission_classes = [IsAuthenticated]
-    
-    @service_token_getter
-    async def post(self, request: Any) -> JsonResponse:
+
+    async def post(self, request):
         try:
-            service = request.service
-            user = request.service_account
-            logger.info(f"User: {user.id} is updating likes for service: {service}")
-
-            service_instance = get_service(service)
+            parent_user = request.user
+            service = request.data.get('service')
             
-            if isinstance(service_instance, SpotifyService):
-                # Clear existing likes before updating
-                await service_instance.clear_user_likes(user)
-                logger.info(f"Cleared existing likes successfully for user: {user.id} on service: {service}")
+            if not parent_user or not service:
+                return JsonResponse({'error': 'User or service not provided'}, status=400)
 
-                # Save new likes
-                await service_instance.save_user_likes(user)
-                logger.info(f"Updated likes successfully for user: {user.id} on service: {service}")
+            service_instance = get_service_instance(service)
+            if not service_instance:
+                return JsonResponse({'error': 'Invalid service'}, status=400)
 
-                return JsonResponse({'message': 'Updated likes successfully'}, status=200)
-            else:
-                raise Exception("Invalid service instance.")
+            user_likes = await service_instance.get_user_likes(parent_user)
+            await service_instance.save_user_likes(parent_user, user_likes)
+
+            return JsonResponse({'message': 'Likes updated successfully'}, status=200)
+        except ValueError as ve:
+            logger.error(f"Error updating likes for user: {parent_user.uid} on service: {service}: {str(ve)}")
+            return JsonResponse({'error': str(ve)}, status=400)
         except Exception as e:
-            error_type = type(e).__name__
-            logger.error(f"Error updating likes for user: {request.user.id} on service: {request.user}: {e}")
-            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
+            logger.error(f"Error updating likes for user: {parent_user.uid} on service: {service}: {str(e)}")
+            return JsonResponse({'error': 'Internal Server Error'}, status=500)
+

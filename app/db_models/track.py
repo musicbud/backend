@@ -9,3 +9,9 @@ class Track(LikedItem):
     artists = AsyncRelationshipTo('.artist.Artist', 'PERFORMED_BY')
     users = AsyncRelationshipFrom('.user.User', 'LIKES_TRACK')
     
+    async def serialize(self):
+        return {
+            'uid': self.uid,
+            'name': self.name,
+            # Add any other common properties here
+        }
