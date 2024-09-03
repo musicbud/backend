@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div id="chat-container">
+    <div id="messages">
+        {% for message in messages %}
+            <div>{{ message.sender.username }}: {{ message.content }}</div>
+        {% endfor %}
+    </div>
+    <input type="text" id="message-input" placeholder="Type your message...">
+    <button id="send-button">Send</button>
+</div>
+
+<script>
+    const token = '{{ request.user.token }}';
+    let socket;
+
+    function connectWebSocket() {
+        socket = new WebSocket(`ws://127.0.0.1:8000/ws/chat/channel/dsa/`);
+        
+        socket.onopen = function(e) {
+            console.log("WebSocket connection established");
+            authenticateUser(token);
+        };
+
+        socket.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            if (data.action === 'reauthenticate') {
+                console.log("Reauthentication required");
+                // Implement your reauthentication logic here
+                // This might involve redirecting the user to a login page
+                // or refreshing the token through an API call
+            } else if (data.error) {
+                console.error("Error:", data.error);
+                // Display error to the user
+            } else {
+                displayMessage(data.sender, data.message);
+            }
+        };
+
+        socket.onerror = function(error) {
+            console.error(`WebSocket Error: ${error}`);
+        };
+    }
+
+    function authenticateUser(token) {
+        if (socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+                type: 'authentication',
+                token: token
+            }));
+        } else {
+            console.error("WebSocket is not open. Cannot send authentication message.");
+        }
+    }
+
+    function displayMessage(sender, message) {
+        const messageElement = document.createElement('div');
+        messageElement.textContent = `${sender}: ${message}`;
+        document.getElementById('messages').appendChild(messageElement);
+        messageElement.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    connectWebSocket();
+
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+
+    sendButton.onclick = function() {
+        sendMessage();
+    };
+
+    messageInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
+
+    function sendMessage() {
+        const message = messageInput.value.trim();
+        if (message && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+                'recipient': '{{ recipient.username }}',
+                'message': message
+            }));
+            displayMessage('You', message);
+            messageInput.value = '';
+        } else if (!message) {
+            console.log("Message is empty");
+        } else {
+            console.error("WebSocket is not open. Cannot send message.");
+        }
+    }
+
+    // Remove the example message send at the end of the script
+</script>
+{% endblock %}

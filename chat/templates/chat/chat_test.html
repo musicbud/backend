@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Test</title>
+</head>
+<body>
+    <h1>Chat Test Page</h1>
+    <div id="chat-container">
+        <div id="messages">
+            <p>Test message: If you see this, the template is being rendered correctly.</p>
+        </div>
+        <input type="text" id="message-input" placeholder="Type your message...">
+        <button id="send-button">Send</button>
+    </div>
+
+    <script>
+        console.log("JavaScript is running");
+        const token = '{{ request.user.token }}';
+        const socket = new WebSocket('ws://127.0.0.1:8000/ws/chat/channel/dsa/');
+
+        socket.onopen = function(e) {
+            console.log("WebSocket connection established");
+            // Send authentication message with a valid token
+            socket.send(JSON.stringify({
+                type: "authentication",
+                token: "your-valid-jwt-token-here"
+            }));
+        };
+
+        socket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            console.log("Message received:", data.message);
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML += '<p>' + data.message + '</p>';
+        };
+
+        socket.onclose = function(e) {
+            console.error('Chat socket closed unexpectedly');
+        };
+
+        document.getElementById('send-button').addEventListener('click', function() {
+            const messageInput = document.getElementById('message-input');
+            const message = messageInput.value;
+            socket.send(JSON.stringify({
+                'message': message
+            }));
+            messageInput.value = '';
+        });
+    </script>
+</body>
+</html>

@@ -1,14 +1,11 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Channels</title>
-</head>
-<body>
-    <h1>Channels</h1>
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Chat Channels</h1>
     <ul>
         {% for channel in channels %}
-            <li><a href="{% url 'chat_in_channel' channel.id %}">{{ channel.name }}</a></li>
+            <li><a href="{% url 'channel_chat' channel_name=channel.name %}">{{ channel.name }}</a></li>
         {% endfor %}
     </ul>
-</body>
-</html>
+    <a href="{% url 'create_channel' %}">Create New Channel</a>
+{% endblock %}

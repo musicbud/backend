@@ -7,3 +7,19 @@ chat/__pycache__/
 # env/
 ai/spotify_dataset.csv
 ai/.bash_profile
+myenv/
+
+ai/user_dict_reversed.pkl
+ai/user_dict.pkl
+ai/item_dict_track_reversed.pkl
+ai/item_dict_track.pkl
+ai/item_dict_artist_reversed.pkl
+ai/item_dict_artist.pkl
+ai/item_dict_artist.pkl
+ai/item_dict_artist_reversed.pkl
+ai/item_dict_track.pkl
+ai/item_dict_track_reversed.pkl
+ai/item_dict_artist.pkl
+ai/item_dict_artist_reversed.pkl
+ai/item_dict_track.pkl
+ai/item_dict_track_reversed.pkl

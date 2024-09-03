@@ -2,31 +2,36 @@ import joblib
 import numpy as np
 from lightfm import LightFM
 
-from app.db_models import User, Track, Artist
+from app.db_models.parent_user import ParentUser 
+from app.db_models.artist import Artist 
+from app.db_models.track import Track 
+
+
 
 # Load the trained model
-model = joblib.load('path/to/your_model.pkl')
+# model = joblib.load('path/to/your_model.pkl')
 
 async def get_recommendations(user_id):
-    user = await User.nodes.get_or_none(uid=user_id)
+    user = await ParentUser.nodes.get_or_none(uid=user_id)
     if not user:
         raise ValueError(f"User with id {user_id} not found")
 
     # Retrieve interactions for the user
-    interactions = await get_user_interactions(user)
+    # interactions = await get_user_interactions(user)
 
     # Predict scores for all items
-    scores = model.predict(user_id, np.arange(interactions.shape[1]))
+    # scores = model.predict(user_id, np.arange(interactions.shape[1]))
 
     # Get top N recommendations
-    top_items = np.argsort(-scores)[:10]  # Adjust the number N as needed
+    # top_items = np.argsort(-scores)[:10]  # Adjust the number N as needed
 
-    recommendations = {
-        'track_recommendations': await get_top_tracks(top_items),
-        'artist_recommendations': await get_top_artists(top_items),
-    }
+    # recommendations = {
+    #     'track_recommendations': await get_top_tracks(top_items),
+    #     'artist_recommendations': await get_top_artists(top_items),
+    # }
     
-    return recommendations
+    # return recommendations
+    pass
 
 async def get_user_interactions(user):
     # Implement a method to get user interactions from Neo4j

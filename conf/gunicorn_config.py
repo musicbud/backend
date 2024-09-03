@@ -1,9 +1,4 @@
-command = '/home/ubuntu/musicbud/myenv/bin/gunicorn'
-pythonpath = '/home/ubuntu/musicbud'
-bind ='0.0.0.0:8000'
-workers = 1
-worker_class = "uvicorn.workers.UvicornWorker"
+import multiprocessing
 
-
-
-# gunicorn myproject.asgi:application --config gunicorn.conf.py
+bind = '127.0.0.1:8000'
+workers = 4

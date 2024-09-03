@@ -13,6 +13,6 @@ from .lastfm.lastfm_track import LastfmTrack
 from .combined.combined_track import CombinedTrack
 from .liked_item import LikedItem
 from .spotify.spotify_user import SpotifyUser
-# Import other models as needed
+from .parent_user import ParentUser
 
 default_app_config = 'app.db_models.apps.DbModelsConfig'

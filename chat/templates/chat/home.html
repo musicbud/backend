@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Welcome to the Chat App</h1>
+<nav>
+    <ul>
+        <li><a href="{% url 'user_list' %}">Chat with Users</a></li>
+        <li><a href="{% url 'channel_list' %}">View Channels</a></li>
+    </ul>
+</nav>
+{% endblock %}

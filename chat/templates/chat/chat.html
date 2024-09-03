@@ -1,19 +1,5 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Chat</title>
-</head>
-<body>
-    <h1>Chat with {% if recipient %}{{ recipient.username }}{% else %}{{ channel.name }}{% endif %}</h1>
-    <div>
-        {% for message in messages %}
-            <p><strong>{{ message.sender.username }}:</strong> {{ message.content }} <em>{{ message.timestamp }}</em></p>
-        {% endfor %}
-    </div>
-    <form method="post">
-        {% csrf_token %}
-        <textarea name="content"></textarea>
-        <button type="submit">Send</button>
-    </form>
-</body>
-</html>
+{% extends 'base.html' %}
+
+{% block content %}
+    <!-- Your chat template content here -->
+{% endblock %}

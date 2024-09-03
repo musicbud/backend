@@ -9,3 +9,5 @@ class AppConfig(AppConfig):
     def ready(self):
         config.DATABASE_URL = settings.NEOMODEL_NEO4J_BOLT_URL
         config.AUTO_INSTALL_LABELS = True
+        import app.models
+        import app.db_models.parent_user

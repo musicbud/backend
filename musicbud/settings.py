@@ -22,7 +22,6 @@ ALLOWED_HOSTS = ['127.0.0.1','localhost','84.235.170.234']
 
 # Application definition
 INSTALLED_APPS = [
-    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -32,8 +31,10 @@ INSTALLED_APPS = [
     'app.apps.AppConfig',  # Use this instead of 'app'
     'chat',
     'ai',
-    'corsheaders',  # Add CORS headers
-    'rest_framework',  # Add Django REST framework
+    'channels',
+    'corsheaders',
+    'rest_framework',
+    'rest_framework_simplejwt',
     'rest_framework.authtoken',
     'django_neomodel',
     'adrf',
@@ -49,13 +50,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-
 ]
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'app.middlewares.custom_token_auth.CustomTokenAuthentication',
-        # ... other authentication classes ...
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PAGINATION_CLASS': 'app.pagination.StandardResultsSetPagination',
     'PAGE_SIZE': 10,  
@@ -67,7 +66,7 @@ ROOT_URLCONF = 'musicbud.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': ['templates'],
+        'DIRS': [os.path.join(BASE_DIR, 'app', 'templates')],  # Update this line
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -176,8 +175,11 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
 
 # Change 'project_name' to your actual Django project name
 dotenv_path = os.path.join(BASE_DIR, '.env')
@@ -202,41 +204,47 @@ SESSION_COOKIE_SECURE = False  # Set to True if you're using HTTPS
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
-        },
-         'custom': {
-            '()': 'app.logger.CustomFormatter',  
-            'json_logging': False,  # Set to True if you want JSON logging
-            'node_uuid': os.getenv('NODE_UUID', 'default_uuid')  # Use an environment variable or a default value
-        },
-    },
     'handlers': {
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'debug.log'),
-            'formatter': 'custom',
-        },
         'console': {
-            'level': 'DEBUG',
             'class': 'logging.StreamHandler',
-            'formatter': 'custom',
         },
     },
-    'loggers': {
-        'app': { 
-            'handlers': ['file', 'console'],
-            'level': 'DEBUG',
-            'propagate': True,
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+}
+
+
+
+
+
+
+
+
+
+AUTH_USER_MODEL = 'app.DjangoParentUser'  # replace 'app' with your app name and 'ParentUser' with your custom user model name
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    # Add any custom authentication backends here
+]
+
+
+
+
+
+
+
+
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
         },
-    }
+    },
 }
 
 
@@ -285,3 +293,20 @@ CORS_ALLOW_HEADERS = [
 from neomodel import config
 from app.db_models.node_resolver import resolve_node_class
 config.NODE_CLASS_REGISTRY = resolve_node_class
+
+# Add these lines to customize the login template
+LOGIN_REDIRECT_URL = 'home'
+LOGIN_URL = 'login'
+LOGOUT_REDIRECT_URL = 'login'
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
+
+APPEND_SLASH = True
