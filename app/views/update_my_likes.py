@@ -6,11 +6,12 @@ import logging
 import asyncio
 from app.middlewares.async_jwt_authentication import AsyncJWTAuthentication
 from rest_framework.permissions import IsAuthenticated  
+from app.middlewares.token_middleware import TokenMiddleware
 
 logger = logging.getLogger(__name__)
 
 class UpdateMyLikes(APIView):
-    authentication_classes = [AsyncJWTAuthentication]
+    authentication_classes = [AsyncJWTAuthentication, TokenMiddleware]
     permission_classes = [IsAuthenticated]
 
     async def post(self, request, *args, **kwargs):

@@ -47,15 +47,15 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'app.middlewares.jwt_auth_middleware.JWTAuthMiddleware',  # Add this line
-    'app.middlewares.token_middleware.TokenMiddleware',  # Add this line
+    'app.middlewares.jwt_auth_middleware.JWTAuthMiddleware', 
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'app.middlewares.async_jwt_authentication.AsyncJWTAuthentication',  # Add this line
+        'app.middlewares.async_jwt_authentication.AsyncJWTAuthentication',
+        'app.middlewares.token_middleware.TokenMiddleware',
         ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
