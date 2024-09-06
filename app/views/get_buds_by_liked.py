@@ -22,7 +22,7 @@ class BudsMixin:
         return await super().dispatch(*args, **kwargs)
 
     async def get_user_node(self, request):
-        user_node = request.user
+        user_node = request.parent_user
         if not user_node:
             logger.warning('User not found')
             raise ValueError('User not found')
@@ -36,7 +36,7 @@ class BudsMixin:
                 logger.info(f"Processing bud: {bud_uid} with similarity score: {similarity_score}")
                 parent_user = await ParentUser.nodes.get_or_none(uid=bud_uid)
                 if parent_user:
-                    serialized_parent = await parent_user.without_relations_serialize()
+                    serialized_parent = await parent_user.serialize()
                     buds_data.append({
                         'bud': serialized_parent,
                         'similarity_score': similarity_score

@@ -10,6 +10,8 @@ from app.views.auth_views import (
     RefreshTokenView  
 )
 
+from .views.get_my_profile import GetMyProfile  
+
 from .views.connect import (
     NotFoundView,
     ErrorView,
@@ -55,7 +57,6 @@ from .views.ytmusic_refresh_token import YtmusicRefreshToken
 
 from .views.update_my_likes import UpdateMyLikes
 
-from .views.get_profile import GetProfile
 from .views.get_bud_profile import GetBudProfile
 
 from .views.get_buds_by_liked_aio import GetBudsByLikedAio
@@ -113,7 +114,7 @@ urlpatterns = [
     path('spotify/token/refresh', SpotifyRefreshToken.as_view(), name='spotify_refresh_token'),
 
     path('me/likes/update', UpdateMyLikes.as_view(), name='update_my_likes'),
-    path('me/profile', GetProfile.as_view(), name='profile'),
+    path('me/profile', GetMyProfile.as_view(), name='get_my_profile'),
     path('me/profile/set', SetMyProfile.as_view(), name='set_my_profile'),
 
     path('bud/common/liked/artists', GetCommonLikedArtists.as_view(), name='get_common_liked_artists'),

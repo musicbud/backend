@@ -23,7 +23,7 @@ class BudsBaseMixin:
         return await super().dispatch(*args, **kwargs)
 
     async def get_user_node(self, request):
-        user_node = request.user
+        user_node = request.parent_user
         if not user_node:
             logger.warning('User not found')
             raise ValueError('User not found')
@@ -41,7 +41,7 @@ class BudsBaseMixin:
                         parent_user = await self.sync_user_to_django(neo4j_user)
                 
                 if parent_user:
-                    serialized_parent = await parent_user.without_relations_serialize()
+                    serialized_parent = await parent_user.serialize()
                     buds_data.append({
                         'bud': serialized_parent,
                         'similarity_score': similarity_score

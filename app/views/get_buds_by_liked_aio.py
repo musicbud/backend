@@ -30,7 +30,7 @@ class GetBudsByLikedAio(APIView):
             similarity_score = bud['similarity_score']
             
             # Serialize the user data
-            serialized_user = await self._serialize_user(bud_user)
+            serialized_user = await self.serialize_node(bud_user)
             
             buds_data.append({
                 'bud': serialized_user,
@@ -41,16 +41,9 @@ class GetBudsByLikedAio(APIView):
         logger.info(f'Data preparation complete. Total buds data prepared: {len(buds_data)}')
         return buds_data
 
-    async def _serialize_user(self, user_node):
-        """Serialize a user node into a dictionary."""
-        return {
-            'uid': user_node['uid'],
-            'username': user_node.get('username'),
-            'display_name': user_node.get('display_name'),
-            'photo_url': user_node.get('photo_url'),
-            'bio': user_node.get('bio'),
-            # Add any other fields you want to include
-        }
+    async def serialize_node(self, node):
+        """Serializes a Node object."""
+        return {key: value for key, value in node.items()}
 
     async def get_user_by_uid(self, uid):
         query = """
@@ -213,7 +206,7 @@ class GetBudsByLikedAio(APIView):
 
     async def post(self, request):
         try:
-            user_node = request.user
+            user_node = request.parent_user
             if not user_node:
                 logger.warning('User not found in request')
                 return JsonResponse({'error': 'User not found'}, status=404)

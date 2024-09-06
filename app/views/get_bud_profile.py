@@ -22,7 +22,7 @@ class GetBudProfile(APIView):
     
     async def post(self, request):
         try:
-            user = request.user
+            user = request.parent_user
             bud_id = request.data.get('bud_id')
 
             if not bud_id:
@@ -37,7 +37,7 @@ class GetBudProfile(APIView):
             # Prepare response structure for the bud profile
             response_data = {
                 'data': {
-                    'bud': await bud_node.without_relations_serialize(),  # Serialize the bud's profile without relations
+                    'bud': await bud_node.serialize(),  # Serialize the bud's profile without relations
                 }
             }
 

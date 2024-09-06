@@ -13,6 +13,13 @@ class ParentUser(AsyncStructuredNode):
     mal_account = AsyncRelationshipTo('app.db_models.mal.mal_user.MalUser', 'CONNECTED_TO_MAL')
     imdb_account = AsyncRelationshipTo('app.db_models.imdb.imdb_user.ImdbUser', 'CONNECTED_TO_IMDB')
 
+    async def associated_accounts(self):
+        return {
+            'spotify_account': await self.spotify_account.get_or_none(),
+            'ytmusic_account': await self.ytmusic_account.get_or_none(),
+            'lastfm_account': await self.lastfm_account.get_or_none(),
+            'mal_account': await self.mal_account.get_or_none() 
+        }
     def __str__(self):
         return f"ParentUser(username={self.username}, uid={self.uid})"
 
@@ -40,3 +47,8 @@ class ParentUser(AsyncStructuredNode):
             user = cls(**user_data)
             user.save()
             return user, True
+    async def serialize(self):
+        return {
+            'username': self.username,
+            'email': self.email,
+        }

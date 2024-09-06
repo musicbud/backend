@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.db import models
+import uuid
 
 class DjangoParentUserManager(BaseUserManager):
     def create_user(self, username, email, password=None, **extra_fields):
@@ -27,6 +28,7 @@ class DjangoParentUser(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    uid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)  # Add this line
 
     objects = DjangoParentUserManager()
 

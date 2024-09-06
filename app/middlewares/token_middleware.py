@@ -1,36 +1,19 @@
 import logging
-from asgiref.sync import sync_to_async
-import asyncio
 from django.http import JsonResponse
 from spotipy.exceptions import SpotifyException
-from django.utils.deprecation import MiddlewareMixin
 import json
 from urllib.parse import parse_qs
-from django.utils.decorators import decorator_from_middleware
 
 logger = logging.getLogger(__name__)
 
-class TokenMiddleware(MiddlewareMixin):
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-    async def __call__(self, request):
-        response = await self.process_request(request)
-        if asyncio.iscoroutine(response):
-            response = await response
-        return response
-
-    async def process_request(self, request):
+class TokenMixin:
+    async def dispatch(self, request, *args, **kwargs):
         user = request.user
         if user and user.is_authenticated:
             parent_user = await self.get_parent_user(user.username)
             request.parent_user = parent_user
         else:
             request.parent_user = None
-
-        response = self.get_response(request)
-        if asyncio.iscoroutine(response):
-            response = await response
 
         if hasattr(request, 'parent_user') and request.parent_user:
             try:
@@ -43,7 +26,7 @@ class TokenMiddleware(MiddlewareMixin):
                 logger.error(f"TokenExpiredError in check_and_refresh_tokens: {str(tee)}")
                 return JsonResponse({'error': str(tee)}, status=401)
 
-        return response
+        return await super().dispatch(request, *args, **kwargs)
 
     async def get_parent_user(self, username):
         from app.db_models.parent_user import ParentUser
@@ -122,6 +105,3 @@ class TokenMiddleware(MiddlewareMixin):
 
 class TokenExpiredError(Exception):
     pass
-
-# Create a decorator from the TokenMiddleware
-token_middleware_decorator = decorator_from_middleware(TokenMiddleware)

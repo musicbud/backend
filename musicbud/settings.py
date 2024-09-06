@@ -49,13 +49,14 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'app.middlewares.jwt_auth_middleware.JWTAuthMiddleware', 
+    'app.middlewares.parent_user_middleware.ParentUserMiddleware',
 ]
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'app.middlewares.async_jwt_authentication.AsyncJWTAuthentication',
-        'app.middlewares.jwt_auth_middleware.JWTAuthMiddleware',
-        ],
+    ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
@@ -357,5 +358,13 @@ def activate_foreign_keys(sender, connection, **kwargs):
         cursor.execute('PRAGMA mmap_size = 30000000000;')
 
 connection_created.connect(activate_foreign_keys)
+
+# Celery settings
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
 
 

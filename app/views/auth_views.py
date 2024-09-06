@@ -22,7 +22,6 @@ logger = logging.getLogger('app')
 
 @method_decorator(csrf_exempt, name='dispatch')
 class AuthLogin(APIView):
-    authentication_classes = [AsyncJWTAuthentication]
     permission_classes = [AllowAny]
 
     def post(self, request):

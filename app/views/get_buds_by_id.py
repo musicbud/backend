@@ -12,15 +12,6 @@ from ..db_models.parent_user import ParentUser
 
 logger = logging.getLogger('app')
 
-def serialize_parent_user(parent_user): 
-    return {
-        'uid': parent_user.uid,
-        'username': parent_user.username,
-        'email': parent_user.email,
-        'display_name': parent_user.display_name,
-        # Add any other fields you want to include
-    }
-
 class GetBudsByEntity(APIView):
     authentication_classes = [AsyncJWTAuthentication]
 
@@ -33,7 +24,7 @@ class GetBudsByEntity(APIView):
 
     async def post(self, request):
         try:
-            user = request.user
+            user = request.parent_user
             entity_id_field = f"{self.entity_type}_id" if self.entity_type else "entity_id"
             entity_id = request.data.get(entity_id_field)
 

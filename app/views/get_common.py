@@ -75,7 +75,7 @@ class CommonItemsView(CommonItemsMixin, APIView):
 
     async def post(self, request):
         try:
-            user = request.user
+            user = request.parent_user
             bud_id = request.data.get('bud_id')
 
             if not bud_id:

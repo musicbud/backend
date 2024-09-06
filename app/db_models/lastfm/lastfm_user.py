@@ -15,7 +15,7 @@ from neomodel import (AsyncStructuredNode, StringProperty, IntegerProperty,
 class LastfmUser(User):
     username = StringProperty(unique_index=True)
     top_artists = AsyncRelationshipTo('..artist.Artist', 'TOP_ARTIST')
-    top_tracks = AsyncRelationshipTo('..trakc.Track', 'TOP_TRACK')
+    top_tracks = AsyncRelationshipTo('..track.Track', 'TOP_TRACK')
     top_genres = AsyncRelationshipTo('..genre.Genre', 'TOP_GENRE')
 
     likes_artists = AsyncRelationshipTo('..artist.Artist', 'LIKES_ARTIST')
