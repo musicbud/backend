@@ -47,9 +47,9 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'app.middlewares.jwt_auth_middleware.JWTAuthMiddleware', 
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Remove 'app.middlewares.token_middleware.TokenMiddleware' from here
 ]
 
 REST_FRAMEWORK = {

@@ -6,6 +6,7 @@ from spotipy.exceptions import SpotifyException
 from django.utils.deprecation import MiddlewareMixin
 import json
 from urllib.parse import parse_qs
+from django.utils.decorators import decorator_from_middleware
 
 logger = logging.getLogger(__name__)
 
@@ -121,3 +122,6 @@ class TokenMiddleware(MiddlewareMixin):
 
 class TokenExpiredError(Exception):
     pass
+
+# Create a decorator from the TokenMiddleware
+token_middleware_decorator = decorator_from_middleware(TokenMiddleware)
