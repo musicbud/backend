@@ -295,3 +295,13 @@ class YTmusicService(ServiceStrategy):
         # Connect user with track
         await getattr(user, f'{relation_type}_tracks').connect(node)
         logger.info(f"Connected user: {user} with track: {item['title']} with relation: {relation_type}")
+
+    async def get_service_user(self, parent_user):
+        # Implement this method to fetch the YouTube Music user associated with the parent user
+        pass
+
+    async def check_token_validity(self, ytmusic_user):
+        # Implement token validity check and refresh logic for YouTube Music
+        pass
+
+    # ... (other methods)

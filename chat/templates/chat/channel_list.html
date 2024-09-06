@@ -1,11 +1,13 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <h1>Chat Channels</h1>
+    <h2>Chat Channels</h2>
+    <a href="{% url 'chat:create_channel' %}">Create New Channel</a>
     <ul>
         {% for channel in channels %}
-            <li><a href="{% url 'channel_chat' channel_name=channel.name %}">{{ channel.name }}</a></li>
+            <li><a href="{% url 'chat:room' room_name=channel.name %}">{{ channel.name }}</a></li>
+        {% empty %}
+            <li>No channels available.</li>
         {% endfor %}
     </ul>
-    <a href="{% url 'create_channel' %}">Create New Channel</a>
 {% endblock %}

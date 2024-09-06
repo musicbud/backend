@@ -1,6 +1,8 @@
-from django.urls import re_path
-from .consumers import YourConsumer
+from django.urls import path
+from channels.routing import URLRouter
+from app.consumers import LoginConsumer, GetProfileConsumer
 
 websocket_urlpatterns = [
-    re_path(r'ws/some_path/$', YourConsumer.as_asgi()),
+    path('ws/login/', LoginConsumer.as_asgi()),
+    path('ws/me/profile/', GetProfileConsumer.as_asgi()),
 ]

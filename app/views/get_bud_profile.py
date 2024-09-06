@@ -5,15 +5,15 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from ..db_models.user import User
 from ..db_models.parent_user import ParentUser
-
-from ..middlewares.custom_token_auth import CustomTokenAuthentication
+from app.middlewares.async_jwt_authentication import AsyncJWTAuthentication
 from app.forms.get_bud_profile import GetBudProfileForm
 import logging
 
 logger = logging.getLogger('app')
 
 class GetBudProfile(APIView):
-    authentication_classes = [CustomTokenAuthentication]
+    authentication_classes = [AsyncJWTAuthentication]
+
     permission_classes = [IsAuthenticated]
     
     @method_decorator(csrf_exempt)

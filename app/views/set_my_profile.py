@@ -8,14 +8,15 @@ from django.core.files.storage import FileSystemStorage
 
 
 from ..forms.set_my_profile import SetMyProfileForm
-from ..middlewares.custom_token_auth import CustomTokenAuthentication
+from app.middlewares.async_jwt_authentication import AsyncJWTAuthentication
 
 import logging
 logger = logging.getLogger(__name__)
 
 
 class SetMyProfile(APIView):
-    authentication_classes = [CustomTokenAuthentication]
+    authentication_classes = [AsyncJWTAuthentication]
+
     permission_classes = [IsAuthenticated]
 
     @method_decorator(csrf_exempt)

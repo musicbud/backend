@@ -1,33 +1,31 @@
-from django.http import JsonResponse
-from adrf.views import APIView
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from app.middlewares.async_jwt_authentication import AsyncJWTAuthentication
 from rest_framework.permissions import IsAuthenticated
-from ..middlewares.custom_token_auth import CustomTokenAuthentication
-
 import logging
-logger = logging.getLogger('app')  # Use 'app' for consistency
+
+logger = logging.getLogger(__name__)
 
 class GetMyProfile(APIView):
-    authentication_classes = [CustomTokenAuthentication]
+    authentication_classes = [AsyncJWTAuthentication]
+
     permission_classes = [IsAuthenticated]
-    
+
     async def post(self, request):
         try:
-            parent_user = request.parent_user
-            
-            # Await the serialize method to get the actual user profile data
-            user_profile = await parent_user.without_relations_serialize()
+            parent_user = await request.user
+            if not parent_user:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-            # Create the response without pagination
-            response = {
-                'profile': user_profile,
-                'message': 'Fetched Profile Successfully.',
-                'code': 200,
-                'successful': True,
+            # Fetch user profile data
+            profile_data = {
+                'username': parent_user.username,
+                'email': parent_user.email,
+                # Add other profile fields as needed
             }
 
-            return JsonResponse(response)
-
+            return Response(profile_data, status=status.HTTP_200_OK)
         except Exception as e:
-            error_type = type(e).__name__
-            logger.error(f"Error fetching user profile: {e}", exc_info=True)
-            return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
+            logger.error(f"Error fetching user profile: {str(e)}")
+            return Response({'error': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

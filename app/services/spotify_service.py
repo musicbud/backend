@@ -21,7 +21,7 @@ from neomodel.exceptions import NodeClassAlreadyDefined
 import traceback
 from app.db_models.user import User  # Add this line
 import neomodel
-
+from datetime import datetime, timedelta, timezone
 logger = logging.getLogger('app')
 
 def get_async_db():
@@ -47,7 +47,7 @@ class SpotifyService(ServiceStrategy):
 
     async def create_authorize_url(self) -> str:
         logger.debug('Creating authorize URL')
-        return self.auth_manager.get_authorize_url()
+        return await sync_to_async(self.auth_manager.get_authorize_url)()
 
     async def get_tokens(self, code):
         logger.debug('Getting tokens for code=%s', code)
@@ -55,11 +55,62 @@ class SpotifyService(ServiceStrategy):
         logger.info('Tokens retrieved successfully')
         return tokens
 
-    async def refresh_access_token(self, refresh_token):
-        logger.debug('Refreshing access token for refresh_token=%s', refresh_token)
-        tokens = await sync_to_async(self.auth_manager.refresh_access_token)(refresh_token)
-        logger.info('Access token refreshed successfully')
-        return tokens
+    @staticmethod
+    async def get_service_user(parent_user):
+        try:
+            # Fetch the SpotifyUser node connected to the given ParentUser
+            spotify_accounts = await parent_user.spotify_account.all()
+            if not spotify_accounts:
+                raise ValueError(f"No Spotify account found for user {parent_user.username}")
+            spotify_user = spotify_accounts[0]  # Assuming one Spotify account per user
+            return spotify_user
+        except Exception as e:
+            logger.error(f"Error retrieving Spotify user for parent user {parent_user.username}: {str(e)}")
+            raise
+
+    async def check_token_validity(self,service_user):
+        try:
+            if isinstance(service_user.token_issue_time, str):
+                try:
+                    token_issue_time = datetime.fromtimestamp(float(service_user.token_issue_time), tz=timezone.utc)
+                except ValueError:
+                    token_issue_time = datetime.fromisoformat(service_user.token_issue_time)
+            elif isinstance(service_user.token_issue_time, (float, int)):
+                token_issue_time = datetime.fromtimestamp(service_user.token_issue_time, tz=timezone.utc)
+            else:
+                token_issue_time = service_user.token_issue_time
+
+            token_expiry = token_issue_time + timedelta(seconds=service_user.expires_in)
+            if datetime.now(timezone.utc) >= token_expiry:
+                logger.info(f"Token for user {service_user.username} has expired. Refreshing token.")
+                await self.refresh_access_token(service_user)
+            else:
+                logger.debug(f"Token for user {service_user.username} is still valid.")
+        except Exception as e:
+            logger.error(f"Error checking token validity for user {service_user.username}: {str(e)}")
+            raise
+
+    async def refresh_access_token(self, service_user):
+        logger.debug(f"Refreshing access token for user {service_user.username}")
+        try:
+            token_info = await sync_to_async(self.auth_manager.refresh_access_token)(service_user.refresh_token)
+            service_user.access_token = token_info['access_token']
+            service_user.expires_in = token_info['expires_in']
+            service_user.token_issue_time = datetime.now(timezone.utc).isoformat()
+            await service_user.save()
+            logger.info(f"Access token refreshed for user {service_user.username}")
+        except Exception as e:
+            logger.error(f"Failed to refresh access token for user {service_user.username}: {str(e)}")
+            raise
+
+    async def refresh_token(self, spotify_user):
+        logger.debug('Refreshing token for user=%s', spotify_user.username)
+        tokens = await self.refresh_access_token(spotify_user.refresh_token)
+        spotify_user.access_token = tokens['access_token']
+        spotify_user.token_created_at = datetime.now(datetime.timezone.utc)
+        spotify_user.expires_in = tokens['expires_in']
+        await spotify_user.save()
+        logger.info('Token refreshed successfully for user=%s', spotify_user.username)
 
     async def get_user_profile(self, tokens):
         logger.debug('Getting user profile with access_token')
@@ -605,21 +656,9 @@ class SpotifyService(ServiceStrategy):
         else:
             return None
         
-    async def get_spotify_user(self, parent_user):
-        spotify_accounts = await parent_user.spotify_account.all()
-        if not spotify_accounts:
-            raise ValueError(f"No Spotify account found for user {parent_user.uid}")
-        return spotify_accounts[0]  # Assuming one Spotify account per user
-
-    async def get_user_likes(self, parent_user):
-        spotify_user = await self.get_spotify_user(parent_user)
-        # Implement this method to fetch user likes from Spotify
-        # Return the likes in the format expected by save_user_likes
-        pass
-
     async def save_user_likes(self, parent_user, user_likes=None):
         try:
-            spotify_user = await self.get_spotify_user(parent_user)
+            spotify_user = await self.get_service_user(parent_user)
             logger.debug(f"Saving user likes for Spotify user: {spotify_user.username}")
             if spotify_user.username is None:
                 logger.error(f"Spotify user has no username. User object: {spotify_user}")

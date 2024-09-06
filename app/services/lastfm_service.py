@@ -230,29 +230,3 @@ class LastFmService(ServiceStrategy):
             user.played_tracks.disconnect_all()
         )
         logger.debug("User likes cleared successfully")
-   
-
-    async def save_user_likes(self, user: Any) -> None:
-        """
-        Fetches and saves the user's top artists, tracks, genres, liked tracks, and recent tracks to Neo4j.
-        """
-        logger.debug(f"Saving user likes for user: {user.username}")
-
-        # Clear existing user likes
-        await self.clear_user_likes(user)
-        
-        user_top_artists = await self.fetch_top_artists(user.username)
-        user_top_tracks = await self.fetch_top_tracks(user.username)
-        user_top_genres = await self.fetch_top_genres(user.username)
-        user_liked_tracks = await self.fetch_liked_tracks(user.username)
-        user_played_tracks = await self.fetch_recent_tracks(user.username)
-        
-        # # Map data to Neo4j
-        await asyncio.gather(
-            self.map_to_neo4j(user, 'Artist', user_top_artists, "top"),
-            self.map_to_neo4j(user, 'Track', user_top_tracks, "top"),
-            self.map_to_neo4j(user, 'Genre', user_top_genres, "top"),
-            self.map_to_neo4j(user, 'Track', user_liked_tracks, "liked"),
-            self.map_to_neo4j(user, 'Played_Track', user_played_tracks, "played")
-        )
-        logger.debug("User likes saved successfully")

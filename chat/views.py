@@ -1,19 +1,39 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import JsonResponse, Http404
+from django.http import JsonResponse, Http404, HttpResponse
 from .models import Message, Channel, Invitation, ChatMessage
 from django.contrib.auth import get_user_model
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.db import models
 from django.db.models import Q
 import logging
 from .forms import ChannelForm  # Add this line
 from rest_framework.authtoken.models import Token
+from asgiref.sync import sync_to_async
+from django.http import HttpResponse
+import json
+from functools import wraps
+from django.core.files.uploadhandler import MemoryFileUploadHandler
+from django.http import QueryDict
 
 User = get_user_model()
 
 logger = logging.getLogger(__name__)
+
+def read_request_body(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if request.method == 'POST':
+            try:
+                body = request.body.decode('utf-8')
+                print("Raw request body (decorator):", body)
+                request.JSON = json.loads(body)
+            except json.JSONDecodeError as e:
+                print("Failed to parse JSON data (decorator):", str(e))
+                request.JSON = None
+        return view_func(request, *args, **kwargs)
+    return wrapper
 
 @login_required
 def chat_home(request):
@@ -21,7 +41,7 @@ def chat_home(request):
 
 @login_required
 def user_list(request):
-    users = User.objects.all()
+    users = User.objects.exclude(id=request.user.id)
     return render(request, 'chat/user_list.html', {'users': users})
 
 @login_required
@@ -39,24 +59,9 @@ def channel_chat(request, channel_name):
     })
 
 @login_required
-def user_chat(request, username):
-    recipient = get_object_or_404(User, username=username)
-    channel_name = f"chat_{min(request.user.id, recipient.id)}_{max(request.user.id, recipient.id)}"
-    
-    channel, created = Channel.objects.get_or_create(name=channel_name)
-    
-    # Ensure both users are members of the channel
-    channel.members.add(request.user, recipient)
-    
-    messages = ChatMessage.objects.filter(channel=channel).order_by('timestamp')
-    
-    context = {
-        'recipient': recipient,
-        'channel_name': channel_name,
-        'messages': messages,
-    }
-    
-    return render(request, 'chat/user_chat.html', context)
+def user_chat(request, user_id):
+    other_user = get_object_or_404(User, id=user_id)
+    return render(request, 'chat/user_chat.html', {'other_user': other_user})
 
 @login_required
 @require_POST
@@ -78,16 +83,18 @@ def send_message(request):
         return JsonResponse({'status': 'error', 'message': 'Invalid recipient type'})
 
     return JsonResponse({'status': 'success', 'message': 'Message sent'})
+
+@csrf_exempt
 @login_required
+@require_http_methods(["GET", "POST"])
 def create_channel(request):
     if request.method == 'POST':
         form = ChannelForm(request.POST)
         if form.is_valid():
             channel = form.save(commit=False)
-            channel.admin = request.user
+            channel.created_by = request.user
             channel.save()
-            channel.members.add(request.user)
-            return redirect('channel_chat', room_name=channel.name)
+            return redirect('chat:room', room_name=channel.name)
     else:
         form = ChannelForm()
     return render(request, 'chat/create_channel.html', {'form': form})
@@ -226,9 +233,35 @@ def add_moderator(request, channel_id, user_id):
         return JsonResponse({'status': 'success'})
     return JsonResponse({'status': 'error', 'message': 'Unauthorized'})
 
+@sync_to_async
+def async_render(request, template_name, context=None):
+    return render(request, template_name, context)
+
+async def channel_list(request):
+    channels = await sync_to_async(list)(Channel.objects.all())
+    context = {'channels': channels}
+    return await async_render(request, 'chat/channel_list.html', context)
+
+# Keep other views synchronous for now
+def chat_home(request):
+    return render(request, 'chat/home.html')
+
 def chat_room(request, room_name):
     messages = Message.objects.filter(room=room_name).order_by('-timestamp')[:50]
-    return render(request, 'chat/room.html', {
+    return render(request, 'chat/channel_chat.html', {
         'room_name': room_name,
-        'messages': messages
+        'messages': messages,
+        'username': request.user.username if request.user.is_authenticated else 'Anonymous',
     })
+
+def channel_list(request):
+    channels = Channel.objects.all()
+    return render(request, 'chat/channel_list.html', {'channels': channels})
+
+# @login_required
+# def chat_room(request, room_name):
+#     return render(request, 'chat/room.html', {
+#         'room_name': room_name,
+#         'username': request.user.username,
+#     })
+

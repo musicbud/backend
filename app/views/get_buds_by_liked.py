@@ -3,7 +3,7 @@ from adrf.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from ..middlewares.custom_token_auth import CustomTokenAuthentication
+from app.middlewares.async_jwt_authentication import AsyncJWTAuthentication
 from ..pagination import StandardResultsSetPagination
 import logging
 from neomodel import db
@@ -13,7 +13,8 @@ from app.db_models.parent_user import ParentUser
 logger = logging.getLogger('app')
 
 class BudsMixin:
-    authentication_classes = [CustomTokenAuthentication]
+    authentication_classes = [AsyncJWTAuthentication]
+
     permission_classes = [IsAuthenticated]
 
     @method_decorator(csrf_exempt)

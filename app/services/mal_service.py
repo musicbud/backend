@@ -205,3 +205,11 @@ class MalService(ServiceStrategy):
             )
         except Exception as e:
             logger.error(e)
+
+    async def get_service_user(self, parent_user):
+        # Implement this method to fetch the MyAnimeList user associated with the parent user
+        pass
+
+    async def check_token_validity(self, mal_user):
+        # Implement token validity check and refresh logic for MyAnimeList
+        pass

@@ -2,7 +2,8 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
-from neomodel import config as neomodel_config
+import jwt
+import sqlite3
 
 load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -18,7 +19,7 @@ SECRET_KEY = 'your-secret-key'
 DEBUG = True
 
 HOST = os.environ.get('HOST')
-ALLOWED_HOSTS = ['127.0.0.1','localhost','84.235.170.234']
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 INSTALLED_APPS = [
@@ -28,38 +29,42 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'rest_framework_simplejwt',
     'app.apps.AppConfig',  # Use this instead of 'app'
     'chat',
     'ai',
     'channels',
     'corsheaders',
-    'rest_framework',
-    'rest_framework_simplejwt',
-    'rest_framework.authtoken',
     'django_neomodel',
     'adrf',
-    'rest_framework_simplejwt',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',  # CORS middleware
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'app.middlewares.jwt_auth_middleware.JWTAuthMiddleware',  # Add this line
+    'app.middlewares.token_middleware.TokenMiddleware',  # Add this line
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'app.middlewares.async_jwt_authentication.AsyncJWTAuthentication',  # Add this line
+        ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_PAGINATION_CLASS': 'app.pagination.StandardResultsSetPagination',
-    'PAGE_SIZE': 10,  
-    
+    'PAGE_SIZE': 10,
+    'UNAUTHENTICATED_USER': None,
 }
+
 
 ROOT_URLCONF = 'musicbud.urls'
 
@@ -89,31 +94,34 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        'CONN_MAX_AGE': 0,  # Close connections immediately after use
+        'OPTIONS': {
+            'timeout': 120,
+        },
     }
 }
 
-#Spotify secrets
+# Spotify secrets
 SPOTIFY_CLIENT_ID = os.environ.get('SPOTIFY_CLIENT_ID')
 SPOTIFY_CLIENT_SECRET = os.environ.get('SPOTIFY_CLIENT_SECRET')
 SPOTIFY_REDIRECT_URI = os.environ.get('SPOTIFY_REDIRECT_URI')
 SPOTIFY_SCOPE = "user-library-read user-read-private user-top-read user-follow-read user-read-recently-played"
 
-#LASTFM secrets
+# LASTFM secrets
 LASTFM_API_KEY = os.environ.get('LASTFM_API_KEY')
 LASTFM_API_SECRET = os.environ.get('LASTFM_API_SECRET')
 LASTFM_REDIRECT_URI = os.environ.get('LASTFM_REDIRECT_URI')
 
-#YTMUSIC secrets
+# YTMUSIC secrets
 YTMUSIC_CLIENT_ID = os.environ.get('YTMUSIC_CLIENT_ID')
 YTMUSIC_CLIENT_SECRET = os.environ.get('YTMUSIC_CLIENT_SECRET')
 YTMUSIC_REDIRECT_URI = os.environ.get('YTMUSIC_REDIRECT_URI')
 
-#YTMUSIC secrets
+# MAL secrets
 MAL_CLIENT_ID = os.environ.get('MAL_CLIENT_ID')
 MAL_CLIENT_SECRET = os.environ.get('MAL_CLIENT_SECRET')
 MAL_REDIRECT_URI = os.environ.get('MAL_REDIRECT_URI')
 MAL_SCOPE = "read"
-
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
@@ -128,8 +136,8 @@ SIMPLE_JWT = {
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
     'TOKEN_TYPE_CLAIM': 'token_type',
 }
-# Neo4j database settings
 
+# Neo4j database settings
 NEOMODEL_NEO4J_BOLT_URL = os.environ.get('NEOMODEL_NEO4J_BOLT_URL', 'bolt://neo4j:12345678@193.123.61.167:7687')
 NEOMODEL_SIGNALS = True
 NEOMODEL_FORCE_TIMEZONE = False
@@ -185,7 +193,6 @@ STATICFILES_DIRS = [
 dotenv_path = os.path.join(BASE_DIR, '.env')
 load_dotenv(dotenv_path)
 
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
@@ -199,29 +206,59 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Session expires when the browser is c
 SESSION_COOKIE_HTTPONLY = True  # Prevents JavaScript access to the cookie
 SESSION_COOKIE_SECURE = False  # Set to True if you're using HTTPS
 
-
-
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+        'custom': {
+            '()': 'app.logger.CustomFormatter',  
+            'json_logging': False,  # Set to True if you want JSON logging
+            'node_uuid': os.getenv('NODE_UUID', 'default_uuid')  # Use an environment variable or a default value
         },
     },
     'root': {
         'handlers': ['console'],
-        'level': 'INFO',
+        'level': 'DEBUG',
     },
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'debug.log'),
+            'formatter': 'custom',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'custom',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'app.middlewares': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'app': { 
+            'handlers': ['file', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    }
 }
-
-
-
-
-
-
-
-
 
 AUTH_USER_MODEL = 'app.DjangoParentUser'  # replace 'app' with your app name and 'ParentUser' with your custom user model name
 
@@ -229,14 +266,6 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     # Add any custom authentication backends here
 ]
-
-
-
-
-
-
-
-
 
 CHANNEL_LAYERS = {
     'default': {
@@ -247,25 +276,15 @@ CHANNEL_LAYERS = {
     },
 }
 
-
-
-
-
-
-
-
 # For development (allows all origins):
-CORS_ALLOW_ALL_ORIGINS = True
-
+CORS_ALLOW_ALL_ORIGINS = True  # For development only, restrict this in production
+CORS_ALLOW_CREDENTIALS = True
 # For production (specify allowed origins):
 # CORS_ALLOWED_ORIGINS = [
 #     "http://localhost:8000",
 #     "http://127.0.0.1:9000",
 #     "https://yourdomain.com",
 # ]
-
-# If you need to allow credentials (cookies, authorization headers)
-CORS_ALLOW_CREDENTIALS = True
 
 # If you need to allow specific HTTP methods
 CORS_ALLOW_METHODS = [
@@ -290,6 +309,8 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
+CORS_ALLOW_CREDENTIALS = True
+
 from neomodel import config
 from app.db_models.node_resolver import resolve_node_class
 config.NODE_CLASS_REGISTRY = resolve_node_class
@@ -309,4 +330,33 @@ CACHES = {
     }
 }
 
-APPEND_SLASH = True
+APPEND_SLASH = False
+
+CSRF_COOKIE_SECURE = False
+CSRF_COOKIE_HTTPONLY = False
+CSRF_USE_SESSIONS = False
+# CSRF_TRUSTED_ORIGINS = ['*']
+
+# Disable CSRF protection globally (only for debugging!)
+CSRF_COOKIE_SECURE = False
+CSRF_COOKIE_HTTPONLY = False
+CSRF_USE_SESSIONS = False
+
+
+sqlite3.enable_callback_tracebacks(True)
+
+# At the end of the file
+from django.db.backends.signals import connection_created
+
+def activate_foreign_keys(sender, connection, **kwargs):
+    if connection.vendor == 'sqlite':
+        cursor = connection.cursor()
+        cursor.execute('PRAGMA foreign_keys = ON;')
+        cursor.execute('PRAGMA journal_mode = DELETE;')  # Disable WAL mode
+        cursor.execute('PRAGMA synchronous = NORMAL;')
+        cursor.execute('PRAGMA temp_store = MEMORY;')
+        cursor.execute('PRAGMA mmap_size = 30000000000;')
+
+connection_created.connect(activate_foreign_keys)
+
+

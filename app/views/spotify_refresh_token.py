@@ -3,9 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from ..middlewares.custom_token_auth import CustomTokenAuthentication
-from django.http import JsonResponse
-
+from app.middlewares.async_jwt_authentication import AsyncJWTAuthentication
 from app.services.service_selector import get_service
 
 import logging
@@ -13,7 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 class SpotifyRefreshToken(APIView):
-    authentication_classes = [CustomTokenAuthentication]
+    authentication_classes = [AsyncJWTAuthentication]
+
     permission_classes = [IsAuthenticated]
 
     @method_decorator(csrf_exempt)

@@ -2,10 +2,12 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter  # Import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from app.views.registeration import (
-    Register,
+from app.views.auth_views import (
     Logout,
-    Login
+    AuthLogin,
+    register_view,
+    login_view,
+    RefreshTokenView  
 )
 
 from .views.connect import (
@@ -53,7 +55,7 @@ from .views.ytmusic_refresh_token import YtmusicRefreshToken
 
 from .views.update_my_likes import UpdateMyLikes
 
-from .views.get_my_profile import GetMyProfile
+from .views.get_profile import GetProfile
 from .views.get_bud_profile import GetBudProfile
 
 from .views.get_buds_by_liked_aio import GetBudsByLikedAio
@@ -91,9 +93,9 @@ from .views.merge_similars import merge_similars
 router = DefaultRouter()
 
 urlpatterns = [
-    path('register', Register.as_view(), name='register'),
-    path('login', Login.as_view(), name='login'),
-    path('logout', Logout.as_view(), name='logout'),
+    path('register/', register_view, name='register'),
+    path('logout/', Logout.as_view(), name='logout'),
+    path('login/', AuthLogin.as_view(), name='login'),
     path('token/refresh', TokenRefreshView.as_view(), name='token_refresh'),
 
     path('service/login', ConnectLogin.as_view(), name='connect'),
@@ -111,7 +113,7 @@ urlpatterns = [
     path('spotify/token/refresh', SpotifyRefreshToken.as_view(), name='spotify_refresh_token'),
 
     path('me/likes/update', UpdateMyLikes.as_view(), name='update_my_likes'),
-    path('me/profile', GetMyProfile.as_view(), name='get_my_profile'),
+    path('me/profile', GetProfile.as_view(), name='profile'),
     path('me/profile/set', SetMyProfile.as_view(), name='set_my_profile'),
 
     path('bud/common/liked/artists', GetCommonLikedArtists.as_view(), name='get_common_liked_artists'),
@@ -159,16 +161,11 @@ urlpatterns = [
     path('spotify/seed/user/create', create_user_seed, name='create_user_seed'),
 
     path('merge-similars', merge_similars, name='merge_similars'),
+    path('login/', AuthLogin.as_view(), name='api_login'),
+    path('token/refresh/', RefreshTokenView.as_view(), name='token_refresh'),
 ]
-
 # Add error handling views
 handler404 = NotFoundView.as_view()
 handler500 = ErrorView.as_view()
 
-from django.contrib.auth import views as auth_views
-
-urlpatterns = [
-    # ... other URL patterns ...
-    path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
-]
 

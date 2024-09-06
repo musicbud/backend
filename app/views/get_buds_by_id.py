@@ -3,12 +3,12 @@ from adrf.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from ..middlewares.custom_token_auth import CustomTokenAuthentication
+from app.middlewares.async_jwt_authentication import AsyncJWTAuthentication
 from ..pagination import StandardResultsSetPagination
 import logging
 from neomodel import db
 from asgiref.sync import sync_to_async
-from ..db_models.parent_user import ParentUser  # Import ParentUser from db_models
+from ..db_models.parent_user import ParentUser
 
 logger = logging.getLogger('app')
 
@@ -22,7 +22,8 @@ def serialize_parent_user(parent_user):
     }
 
 class GetBudsByEntity(APIView):
-    authentication_classes = [CustomTokenAuthentication]
+    authentication_classes = [AsyncJWTAuthentication]
+
     permission_classes = [IsAuthenticated]
     entity_type = None
 

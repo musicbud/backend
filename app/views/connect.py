@@ -3,7 +3,7 @@ from django.http import JsonResponse
 from neomodel.exceptions import MultipleNodesReturned, DoesNotExist
 from adrf.views import APIView
 from rest_framework.permissions import AllowAny
-from app.middlewares.custom_token_auth import CustomTokenAuthentication
+from app.middlewares.async_jwt_authentication import AsyncJWTAuthentication
 from ..db_models.spotify.spotify_user import SpotifyUser
 from ..db_models.lastfm.lastfm_user import LastfmUser
 from ..db_models.ytmusic.ytmusic_user import YtmusicUser
@@ -12,20 +12,21 @@ from ..db_models.mal.mal_user import MalUser
 from asgiref.sync import sync_to_async
 
 from ..forms.callback import CodeForm
-from app.services.service_selector import get_service_instance
+from app.services.service_selector import get_service
 import logging
 
 logger = logging.getLogger(__name__)
 
 class Login(APIView):
-    authentication_classes = [CustomTokenAuthentication]
+    authentication_classes = [AsyncJWTAuthentication]
+
     permission_classes = [AllowAny]
 
     async def get(self, request):
         service = request.GET.get('service', 'spotify')
         try:
             logger.info(f"Generating authorization link for service: {service}")
-            service_instance = get_service_instance(service)
+            service_instance = get_service(service)
             authorization_link = await service_instance.create_authorize_url()
             logger.info("Generated authorization link successfully")
             return JsonResponse({
@@ -40,7 +41,7 @@ class Login(APIView):
             return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 
 class YtmusicCallback(APIView):
-    authentication_classes = [CustomTokenAuthentication]
+    authentication_classes = [AsyncJWTAuthentication]
     permission_classes = [AllowAny]
 
     async def get(self, request):
@@ -56,7 +57,7 @@ class YtmusicCallback(APIView):
         try:
             service = 'ytmusic'
             logger.info("Fetching tokens and user profile for YouTube Music")
-            service_instance = get_service_instance(service)
+            service_instance = get_service(service)
 
             tokens = await service_instance.get_tokens(code=code)
             user_profile = await service_instance.get_user_profile(tokens)
@@ -89,7 +90,7 @@ class YtmusicCallback(APIView):
             return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 
 class YtmusicConnect(APIView):
-    authentication_classes = [CustomTokenAuthentication]
+    authentication_classes = [AsyncJWTAuthentication]
     permission_classes = [AllowAny]
     
     async def post(self, request):
@@ -134,7 +135,7 @@ class SpotifyCallback(APIView):
         try:
             service = 'spotify'
             logger.info("Fetching tokens and user profile for Spotify")
-            service_instance = get_service_instance(service)
+            service_instance = get_service(service)
 
             tokens = await service_instance.get_tokens(code)
             user_profile = await service_instance.get_user_profile(tokens)
@@ -167,7 +168,7 @@ class SpotifyCallback(APIView):
             return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 
 class SpotifyConnect(APIView):
-    authentication_classes = [CustomTokenAuthentication]
+    authentication_classes = [AsyncJWTAuthentication]
     permission_classes = [AllowAny]
             
     async def post(self, request):
@@ -197,7 +198,7 @@ class SpotifyConnect(APIView):
             return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 
 class LastfmCallback(APIView):
-    authentication_classes = [CustomTokenAuthentication]
+    authentication_classes = [AsyncJWTAuthentication]
     permission_classes = [AllowAny]
 
     async def get(self, request):
@@ -209,7 +210,7 @@ class LastfmCallback(APIView):
         try:
             service = 'lastfm'
             logger.info("Fetching user profile for Last.fm")
-            service_instance = get_service_instance(service)
+            service_instance = get_service(service)
             user_profile = await service_instance.get_user_profile(token)
 
             try:
@@ -240,7 +241,7 @@ class LastfmCallback(APIView):
             return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 
 class LastfmConnect(APIView):
-    authentication_classes = [CustomTokenAuthentication]
+    authentication_classes = [AsyncJWTAuthentication]
     permission_classes = [AllowAny]
             
     async def post(self, request):
@@ -280,7 +281,7 @@ class MalCallback(APIView):
         try:
             service = 'mal'
             logger.info("Fetching tokens and user profile for MyAnimeList")
-            service_instance = get_service_instance(service)
+            service_instance = get_service(service)
 
             code_verifier = await sync_to_async(request.session.get)('code_verifier')
             logger.debug(f"Retrieved code_verifier from session: {code_verifier}")  # Add this line
@@ -314,7 +315,7 @@ class MalCallback(APIView):
             return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 
 class MalConnect(APIView):
-    authentication_classes = [CustomTokenAuthentication]
+    authentication_classes = [AsyncJWTAuthentication]
     permission_classes = [AllowAny]
             
     async def post(self, request):
@@ -345,7 +346,7 @@ class MalConnect(APIView):
             return JsonResponse({'error': 'Internal Server Error', 'type': error_type}, status=500)
 
 class NotFoundView(APIView):
-    authentication_classes = [CustomTokenAuthentication]
+    authentication_classes = [AsyncJWTAuthentication]
     permission_classes = [AllowAny]
 
     async def get(self, request):
@@ -353,7 +354,7 @@ class NotFoundView(APIView):
         return JsonResponse({'error': 'Resource not found on this server'}, status=404)
 
 class ErrorView(APIView):
-    authentication_classes = [CustomTokenAuthentication]
+    authentication_classes = [AsyncJWTAuthentication]
     permission_classes = [AllowAny]
 
     async def get(self, request):

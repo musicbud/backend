@@ -9,7 +9,8 @@ import logging
 # Use a function to delay import of consumers
 def get_websocket_urlpatterns():
     return [
-        re_path(r'ws/chat/(?P<room_name>\w+)/$', consumers.ChatConsumer.as_asgi()),
+        re_path(r'ws/chat/(?P<room_name>[\w\s]+)/$', consumers.ChatConsumer.as_asgi()),
+        re_path(r'ws/chat/user/(?P<user_username>\w+)/(?P<other_username>\w+)/$', consumers.UserChatConsumer.as_asgi()),
         # Remove the log_and_route wrapper if it's not needed
         # re_path(r'ws/chat/(?P<room_name>\w+)/$', log_and_route('ws/chat/<room_name>/', consumers.ChatConsumer)),
     ]
@@ -23,7 +24,10 @@ def load_websocket_urlpatterns():
     websocket_urlpatterns = get_websocket_urlpatterns()
 
 # Initialize websocket_urlpatterns
-websocket_urlpatterns = get_websocket_urlpatterns()
+websocket_urlpatterns = [
+    re_path(r'ws/chat/(?P<room_name>[\w\s]+)/$', consumers.ChatConsumer.as_asgi()),
+    re_path(r'ws/chat/user/(?P<user_username>\w+)/(?P<other_username>\w+)/$', consumers.UserChatConsumer.as_asgi()),
+]
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),

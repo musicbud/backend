@@ -20,6 +20,7 @@ class SpotifyUser(User):
     top_artists = AsyncRelationshipTo(Artist, 'TOP_ARTIST')
     top_tracks = AsyncRelationshipTo('..track.Track', 'TOP_TRACK')
     top_genres = AsyncRelationshipTo('..genre.Genre', 'TOP_GENRE')
+    parent_user = AsyncRelationshipTo('..parent_user.ParentUser', 'CONNECTED_TO_SPOTIFY')
 
     likes_artists = AsyncRelationshipTo(Artist, 'LIKES_ARTIST')
     likes_tracks = AsyncRelationshipTo('..track.Track', 'LIKES_TRACK')
@@ -29,22 +30,30 @@ class SpotifyUser(User):
     saved_tracks = AsyncRelationshipTo('..track.Track', 'SAVED_TRACK')
     saved_albums = AsyncRelationshipTo('..album.Album', 'SAVED_ALBUM')
 
+    @property
+    def username(self):
+        return self.spotify_id
 
-    parent = AsyncRelationshipFrom('..parent_user.ParentUser', 'CONNECTED_TO_SPOTIFY')
-    
+    def __str__(self):
+        return f"SpotifyUser(spotify_id={self.spotify_id}, display_name={self.display_name})"
+
 
     @classmethod
     async def update_spotify_tokens(cls, user, tokens):
-        user.access_token = tokens['access_token']
-        user.refresh_token = tokens['refresh_token']
-        user.expires_at = tokens['expires_at']
-        user.token_type = tokens['token_type']
-        user.expires_in = tokens['expires_in']
-        user.token_issue_time = time.time()
-        user.is_active = True
-        user.service = 'spotify'
-        await user.save()
-        return user
+        try:
+            user.access_token = tokens['access_token']
+            user.refresh_token = tokens['refresh_token']
+            user.expires_at = tokens['expires_at']
+            user.token_type = tokens['token_type']
+            user.expires_in = tokens['expires_in']
+            user.token_issue_time = time.time()
+            user.is_active = True
+            user.service = 'spotify'    
+            await user.save()
+            return user
+        except Exception as e:
+            logger.error(f"Error updating Spotify tokens: {e}")
+            return None
 
     @classmethod
     async def create_from_spotify_profile(cls, profile, tokens):

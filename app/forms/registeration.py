@@ -18,5 +18,15 @@ class RegistrationForm(forms.Form):
         return cleaned_data
 
 class LoginForm(forms.Form):
-    username = forms.CharField(max_length=100, required=True)
-    password = forms.CharField(widget=forms.PasswordInput, required=True)
+    username = forms.CharField()
+    password = forms.CharField()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        username = cleaned_data.get('username')
+        password = cleaned_data.get('password')
+        
+        if not username or not password:
+            raise forms.ValidationError('Both username and password are required')
+        
+        return cleaned_data

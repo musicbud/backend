@@ -1,47 +1,27 @@
-from .lastfm_service import LastFmService
-from .spotify_service import SpotifyService
-from .ytmusic_service import YTmusicService 
-from .mal_service import MalService 
-from .imdb_service import ImdbService
-
-from django.http import JsonResponse  
-from django.conf import settings
 import logging
-logger = logging.getLogger(__name__)
-# Function using the Orchestrator services
-def get_service(service, request=None):
-        # Select the appropriate service Orchestrator
-        if service == 'lastfm':
-            service_instance = LastFmService(settings.LASTFM_API_KEY, settings.LASTFM_API_SECRET)
-        elif service == 'spotify':
-            service_instance = SpotifyService(settings.SPOTIFY_CLIENT_ID, settings.SPOTIFY_CLIENT_SECRET, settings.SPOTIFY_REDIRECT_URI,settings.SPOTIFY_SCOPE)
-        elif service == 'ytmusic':
-            service_instance = YTmusicService(settings.YTMUSIC_CLIENT_ID, settings.YTMUSIC_CLIENT_SECRET, settings.YTMUSIC_REDIRECT_URI)
-        elif service == 'mal':
-            service_instance = MalService(settings.MAL_CLIENT_ID, settings.MAL_CLIENT_SECRET, settings.MAL_REDIRECT_URI,settings.MAL_SCOPE,request)
-        elif service == 'imdb':
-            service_instance = ImdbService()
-        else:
-            return JsonResponse({'error': 'Unsupported service'}, status=400)
-        return service_instance
+from django.conf import settings
+from app.services.lastfm_service import LastFmService
+from app.services.ytmusic_service import YTmusicService
+from app.services.mal_service import MalService
+from app.services.spotify_service import SpotifyService
 
-def get_service_instance(service):
-    if service == 'spotify':
-        logger.debug("Creating SpotifyService instance")
-        instance = SpotifyService(
-            client_id=settings.SPOTIFY_CLIENT_ID,
-            client_secret=settings.SPOTIFY_CLIENT_SECRET,
-            redirect_uri=settings.SPOTIFY_REDIRECT_URI
-        )
-        logger.debug(f"SpotifyService instance created: {instance}")
-        return instance
-    elif service == 'ytmusic':
-        return YTmusicService(
-            client_id=settings.YTMUSIC_CLIENT_ID,
-            client_secret=settings.YTMUSIC_CLIENT_SECRET,
-            redirect_uri=settings.YTMUSIC_REDIRECT_URI
-        )
-    # Add other services as needed
-    return None
+logger = logging.getLogger('app')
+
+async def get_service(service_name):
+    if service_name == 'spotify':
+        return SpotifyService(
+            settings.SPOTIFY_CLIENT_ID,
+            settings.SPOTIFY_CLIENT_SECRET,
+            settings.SPOTIFY_REDIRECT_URI
+                            )
+    elif service_name == 'lastfm':
+        return LastFmService(settings.LASTFM_API_KEY, settings.LASTFM_API_SECRET)
+    elif service_name == 'ytmusic':
+        return YTmusicService(settings.YTMUSIC_CLIENT_ID, settings.YTMUSIC_CLIENT_SECRET, settings.YTMUSIC_REDIRECT_URI)
+    elif service_name == 'mal':
+        return MalService(settings.MAL_CLIENT_ID, settings.MAL_CLIENT_SECRET, settings.MAL_REDIRECT_URI)
+    else:
+        logger.error(f"Invalid service name: {service_name}")
+        return None
 
 

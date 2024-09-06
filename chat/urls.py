@@ -1,13 +1,16 @@
 from django.urls import path
 from . import views
 
+app_name = 'chat'
+
 urlpatterns = [
     path('channel/<str:channel_name>/', views.channel_chat, name='channel_chat'),
     path('users/', views.user_list, name='user_list'),
+    path('user_chat/<int:user_id>/', views.user_chat, name='user_chat'),
     path('chat/<str:username>/', views.user_chat, name='user_chat'),
-    path('', views.chat_home, name='chat_home'),
+    path('', views.chat_home, name='home'),
     path('channels/', views.channel_list, name='channel_list'),
-    path('create_channel/', views.create_channel, name='create_channel'),
+    path('channel/<str:room_name>/', views.chat_room, name='room'),
     path('send_message/', views.send_message, name='send_message'),
     path('add_channel_member/<int:channel_id>/', views.add_channel_member, name='add_channel_member'),
     # Add these new paths for channel management
@@ -18,5 +21,6 @@ urlpatterns = [
     path('delete_message/<int:message_id>/', views.delete_message, name='delete_message'),
     path('handle_invitation/<int:invitation_id>/<str:action>/', views.handle_invitation, name='handle_invitation'),
     path('channel/<int:channel_id>/add_moderator/<int:user_id>/', views.add_moderator, name='add_moderator'),
-    path('chat/channel/<str:room_name>/', views.chat_room, name='chat_room'),
+    path('chat/channel/<str:room_name>/', views.chat_room, name='room'),
+    path('create_channel/', views.create_channel, name='create_channel'),
 ]

@@ -6,14 +6,15 @@ from django.utils.decorators import method_decorator
 from django.http import JsonResponse
 
 from ..db_models.user import User
-from ..middlewares.custom_token_auth import CustomTokenAuthentication
+from app.middlewares.async_jwt_authentication import AsyncJWTAuthentication
 from ..forms.search_user import SearchUsersForm
 import logging
 logger = logging.getLogger(__name__)
 
 
 class SearchUsers(APIView):
-    authentication_classes = [CustomTokenAuthentication]
+    authentication_classes = [AsyncJWTAuthentication]
+
     permission_classes = [IsAuthenticated]
 
     @method_decorator(csrf_exempt)

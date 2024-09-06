@@ -5,7 +5,7 @@ from app.db_models.parent_user import ParentUser
 from neomodel import db
 import logging
 from asgiref.sync import sync_to_async
-from ..middlewares.custom_token_auth import CustomTokenAuthentication
+from app.middlewares.async_jwt_authentication import AsyncJWTAuthentication
 from rest_framework.permissions import IsAuthenticated
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -13,7 +13,8 @@ from django.utils.decorators import method_decorator
 logger = logging.getLogger('app')
 
 class CommonItemsMixin:
-    authentication_classes = [CustomTokenAuthentication]
+    authentication_classes = [AsyncJWTAuthentication]
+
     permission_classes = [IsAuthenticated]
 
     @method_decorator(csrf_exempt)
