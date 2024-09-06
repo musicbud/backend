@@ -54,6 +54,7 @@ MIDDLEWARE = [
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'app.middlewares.async_jwt_authentication.AsyncJWTAuthentication',
+        'app.middlewares.jwt_auth_middleware.JWTAuthMiddleware',
         ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
