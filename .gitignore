@@ -1,25 +1,44 @@
+# Python cache files
 __pycache__/
 */__pycache__/*
 musicbud/__pycache__/
 chat/__pycache__/
-*.log
-# venv/
-# env/
-ai/spotify_dataset.csv
-ai/.bash_profile
+*.py[cod]
+*$py.class
+
+# Environment files (containing sensitive information)
+.env
+.env.*
+!.env.example
+.venv
+env/
+venv/
+ENV/
 myenv/
 
+# Log files
+*.log
+logs/
+debug.log
+
+# AI-specific data files
+ai/spotify_dataset.csv
+ai/.bash_profile
 ai/user_dict_reversed.pkl
 ai/user_dict.pkl
 ai/item_dict_track_reversed.pkl
 ai/item_dict_track.pkl
 ai/item_dict_artist_reversed.pkl
 ai/item_dict_artist.pkl
-ai/item_dict_artist.pkl
-ai/item_dict_artist_reversed.pkl
-ai/item_dict_track.pkl
-ai/item_dict_track_reversed.pkl
-ai/item_dict_artist.pkl
-ai/item_dict_artist_reversed.pkl
-ai/item_dict_track.pkl
-ai/item_dict_track_reversed.pkl
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Local development configuration
+instance/
+.pytest_cache/
+.coverage
+htmlcov/
