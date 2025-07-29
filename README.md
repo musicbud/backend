@@ -11,7 +11,24 @@
 
 MusicBud is a platform that connects people based on their musical preferences. Using data from Spotify and other music services, our algorithm identifies potential "music buddies" by analyzing listening habits, favorite artists, genres, and tracks. The system uses a sophisticated matching algorithm implemented on a Neo4j graph database to find connections between users.
 
-[Demo Link](https://musicbud-demo.example.com)
+## 🗄️ Databases
+
+MusicBud uses two databases for optimal performance and scalability:
+
+- **Neo4j (Graph Database):**
+  Used for storing all music-related data, user preferences, and relationships. Powers the AI recommendation and matching engine.
+  Configured via the `NEOMODEL_NEO4J_BOLT_URL` setting in your environment or `musicbud/settings.py`.
+
+- **Relational Database (Default: SQLite):**
+  Used for user authentication, login info, and Django admin data.
+  By default, this is SQLite, but you can use PostgreSQL, MySQL, etc. by updating the `DATABASES` setting in `musicbud/settings.py`.
+
+**How they work together:**
+- User login and authentication are handled by Django’s relational database.
+- All music and social graph data are managed in Neo4j.
+- The app links users across both databases using unique identifiers (UIDs).
+
+---
 
 ## ✨ Features
 
@@ -31,6 +48,132 @@ MusicBud is a platform that connects people based on their musical preferences. 
 - **Authentication**: Secure login via Spotify OAuth
 - **Token Management**: Automatic refresh token handling
 - **Profile Synchronization**: Update your profile with latest Spotify data
+
+## 📚 API Documentation
+
+A full Postman collection is available for exploring and testing all endpoints:
+- [Download/Postman Collection (JSON)](./postman_collection/collection.json)
+
+### API Categories
+
+| Category                | Example Endpoints (see below for full list)                |
+|-------------------------|-----------------------------------------------------------|
+| **Buds**                | `/bud/profile`, `/bud/top/artists`, `/bud/liked/artists`  |
+| **User Profile & Likes**| `/me/profile`, `/me/likes/update`, `/me/liked/artists`    |
+| **Commonality**         | `/bud/common/liked/artists`, `/bud/common/top/tracks`     |
+| **Service Connections** | `/spotify/connect`, `/ytmusic/connect`, `/mal/connect`    |
+| **Authentication**      | `/login`, `/register`, `/logout`, `/token/refresh`        |
+| **Search & Misc**       | `/bud/search`, `/merge-similars`                          |
+| **Chat & Messaging**    | `/chat/`, `/chat/send_message/`, `/chat/create_channel/`  |
+
+#### Example Endpoints by Category
+
+**Buds**
+- `/bud/profile` — Get bud profile
+- `/bud/top/artists` — Get buds by top artists
+- `/bud/top/tracks` — Get buds by top tracks
+- `/bud/top/genres` — Get buds by top genres
+- `/bud/top/anime` — Get buds by top anime
+- `/bud/top/manga` — Get buds by top manga
+- `/bud/liked/artists` — Get buds by liked artists
+- ...
+
+**User Profile & Likes**
+- `/me/profile` — Get your profile
+- `/me/profile/set` — Set your profile
+- `/me/likes/update` — Update your likes
+- `/me/liked/artists`, `/me/liked/tracks`, `/me/liked/genres`, `/me/liked/albums` — Get your liked items
+- `/me/top/artists`, `/me/top/tracks`, `/me/top/genres`, `/me/top/anime`, `/me/top/manga` — Get your top items
+
+**Commonality**
+- `/bud/common/liked/artists`, `/bud/common/liked/tracks`, `/bud/common/liked/genres`, `/bud/common/liked/albums` — Get common liked items with buds
+- `/bud/common/played/tracks` — Get common played tracks
+- `/bud/common/top/artists`, `/bud/common/top/tracks`, `/bud/common/top/genres`, `/bud/common/top/anime`, `/bud/common/top/manga` — Get common top items
+
+**Service Connections (OAuth)**
+- `/service/login` — Start service login
+- `/spotify/callback`, `/ytmusic/callback`, `/lastfm/callback`, `/mal/callback` — OAuth callbacks
+- `/spotify/connect`, `/ytmusic/connect`, `/lastfm/connect`, `/mal/connect` — Connect to services
+- `/ytmusic/token/refresh`, `/spotify/token/refresh` — Refresh tokens for services
+
+**Authentication**
+- `/register` — Register a new user
+- `/logout` — Logout
+- `/login` — Login
+- `/token/refresh` — Refresh JWT token
+
+**Search & Misc**
+- `/bud/search` — Search users
+- `/merge-similars` — Merge similar items
+- `/spotify/seed/user/create` — Create user seed (for seeding/testing)
+
+**Chat & Messaging**
+- `/chat/` — Chat home
+- `/chat/channel/<str:channel_name>/` — Channel chat
+- `/chat/users/` — List users
+- `/chat/user_chat/<int:user_id>/` — User-to-user chat
+- `/chat/send_message/` — Send a message
+- `/chat/create_channel/` — Create a new channel
+- ...
+
+For the full list and details, import the [Postman collection](./postman_collection/collection.json) into Postman or your preferred API client.
+
+### 🤖 AI-Powered 'Get Common' Endpoints
+
+These endpoints use AI and graph analysis to find items (artists, tracks, genres, etc.) that you and another user (bud) have in common. They require authentication and a `bud_id` in the request body.
+
+**Base URL:** `/bud/common/`
+
+| Endpoint                  | Description                                 |
+|--------------------------|---------------------------------------------|
+| liked/artists            | Common liked artists                        |
+| liked/tracks             | Common liked tracks                         |
+| liked/genres             | Common liked genres                         |
+| liked/albums             | Common liked albums                         |
+| played/tracks            | Common played tracks                        |
+| top/artists              | Common top artists                          |
+| top/tracks               | Common top tracks                           |
+| top/genres               | Common top genres                           |
+| top/anime                | Common top anime                            |
+| top/manga                | Common top manga                            |
+
+#### **Usage Example**
+
+**Request:**
+```http
+POST /bud/common/liked/artists
+Content-Type: application/json
+Authorization: Bearer <your_token>
+
+{
+  "bud_id": "<bud_user_uid>"
+}
+```
+
+**Response:**
+```json
+{
+  "results": [
+    {
+      "name": "Artist Name",
+      "image": "https://...",
+      // ...other artist fields
+    },
+    // ...more items
+  ],
+  "count": 10,
+  "next": null,
+  "previous": null
+}
+```
+
+- Replace `liked/artists` with any of the endpoints above to get common tracks, genres, albums, etc.
+- The `bud_id` is the unique identifier of the other user (bud) you want to compare with.
+- The response is paginated and contains the common items and their details.
+
+For more details and to test these endpoints, use the [Postman collection](./postman_collection/collection.json).
+
+---
 
 ## 🚀 Getting Started
 
@@ -199,11 +342,6 @@ We welcome contributions to MusicBud! Here's how you can help:
 Please make sure to update tests as appropriate and adhere to the coding standards.
 
 
-### Demo link
-
-http://84.235.170.234/
-
-
 ### Functions
 
 <strong>Buds functions</strong>
@@ -281,7 +419,7 @@ The application requires various API keys and credentials to function properly. 
 
 1. install neo4j
   - using apt-get [install-and-configure-neo4j](https://www.digitalocean.com/community/tutorials/how-to-install-and-configure-neo4j-on-ubuntu-20-04)
-  - using kubernetes [neo4j5-on-kubernetes](https://github.com/synyx/neo4j5-on-kubernetes/tree/main) 
+  - using kubernetes [neo4j5-on-kubernetes](https://github.com/synyx/neo4j5-on-kubernetes/tree/main)
 2. ```pip3 install -r requirements.txt```
 3. Ensure your `.env` file is properly configured (see Environment Configuration section)
 4. Run the application and navigate to `127.0.0.1/login`
